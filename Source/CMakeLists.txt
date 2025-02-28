@@ -19,7 +19,7 @@ juce_add_plugin("${BaseTargetName}"
         PRODUCT_NAME "Dummy Synth")
 
 target_sources(${BaseTargetName} PRIVATE
-        Source/PluginProcessor.cpp)
+        PluginProcessor.cpp)
 
 target_compile_definitions(${BaseTargetName}
         PUBLIC
