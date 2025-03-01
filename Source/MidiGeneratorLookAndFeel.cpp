@@ -31,13 +31,13 @@ MidiGeneratorLookAndFeel::MidiGeneratorLookAndFeel()
 }
 
 void MidiGeneratorLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height, 
-                                                float sliderPos, float rotaryStartAngle, float rotaryEndAngle, 
+                                                float sliderPos, float rotaryStartAngle, float rotaryEndAngle,
                                                 juce::Slider& slider)
 {
     // Determine which color to use based on the slider name
     juce::Colour knobColor;
     juce::Colour indicatorColor;
-    
+
     if (slider.getName().startsWith("rate"))
     {
         // Rate knobs - cyan/blue
@@ -47,7 +47,7 @@ void MidiGeneratorLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y,
     else if (slider.getName().startsWith("gate"))
     {
         // Gate knobs - magenta
-        knobColor = juce::Colour(0xff303030); 
+        knobColor = juce::Colour(0xff303030);
         indicatorColor = juce::Colour(0xffd952bf); // magenta
     }
     else if (slider.getName().startsWith("velocity") || slider.getName().startsWith("density"))
@@ -69,23 +69,23 @@ void MidiGeneratorLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y,
     auto toAngle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
     auto lineWidth = radius * 0.1f;
     auto arcRadius = radius - lineWidth * 0.5f;
-    
+
     // Center point of knob
     auto centreX = bounds.getCentreX();
     auto centreY = bounds.getCentreY();
-    
+
     // Draw the main knob body
     g.setColour(knobColor);
     g.fillEllipse(centreX - radius, centreY - radius, radius * 2.0f, radius * 2.0f);
-    
+
     // Draw the outer ring
     g.setColour(juce::Colours::darkgrey);
     g.drawEllipse(centreX - radius, centreY - radius, radius * 2.0f, radius * 2.0f, 1.0f);
-    
+
     // Draw the position indicator arc
     g.setColour(indicatorColor);
     auto arcStartAngle = rotaryStartAngle;
-    
+
     if (sliderPos > 0.0f)
     {
         // Create a path for the arc
@@ -99,48 +99,61 @@ void MidiGeneratorLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y,
     }
 
     // For gate and velocity sliders, draw a second indicator for the randomized value
-    if ((slider.getName() == "gate" || slider.getName() == "velocity") &&
-        slider.getParentComponent() != nullptr &&
-        slider.getParentComponent()->getParentComponent() != nullptr &&
-        slider.getParentComponent()->getParentComponent()->getParentComponent() != nullptr)
+    // Find the editor by searching up through the component hierarchy
+    if ((slider.getName() == "gate" || slider.getName() == "velocity"))
     {
-        auto* editor = dynamic_cast<MidiGeneratorEditor*>(slider.getParentComponent()->getParentComponent()->getParentComponent());
+        // Simplified approach to find the editor
+        juce::Component* parent = slider.getParentComponent();
+        MidiGeneratorEditor* editor = nullptr;
+
+        // Try to find the editor by traversing up the component tree
+        while (parent != nullptr)
+        {
+            editor = dynamic_cast<MidiGeneratorEditor*>(parent);
+            if (editor != nullptr)
+                break;
+
+            parent = parent->getParentComponent();
+        }
 
         if (editor != nullptr)
         {
             // Get the processor to check current randomized values
             MidiGeneratorProcessor* processor = dynamic_cast<MidiGeneratorProcessor*>(editor->getAudioProcessor());
 
-            float randomizedValue = 0.0f;
-            if (slider.getName() == "gate")
-                randomizedValue = processor->getCurrentRandomizedGate();
-            else if (slider.getName() == "velocity")
-                randomizedValue = processor->getCurrentRandomizedVelocity();
-
-            if (randomizedValue > 0.0f)
+            if (processor != nullptr)
             {
-                // Calculate randomized angle
-                float randomizedPos = randomizedValue / 100.0f;
-                auto randomizedAngle = rotaryStartAngle + randomizedPos * (rotaryEndAngle - rotaryStartAngle);
+                float randomizedValue = 0.0f;
+                if (slider.getName() == "gate")
+                    randomizedValue = processor->getCurrentRandomizedGate();
+                else if (slider.getName() == "velocity")
+                    randomizedValue = processor->getCurrentRandomizedVelocity();
 
-                // Draw a second indicator with lower alpha for the randomized value
-                juce::Colour randomColor = indicatorColor.withAlpha(0.4f);
-                g.setColour(randomColor);
+                if (randomizedValue > 0.0f)
+                {
+                    // Calculate randomized angle
+                    float randomizedPos = randomizedValue / 100.0f;
+                    auto randomizedAngle = rotaryStartAngle + randomizedPos * (rotaryEndAngle - rotaryStartAngle);
 
-                // Draw the randomized value as a faded arc
-                juce::Path randomArcPath;
-                randomArcPath.addArc(centreX - arcRadius * 0.8f, centreY - arcRadius * 0.8f,
-                                     arcRadius * 1.6f, arcRadius * 1.6f,
-                                     arcStartAngle, randomizedAngle, true);
+                    // Draw a second indicator with lower alpha for the randomized value
+                    juce::Colour randomColor = indicatorColor.withAlpha(0.4f);
+                    g.setColour(randomColor);
 
-                g.strokePath(randomArcPath, juce::PathStrokeType(lineWidth * 0.6f));
+                    // Draw the randomized value as a faded arc
+                    juce::Path randomArcPath;
+                    randomArcPath.addArc(centreX - arcRadius * 0.8f, centreY - arcRadius * 0.8f,
+                                         arcRadius * 1.6f, arcRadius * 1.6f,
+                                         arcStartAngle, randomizedAngle, true);
 
-                // Draw a small dot at the randomized position
-                auto dotRadius = 2.0f;
-                auto dotCentreX = centreX + (radius * 0.8f) * std::cos(randomizedAngle - juce::MathConstants<float>::halfPi);
-                auto dotCentreY = centreY + (radius * 0.8f) * std::sin(randomizedAngle - juce::MathConstants<float>::halfPi);
+                    g.strokePath(randomArcPath, juce::PathStrokeType(lineWidth * 0.6f));
 
-                g.fillEllipse(dotCentreX - dotRadius, dotCentreY - dotRadius, dotRadius * 2.0f, dotRadius * 2.0f);
+                    // Draw a small dot at the randomized position
+                    auto dotRadius = 2.0f;
+                    auto dotCentreX = centreX + (radius * 0.8f) * std::cos(randomizedAngle - juce::MathConstants<float>::halfPi);
+                    auto dotCentreY = centreY + (radius * 0.8f) * std::sin(randomizedAngle - juce::MathConstants<float>::halfPi);
+
+                    g.fillEllipse(dotCentreX - dotRadius, dotCentreY - dotRadius, dotRadius * 2.0f, dotRadius * 2.0f);
+                }
             }
         }
     }

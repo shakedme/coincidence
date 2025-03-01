@@ -1,3 +1,5 @@
+#include <memory>
+
 #include "MidiGeneratorProcessor.h"
 
 //==============================================================================
@@ -7,20 +9,16 @@ MidiGeneratorEditor::MidiGeneratorEditor(MidiGeneratorProcessor& p)
     // Set custom look and feel
     setLookAndFeel(&customLookAndFeel);
 
-    // Set up tabbed component
-    setupTabbedComponent();
-
-    // Set up rhythm tab
-    setupRhythmTab();
-
-    // Set up melody tab
-    setupMelodyTab();
+    // Set up main sections
+    setupGrooveSection();
+    setupPitchSection();
+    setupGlitchSection();
 
     // Set up keyboard
     setupKeyboard();
 
     // Set editor size
-    setSize(800, 600);
+    setSize(800, 700);
 
     startTimerHz(30);
 }
@@ -51,25 +49,125 @@ void MidiGeneratorEditor::paint(juce::Graphics& g)
     g.setColour(juce::Colours::grey);
     g.setFont(12.0f);
     g.drawText("v1.0", getLocalBounds().removeFromTop(60).removeFromRight(60), juce::Justification::centredRight, true);
+
+    // Draw section borders
+    g.setColour(juce::Colour(0xff3a3a3a));
+
+    // Groove section border
+    g.drawRect(10, 70, getWidth()/2 - 20, (getHeight() - 80 - 80) * 0.7, 1);
+
+    // Pitch section border
+    g.drawRect(getWidth()/2 + 10, 70, getWidth()/2 - 20, (getHeight() - 80 - 80) * 0.7, 1);
+
+    // Glitch section border
+    g.drawRect(10, 70 + (getHeight() - 80 - 80) * 0.7 + 10, getWidth() - 20, (getHeight() - 80 - 80) * 0.3 - 10, 1);
 }
 
 void MidiGeneratorEditor::resized()
 {
-    // Logo area
+    // Calculate main sections
     auto area = getLocalBounds();
-    auto logoArea = area.removeFromTop(60);
-
-    // Main area with tabs
+    auto headerArea = area.removeFromTop(60);
     auto mainArea = area.removeFromTop(area.getHeight() - 80);
 
-    // Footer with keyboard
-    auto keyboardArea = area;
+    // Calculate dimensions for the three sections
+    int sectionHeight = static_cast<int>(mainArea.getHeight() * 0.7);
+    int glitchHeight = mainArea.getHeight() - sectionHeight;
 
-    // Set tabbed component bounds
-    tabbedComponent->setBounds(mainArea);
+    // Create section areas
+    auto grooveArea = juce::Rectangle<int>(10, 70, getWidth()/2 - 20, sectionHeight);
+    auto pitchArea = juce::Rectangle<int>(getWidth()/2 + 10, 70, getWidth()/2 - 20, sectionHeight);
+    auto glitchArea = juce::Rectangle<int>(10, 70 + sectionHeight + 10, getWidth() - 20, glitchHeight - 10);
 
-    // Set keyboard bounds - make it fill the entire width
-    keyboardComponent->setBounds(keyboardArea.reduced(5, 5));
+    // Position the section labels
+    grooveSectionLabel->setBounds(grooveArea.getX(), 70, grooveArea.getWidth(), 30);
+    pitchSectionLabel->setBounds(pitchArea.getX(), 70, pitchArea.getWidth(), 30);
+    glitchSectionLabel->setBounds(glitchArea.getX(), glitchArea.getY(), glitchArea.getWidth(), 30);
+
+    // Configure the Groove section
+    // Calculate even spacing for rate knobs
+    const int knobSize = 60;
+    const int labelHeight = 20;
+    const int knobPadding = (grooveArea.getWidth() - (MidiGeneratorProcessor::NUM_RATE_OPTIONS * knobSize)) /
+                            (MidiGeneratorProcessor::NUM_RATE_OPTIONS + 1);
+
+    // Top row - Rate knobs
+    const int rateKnobY = grooveArea.getY() + 40;
+    for (int i = 0; i < MidiGeneratorProcessor::NUM_RATE_OPTIONS; ++i)
+    {
+        int xPos = grooveArea.getX() + knobPadding + i * (knobSize + knobPadding);
+        rateKnobs[i]->setBounds(xPos, rateKnobY, knobSize, knobSize);
+        rateLabels[i]->setBounds(xPos, rateKnobY + knobSize, knobSize, labelHeight);
+    }
+
+    // Middle row - Density (centered)
+    const int middleRowY = rateKnobY + knobSize + labelHeight + 30;
+
+    // Centered density knob
+    densityKnob->setBounds(grooveArea.getCentreX() - knobSize/2, middleRowY, knobSize, knobSize);
+    densityLabel->setBounds(grooveArea.getCentreX() - knobSize/2, middleRowY + knobSize, knobSize, labelHeight);
+
+    // Bottom row - Gate and Velocity controls
+    const int bottomRowY = middleRowY + knobSize + labelHeight + 30;
+    const int fourKnobPadding = (grooveArea.getWidth() - (4 * knobSize)) / 5;
+
+    // Two gate knobs on the left
+    gateKnob->setBounds(grooveArea.getX() + fourKnobPadding, bottomRowY, knobSize, knobSize);
+    gateLabel->setBounds(grooveArea.getX() + fourKnobPadding, bottomRowY + knobSize, knobSize, labelHeight);
+
+    gateRandomKnob->setBounds(grooveArea.getX() + 2 * fourKnobPadding + knobSize, bottomRowY, knobSize, knobSize);
+    gateRandomLabel->setBounds(grooveArea.getX() + 2 * fourKnobPadding + knobSize, bottomRowY + knobSize, knobSize, labelHeight);
+
+    // Two velocity knobs on the right
+    velocityKnob->setBounds(grooveArea.getX() + 3 * fourKnobPadding + 2 * knobSize, bottomRowY, knobSize, knobSize);
+    velocityLabel->setBounds(grooveArea.getX() + 3 * fourKnobPadding + 2 * knobSize, bottomRowY + knobSize, knobSize, labelHeight);
+
+    velocityRandomKnob->setBounds(grooveArea.getX() + 4 * fourKnobPadding + 3 * knobSize, bottomRowY, knobSize, knobSize);
+    velocityRandomLabel->setBounds(grooveArea.getX() + 4 * fourKnobPadding + 3 * knobSize, bottomRowY + knobSize, knobSize, labelHeight);
+
+    // Configure the Pitch section
+    // Scale type dropdown at the top
+    scaleTypeComboBox->setBounds(pitchArea.getCentreX() - 100, pitchArea.getY() + 40, 200, 30);
+    scaleLabel->setBounds(pitchArea.getCentreX() - 50, pitchArea.getY() + 75, 100, 20);
+
+    const int twoKnobPadding = (pitchArea.getWidth() - (2 * knobSize)) / 3;
+
+    // Middle row - Semitone controls
+    // Steps
+    semitonesKnob->setBounds(pitchArea.getX() + twoKnobPadding, middleRowY, knobSize, knobSize);
+    semitonesLabel->setBounds(pitchArea.getX() + twoKnobPadding, middleRowY + knobSize, knobSize, labelHeight);
+
+    // Chance
+    semitonesProbabilityKnob->setBounds(pitchArea.getX() + 2 * twoKnobPadding + knobSize, middleRowY, knobSize, knobSize);
+    semitonesProbabilityLabel->setBounds(pitchArea.getX() + 2 * twoKnobPadding + knobSize, middleRowY + knobSize, knobSize, labelHeight);
+
+    // Bottom row - Octave controls
+    // Shift
+    octavesKnob->setBounds(pitchArea.getX() + twoKnobPadding, bottomRowY, knobSize, knobSize);
+    octavesLabel->setBounds(pitchArea.getX() + twoKnobPadding, bottomRowY + knobSize, knobSize, labelHeight);
+
+    // Chance
+    octavesProbabilityKnob->setBounds(pitchArea.getX() + 2 * twoKnobPadding + knobSize, bottomRowY, knobSize, knobSize);
+    octavesProbabilityLabel->setBounds(pitchArea.getX() + 2 * twoKnobPadding + knobSize, bottomRowY + knobSize, knobSize, labelHeight);
+
+    // Configure Glitch section - evenly distribute 6 knobs
+    const int numGlitchKnobs = 6;
+    const int glitchKnobPadding = (glitchArea.getWidth() - (numGlitchKnobs * knobSize)) / (numGlitchKnobs + 1);
+    const int glitchKnobY = glitchArea.getY() + 40;
+
+    for (int i = 0; i < numGlitchKnobs; ++i)
+    {
+        int xPos = glitchArea.getX() + glitchKnobPadding + i * (knobSize + glitchKnobPadding);
+        glitchKnobs[i]->setBounds(xPos, glitchKnobY, knobSize, knobSize);
+        glitchLabels[i]->setBounds(xPos, glitchKnobY + knobSize, knobSize, labelHeight);
+    }
+
+    // Footer with keyboard - center it horizontally
+    const int keyboardWidth = area.getWidth() - 20;
+    const int keyboardHeight = area.getHeight() - 10;
+    const int keyboardX = (getWidth() - keyboardWidth) / 2;
+
+    keyboardComponent->setBounds(keyboardX, area.getY(), keyboardWidth, keyboardHeight);
 }
 
 //==============================================================================
@@ -94,27 +192,15 @@ juce::Slider* MidiGeneratorEditor::createRotarySlider(const juce::String& toolti
 }
 
 //==============================================================================
-void MidiGeneratorEditor::setupTabbedComponent()
+void MidiGeneratorEditor::setupGrooveSection()
 {
-    tabbedComponent = std::make_unique<juce::TabbedComponent>(juce::TabbedButtonBar::TabsAtTop);
+    // Create section header
+    grooveSectionLabel = std::unique_ptr<juce::Label>(createLabel("GROOVE", juce::Justification::centred));
+    grooveSectionLabel->setFont(juce::Font(20.0f, juce::Font::bold));
+    grooveSectionLabel->setColour(juce::Label::textColourId, juce::Colour(0xff52bfd9)); // cyan/blue
+    addAndMakeVisible(grooveSectionLabel.get());
+    grooveSectionLabel->setBounds(10, 80, getWidth()/2 - 20, 30);
 
-    // Create rhythm tab with custom color
-    rhythmTab = std::make_unique<juce::Component>();
-    tabbedComponent->addTab("RHYTHM", juce::Colour(0xff2a2a2a), rhythmTab.get(), false);
-
-    // Create melody tab with custom color
-    melodyTab = std::make_unique<juce::Component>();
-    tabbedComponent->addTab("MELODY", juce::Colour(0xff2a2a2a), melodyTab.get(), false);
-
-    // Style the tabs
-    tabbedComponent->setOutline(0);
-    tabbedComponent->setTabBarDepth(32);
-
-    addAndMakeVisible(tabbedComponent.get());
-}
-
-void MidiGeneratorEditor::setupRhythmTab()
-{
     // Set up rate controls
     setupRateControls();
 
@@ -128,13 +214,17 @@ void MidiGeneratorEditor::setupRhythmTab()
     setupVelocityControls();
 }
 
-void MidiGeneratorEditor::setupMelodyTab()
+void MidiGeneratorEditor::setupPitchSection()
 {
+    // Create section header
+    pitchSectionLabel = std::unique_ptr<juce::Label>(createLabel("PITCH", juce::Justification::centred));
+    pitchSectionLabel->setFont(juce::Font(20.0f, juce::Font::bold));
+    pitchSectionLabel->setColour(juce::Label::textColourId, juce::Colour(0xff52d97d)); // green
+    addAndMakeVisible(pitchSectionLabel.get());
+    pitchSectionLabel->setBounds(getWidth()/2 + 10, 80, getWidth()/2 - 20, 30);
+
     // Set up scale type controls
     setupScaleTypeControls();
-
-    // Set up shifter controls
-    setupShifterControls();
 
     // Set up semitone controls
     setupSemitoneControls();
@@ -143,17 +233,47 @@ void MidiGeneratorEditor::setupMelodyTab()
     setupOctaveControls();
 }
 
+void MidiGeneratorEditor::setupGlitchSection()
+{
+    // Create section header
+    glitchSectionLabel = std::unique_ptr<juce::Label>(createLabel("GLITCH", juce::Justification::centred));
+    glitchSectionLabel->setFont(juce::Font(20.0f, juce::Font::bold));
+    glitchSectionLabel->setColour(juce::Label::textColourId, juce::Colour(0xffd9a652)); // amber
+    addAndMakeVisible(glitchSectionLabel.get());
+    // Position will be set in resized()
+
+    // Create dummy knobs for the Glitch section
+    const char* glitchNames[6] = { "CRUSH", "STUTTER", "CHAOS", "REVERSE", "JUMP", "GLIDE" };
+
+    for (int i = 0; i < 6; ++i)
+    {
+        // Create glitch knob
+        glitchKnobs[i] = std::unique_ptr<juce::Slider>(createRotarySlider(glitchNames[i] + juce::String(" intensity")));
+        glitchKnobs[i]->setName("glitch_" + juce::String(i));
+        glitchKnobs[i]->setRange(0.0, 100.0, 0.1);
+        glitchKnobs[i]->setTextValueSuffix("%");
+        addAndMakeVisible(glitchKnobs[i].get());
+
+        // Create glitch label
+        glitchLabels[i] = std::unique_ptr<juce::Label>(createLabel(glitchNames[i], juce::Justification::centred));
+        glitchLabels[i]->setFont(juce::Font(14.0f, juce::Font::bold));
+        addAndMakeVisible(glitchLabels[i].get());
+
+        // These parameters don't exist yet, so we won't create attachments
+    }
+}
+
 void MidiGeneratorEditor::setupKeyboard()
 {
     // Create keyboard state
     keyboardState = std::make_unique<juce::MidiKeyboardState>();
 
     // Create keyboard component the traditional way
-    keyboardComponent = std::unique_ptr<juce::MidiKeyboardComponent>(
-        new juce::MidiKeyboardComponent(*keyboardState, juce::MidiKeyboardComponent::horizontalKeyboard));
+    keyboardComponent = std::make_unique<juce::MidiKeyboardComponent>(
+        *keyboardState, juce::MidiKeyboardComponent::horizontalKeyboard);
 
     keyboardComponent->setKeyWidth(16.0f);
-    keyboardComponent->setAvailableRange(36, 96); // C2 to C7
+    keyboardComponent->setAvailableRange(12, 96); // C2 to C7
     keyboardComponent->setLowestVisibleKey(48);   // C3
     keyboardComponent->setOctaveForMiddleC(4);
     keyboardComponent->setColour(juce::MidiKeyboardComponent::shadowColourId, juce::Colours::transparentBlack);
@@ -180,16 +300,8 @@ void MidiGeneratorEditor::updateKeyboardState(bool isNoteOn, int noteNumber, int
 //==============================================================================
 void MidiGeneratorEditor::setupRateControls()
 {
-    // Section header
-    auto* header = createLabel("GROOVE", juce::Justification::centred);
-    header->setFont(juce::Font(20.0f, juce::Font::bold));
-    header->setColour(juce::Label::textColourId, juce::Colours::lightgrey);
-    header->setBounds(240, 20, 200, 30);
-    rhythmTab->addAndMakeVisible(header);
-
     // Rate labels - Update with 1/2 and adjust positions
     const char* rateNames[MidiGeneratorProcessor::NUM_RATE_OPTIONS] = { "1/2", "1/4", "1/8", "1/16", "1/32" };
-    const int rateX[MidiGeneratorProcessor::NUM_RATE_OPTIONS] = { 110, 230, 350, 470, 590 };
 
     for (int i = 0; i < MidiGeneratorProcessor::NUM_RATE_OPTIONS; ++i)
     {
@@ -198,14 +310,12 @@ void MidiGeneratorEditor::setupRateControls()
         rateKnobs[i]->setName("rate_" + juce::String(i));
         rateKnobs[i]->setRange(0.0, 100.0, 0.1);
         rateKnobs[i]->setTextValueSuffix("%");
-        rhythmTab->addAndMakeVisible(rateKnobs[i].get());
-        rateKnobs[i]->setBounds(rateX[i], 60, 80, 100);
+        addAndMakeVisible(rateKnobs[i].get());
 
         // Create rate label
         rateLabels[i] = std::unique_ptr<juce::Label>(createLabel(rateNames[i], juce::Justification::centred));
         rateLabels[i]->setFont(juce::Font(16.0f, juce::Font::bold));
-        rhythmTab->addAndMakeVisible(rateLabels[i].get());
-        rateLabels[i]->setBounds(rateX[i], 150, 80, 30);
+        addAndMakeVisible(rateLabels[i].get());
 
         // Create parameter attachment
         sliderAttachments.push_back(std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
@@ -215,26 +325,17 @@ void MidiGeneratorEditor::setupRateControls()
 
 void MidiGeneratorEditor::setupDensityControls()
 {
-    // Section header
-    auto* header = createLabel("DENSITY", juce::Justification::centred);
-    header->setFont(juce::Font(20.0f, juce::Font::bold));
-    header->setColour(juce::Label::textColourId, juce::Colours::lightgrey);
-    header->setBounds(580, 20, 150, 30);
-    rhythmTab->addAndMakeVisible(header);
-
     // Create density knob
     densityKnob = std::unique_ptr<juce::Slider>(createRotarySlider("Overall density/probability"));
     densityKnob->setName("density");
     densityKnob->setRange(0.0, 100.0, 0.1);
     densityKnob->setTextValueSuffix("%");
-    rhythmTab->addAndMakeVisible(densityKnob.get());
-    densityKnob->setBounds(615, 60, 80, 100);
+    addAndMakeVisible(densityKnob.get());
 
     // Create density label
     densityLabel = std::unique_ptr<juce::Label>(createLabel("DENSITY", juce::Justification::centred));
     densityLabel->setFont(juce::Font(16.0f, juce::Font::bold));
-    rhythmTab->addAndMakeVisible(densityLabel.get());
-    densityLabel->setBounds(615, 150, 80, 30);
+    addAndMakeVisible(densityLabel.get());
 
     // Create parameter attachment
     sliderAttachments.push_back(std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
@@ -243,40 +344,29 @@ void MidiGeneratorEditor::setupDensityControls()
 
 void MidiGeneratorEditor::setupGateControls()
 {
-    // Section header
-    auto* header = createLabel("GATE", juce::Justification::centred);
-    header->setFont(juce::Font(20.0f, juce::Font::bold));
-    header->setColour(juce::Label::textColourId, juce::Colour(0xffd952bf)); // Magenta
-    header->setBounds(280, 190, 150, 30);
-    rhythmTab->addAndMakeVisible(header);
-
     // Create gate knob
     gateKnob = std::unique_ptr<juce::Slider>(createRotarySlider("Gate length"));
     gateKnob->setName("gate");
     gateKnob->setRange(0.0, 100.0, 0.1);
     gateKnob->setTextValueSuffix("%");
-    rhythmTab->addAndMakeVisible(gateKnob.get());
-    gateKnob->setBounds(230, 230, 80, 100);
+    addAndMakeVisible(gateKnob.get());
 
     // Create gate label
     gateLabel = std::unique_ptr<juce::Label>(createLabel("GATE", juce::Justification::centred));
     gateLabel->setFont(juce::Font(16.0f, juce::Font::bold));
-    rhythmTab->addAndMakeVisible(gateLabel.get());
-    gateLabel->setBounds(230, 320, 80, 30);
+    addAndMakeVisible(gateLabel.get());
 
     // Create gate random knob
     gateRandomKnob = std::unique_ptr<juce::Slider>(createRotarySlider("Gate randomization"));
     gateRandomKnob->setName("gate_random");
     gateRandomKnob->setRange(0.0, 100.0, 0.1);
     gateRandomKnob->setTextValueSuffix("%");
-    rhythmTab->addAndMakeVisible(gateRandomKnob.get());
-    gateRandomKnob->setBounds(400, 230, 80, 100);
+    addAndMakeVisible(gateRandomKnob.get());
 
     // Create gate random label
     gateRandomLabel = std::unique_ptr<juce::Label>(createLabel("RNDM", juce::Justification::centred));
     gateRandomLabel->setFont(juce::Font(16.0f, juce::Font::bold));
-    rhythmTab->addAndMakeVisible(gateRandomLabel.get());
-    gateRandomLabel->setBounds(400, 320, 80, 30);
+    addAndMakeVisible(gateRandomLabel.get());
 
     // Create parameter attachments
     sliderAttachments.push_back(std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
@@ -287,40 +377,29 @@ void MidiGeneratorEditor::setupGateControls()
 
 void MidiGeneratorEditor::setupVelocityControls()
 {
-    // Section header
-    auto* header = createLabel("VELO", juce::Justification::centred);
-    header->setFont(juce::Font(20.0f, juce::Font::bold));
-    header->setColour(juce::Label::textColourId, juce::Colour(0xffd9a652)); // Amber
-    header->setBounds(580, 190, 150, 30);
-    rhythmTab->addAndMakeVisible(header);
-
     // Create velocity knob
     velocityKnob = std::unique_ptr<juce::Slider>(createRotarySlider("Velocity"));
     velocityKnob->setName("velocity");
     velocityKnob->setRange(0.0, 100.0, 0.1);
     velocityKnob->setTextValueSuffix("%");
-    rhythmTab->addAndMakeVisible(velocityKnob.get());
-    velocityKnob->setBounds(530, 230, 80, 100);
+    addAndMakeVisible(velocityKnob.get());
 
     // Create velocity label
     velocityLabel = std::unique_ptr<juce::Label>(createLabel("VELO", juce::Justification::centred));
     velocityLabel->setFont(juce::Font(16.0f, juce::Font::bold));
-    rhythmTab->addAndMakeVisible(velocityLabel.get());
-    velocityLabel->setBounds(530, 320, 80, 30);
+    addAndMakeVisible(velocityLabel.get());
 
     // Create velocity random knob
     velocityRandomKnob = std::unique_ptr<juce::Slider>(createRotarySlider("Velocity randomization"));
     velocityRandomKnob->setName("velocity_random");
     velocityRandomKnob->setRange(0.0, 100.0, 0.1);
     velocityRandomKnob->setTextValueSuffix("%");
-    rhythmTab->addAndMakeVisible(velocityRandomKnob.get());
-    velocityRandomKnob->setBounds(700, 230, 80, 100);
+    addAndMakeVisible(velocityRandomKnob.get());
 
     // Create velocity random label
     velocityRandomLabel = std::unique_ptr<juce::Label>(createLabel("RNDM", juce::Justification::centred));
     velocityRandomLabel->setFont(juce::Font(16.0f, juce::Font::bold));
-    rhythmTab->addAndMakeVisible(velocityRandomLabel.get());
-    velocityRandomLabel->setBounds(700, 320, 80, 30);
+    addAndMakeVisible(velocityRandomLabel.get());
 
     // Create parameter attachments
     sliderAttachments.push_back(std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
@@ -331,13 +410,6 @@ void MidiGeneratorEditor::setupVelocityControls()
 
 void MidiGeneratorEditor::setupScaleTypeControls()
 {
-    // Section header
-    auto* header = createLabel("SCALE", juce::Justification::centred);
-    header->setFont(juce::Font(20.0f, juce::Font::bold));
-    header->setColour(juce::Label::textColourId, juce::Colours::lightgrey);
-    header->setBounds(230, 20, 150, 30);
-    melodyTab->addAndMakeVisible(header);
-
     // Create scale type combo box
     scaleTypeComboBox = std::make_unique<juce::ComboBox>();
     scaleTypeComboBox->addItem("MAJOR", MidiGeneratorProcessor::SCALE_MAJOR + 1);
@@ -346,60 +418,42 @@ void MidiGeneratorEditor::setupScaleTypeControls()
     scaleTypeComboBox->setJustificationType(juce::Justification::centred);
     scaleTypeComboBox->setColour(juce::ComboBox::backgroundColourId, juce::Colour(0xff3a3a3a));
     scaleTypeComboBox->setColour(juce::ComboBox::textColourId, juce::Colours::white);
-    melodyTab->addAndMakeVisible(scaleTypeComboBox.get());
-    scaleTypeComboBox->setBounds(200, 60, 200, 30);
+    addAndMakeVisible(scaleTypeComboBox.get());
 
     // Create scale label
     scaleLabel = std::unique_ptr<juce::Label>(createLabel("TYPE", juce::Justification::centred));
     scaleLabel->setFont(juce::Font(16.0f, juce::Font::bold));
-    melodyTab->addAndMakeVisible(scaleLabel.get());
-    scaleLabel->setBounds(260, 100, 80, 30);
+    addAndMakeVisible(scaleLabel.get());
 
     // Create parameter attachment
     comboBoxAttachments.push_back(std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
         processor.parameters, "scale_type", *scaleTypeComboBox));
 }
 
-void MidiGeneratorEditor::setupShifterControls()
-{
-    // No control needed yet - placeholder for future expansion
-}
-
 void MidiGeneratorEditor::setupSemitoneControls()
 {
-    // Section header
-    auto* header = createLabel("CHANCE", juce::Justification::centred);
-    header->setFont(juce::Font(20.0f, juce::Font::bold));
-    header->setColour(juce::Label::textColourId, juce::Colour(0xff52d97d)); // Green
-    header->setBounds(580, 20, 150, 30);
-    melodyTab->addAndMakeVisible(header);
-
     // Create semitones knob
     semitonesKnob = std::unique_ptr<juce::Slider>(createRotarySlider("Semitone range"));
     semitonesKnob->setName("semitones");
     semitonesKnob->setRange(0, 12, 1);
-    melodyTab->addAndMakeVisible(semitonesKnob.get());
-    semitonesKnob->setBounds(530, 100, 80, 100);
+    addAndMakeVisible(semitonesKnob.get());
 
     // Create semitones label
     semitonesLabel = std::unique_ptr<juce::Label>(createLabel("STEPS", juce::Justification::centred));
     semitonesLabel->setFont(juce::Font(16.0f, juce::Font::bold));
-    melodyTab->addAndMakeVisible(semitonesLabel.get());
-    semitonesLabel->setBounds(530, 190, 80, 30);
+    addAndMakeVisible(semitonesLabel.get());
 
     // Create semitones probability knob
     semitonesProbabilityKnob = std::unique_ptr<juce::Slider>(createRotarySlider("Semitone variation probability"));
     semitonesProbabilityKnob->setName("semitones_prob");
     semitonesProbabilityKnob->setRange(0.0, 100.0, 0.1);
     semitonesProbabilityKnob->setTextValueSuffix("%");
-    melodyTab->addAndMakeVisible(semitonesProbabilityKnob.get());
-    semitonesProbabilityKnob->setBounds(700, 100, 80, 100);
+    addAndMakeVisible(semitonesProbabilityKnob.get());
 
     // Create semitones probability label
     semitonesProbabilityLabel = std::unique_ptr<juce::Label>(createLabel("CHANCE", juce::Justification::centred));
     semitonesProbabilityLabel->setFont(juce::Font(16.0f, juce::Font::bold));
-    melodyTab->addAndMakeVisible(semitonesProbabilityLabel.get());
-    semitonesProbabilityLabel->setBounds(700, 190, 80, 30);
+    addAndMakeVisible(semitonesProbabilityLabel.get());
 
     // Create parameter attachments
     sliderAttachments.push_back(std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
@@ -410,39 +464,28 @@ void MidiGeneratorEditor::setupSemitoneControls()
 
 void MidiGeneratorEditor::setupOctaveControls()
 {
-    // Section header
-    auto* header = createLabel("OCTAVE", juce::Justification::centred);
-    header->setFont(juce::Font(20.0f, juce::Font::bold));
-    header->setColour(juce::Label::textColourId, juce::Colour(0xff52d97d)); // Green
-    header->setBounds(230, 190, 150, 30);
-    melodyTab->addAndMakeVisible(header);
-
     // Create octaves knob
     octavesKnob = std::unique_ptr<juce::Slider>(createRotarySlider("Octave range"));
     octavesKnob->setName("octaves");
     octavesKnob->setRange(0, 3, 1);
-    melodyTab->addAndMakeVisible(octavesKnob.get());
-    octavesKnob->setBounds(230, 230, 80, 100);
+    addAndMakeVisible(octavesKnob.get());
 
     // Create octaves label
     octavesLabel = std::unique_ptr<juce::Label>(createLabel("SHIFT", juce::Justification::centred));
     octavesLabel->setFont(juce::Font(16.0f, juce::Font::bold));
-    melodyTab->addAndMakeVisible(octavesLabel.get());
-    octavesLabel->setBounds(230, 320, 80, 30);
+    addAndMakeVisible(octavesLabel.get());
 
     // Create octaves probability knob
     octavesProbabilityKnob = std::unique_ptr<juce::Slider>(createRotarySlider("Octave variation probability"));
     octavesProbabilityKnob->setName("octaves_prob");
     octavesProbabilityKnob->setRange(0.0, 100.0, 0.1);
     octavesProbabilityKnob->setTextValueSuffix("%");
-    melodyTab->addAndMakeVisible(octavesProbabilityKnob.get());
-    octavesProbabilityKnob->setBounds(400, 230, 80, 100);
+    addAndMakeVisible(octavesProbabilityKnob.get());
 
     // Create octaves probability label
     octavesProbabilityLabel = std::unique_ptr<juce::Label>(createLabel("CHANCE", juce::Justification::centred));
     octavesProbabilityLabel->setFont(juce::Font(16.0f, juce::Font::bold));
-    melodyTab->addAndMakeVisible(octavesProbabilityLabel.get());
-    octavesProbabilityLabel->setBounds(400, 320, 80, 30);
+    addAndMakeVisible(octavesProbabilityLabel.get());
 
     // Create parameter attachments
     sliderAttachments.push_back(std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
@@ -450,7 +493,6 @@ void MidiGeneratorEditor::setupOctaveControls()
     sliderAttachments.push_back(std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         processor.parameters, "octaves_prob", *octavesProbabilityKnob));
 }
-
 
 void MidiGeneratorEditor::repaintRandomizationControls()
 {

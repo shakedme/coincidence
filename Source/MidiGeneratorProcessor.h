@@ -180,11 +180,7 @@ public:
     void drawTabButton(juce::TabBarButton& button, juce::Graphics& g, bool isMouseOver, bool isMouseDown) override;
 };
 
-//==============================================================================
-/**
- * MidiGeneratorEditor - Editor component for the MIDI generator plugin
- */
-class MidiGeneratorEditor : public juce::AudioProcessorEditor,private juce::Timer
+class MidiGeneratorEditor : public juce::AudioProcessorEditor, private juce::Timer
 {
 public:
     MidiGeneratorEditor(MidiGeneratorProcessor&);
@@ -204,11 +200,12 @@ private:
     // Custom look and feel
     MidiGeneratorLookAndFeel customLookAndFeel;
 
-    // UI Components
-    std::unique_ptr<juce::TabbedComponent> tabbedComponent;
+    // Section labels
+    std::unique_ptr<juce::Label> grooveSectionLabel;
+    std::unique_ptr<juce::Label> pitchSectionLabel;
+    std::unique_ptr<juce::Label> glitchSectionLabel;
 
-    // Rhythm tab components
-    std::unique_ptr<juce::Component> rhythmTab;
+    // Rhythm/Groove section components
     std::array<std::unique_ptr<juce::Slider>, MidiGeneratorProcessor::NUM_RATE_OPTIONS> rateKnobs;
     std::array<std::unique_ptr<juce::Label>, MidiGeneratorProcessor::NUM_RATE_OPTIONS> rateLabels;
     std::unique_ptr<juce::Slider> densityKnob;
@@ -224,9 +221,7 @@ private:
     std::unique_ptr<juce::Label> velocityLabel;
     std::unique_ptr<juce::Label> velocityRandomLabel;
 
-    // Melody tab components
-    std::unique_ptr<juce::Component> melodyTab;
-
+    // Melody/Pitch section components
     std::unique_ptr<juce::ComboBox> scaleTypeComboBox;
     std::unique_ptr<juce::Label> scaleLabel;
 
@@ -243,6 +238,10 @@ private:
     std::unique_ptr<juce::Label> octavesLabel;
     std::unique_ptr<juce::Label> octavesProbabilityLabel;
 
+    // Glitch section components (new)
+    std::array<std::unique_ptr<juce::Slider>, 6> glitchKnobs;
+    std::array<std::unique_ptr<juce::Label>, 6> glitchLabels;
+
     // Keyboard state and component
     std::unique_ptr<juce::MidiKeyboardState> keyboardState;
     std::unique_ptr<juce::MidiKeyboardComponent> keyboardComponent;
@@ -252,12 +251,13 @@ private:
     std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment>> buttonAttachments;
     std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment>> comboBoxAttachments;
 
-    // Setup methods
-    void setupTabbedComponent();
-    void setupRhythmTab();
-    void setupMelodyTab();
+    // Setup methods for main sections
+    void setupGrooveSection();
+    void setupPitchSection();
+    void setupGlitchSection();
     void setupKeyboard();
 
+    // Setup methods for individual control groups
     void setupRateControls();
     void setupDensityControls();
     void setupGateControls();
@@ -266,6 +266,7 @@ private:
     void setupShifterControls();
     void setupSemitoneControls();
     void setupOctaveControls();
+
     void timerCallback() override;
     void repaintRandomizationControls();
 
