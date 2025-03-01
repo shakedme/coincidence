@@ -7,10 +7,10 @@ juce_add_plugin("${BaseTargetName}"
         # ICON_BIG ...                              # ICON_* arguments specify a path to an image file to use as an icon for the Standalone
         # ICON_SMALL ...
         COMPANY_NAME "Shaduki"
-        IS_SYNTH FALSE
+        IS_SYNTH TRUE
         NEEDS_MIDI_INPUT TRUE
         NEEDS_MIDI_OUTPUT TRUE
-        IS_MIDI_EFFECT TRUE
+        IS_MIDI_EFFECT FALSE
         EDITOR_WANTS_KEYBOARD_FOCUS FALSE
         COPY_PLUGIN_AFTER_BUILD TRUE
         PLUGIN_MANUFACTURER_CODE Juce
@@ -22,6 +22,7 @@ target_sources(${BaseTargetName} PRIVATE
         MidiGeneratorEditor.cpp
         MidiGeneratorProcessor.cpp
         MidiGeneratorLookAndFeel.cpp
+        Sampler.cpp
         )
 
 target_compile_definitions(${BaseTargetName}

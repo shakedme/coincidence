@@ -8,20 +8,20 @@ MidiGeneratorLookAndFeel::MidiGeneratorLookAndFeel()
     setColour(juce::TabbedComponent::outlineColourId, juce::Colour(0xff3a3a3a));
     setColour(juce::TabbedButtonBar::tabOutlineColourId, juce::Colour(0xff3a3a3a));
     setColour(juce::TabbedButtonBar::frontOutlineColourId, juce::Colour(0xff3a3a3a));
-    
+
     // Slider colors
     setColour(juce::Slider::rotarySliderFillColourId, juce::Colours::darkgrey);
     setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colours::grey);
     setColour(juce::Slider::thumbColourId, juce::Colours::white);
     setColour(juce::Slider::trackColourId, juce::Colours::darkgrey);
-    
+
     // Text colors
     setColour(juce::Label::textColourId, juce::Colours::white);
-    
+
     // Button colors
     setColour(juce::ToggleButton::tickDisabledColourId, juce::Colours::darkgrey);
     setColour(juce::ToggleButton::tickColourId, juce::Colours::lightgrey);
-    
+
     // ComboBox colors
     setColour(juce::ComboBox::backgroundColourId, juce::Colour(0xff3a3a3a));
     setColour(juce::ComboBox::textColourId, juce::Colours::white);
@@ -30,8 +30,15 @@ MidiGeneratorLookAndFeel::MidiGeneratorLookAndFeel()
     setColour(juce::ComboBox::arrowColourId, juce::Colours::white);
 }
 
-void MidiGeneratorLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height, 
-                                                float sliderPos, float rotaryStartAngle, float rotaryEndAngle,
+// This is the complete drawRotarySlider method with both metallic styling and randomization visualization
+void MidiGeneratorLookAndFeel::drawRotarySlider(juce::Graphics& g,
+                                                int x,
+                                                int y,
+                                                int width,
+                                                int height,
+                                                float sliderPos,
+                                                float rotaryStartAngle,
+                                                float rotaryEndAngle,
                                                 juce::Slider& slider)
 {
     // Determine which color to use based on the slider name
@@ -50,7 +57,8 @@ void MidiGeneratorLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y,
         knobColor = juce::Colour(0xff303030);
         indicatorColor = juce::Colour(0xffd952bf); // magenta
     }
-    else if (slider.getName().startsWith("velocity") || slider.getName().startsWith("density"))
+    else if (slider.getName().startsWith("velocity")
+             || slider.getName().startsWith("density"))
     {
         // Velocity and density knobs - orange/amber
         knobColor = juce::Colour(0xff303030);
@@ -74,28 +82,64 @@ void MidiGeneratorLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y,
     auto centreX = bounds.getCentreX();
     auto centreY = bounds.getCentreY();
 
-    // Draw the main knob body
-    g.setColour(knobColor);
+    // Draw the metallic knob body
+    // Create a metallic gradient for the knob body
+    g.setGradientFill(juce::ColourGradient(juce::Colour(0xff808080),
+                                           centreX - radius * 0.5f,
+                                           centreY - radius * 0.5f,
+                                           juce::Colour(0xff404040),
+                                           centreX + radius,
+                                           centreY + radius,
+                                           true));
     g.fillEllipse(centreX - radius, centreY - radius, radius * 2.0f, radius * 2.0f);
 
-    // Draw the outer ring
-    g.setColour(juce::Colours::darkgrey);
-    g.drawEllipse(centreX - radius, centreY - radius, radius * 2.0f, radius * 2.0f, 1.0f);
+    // Draw a metallic ring around the knob
+    g.setGradientFill(juce::ColourGradient(juce::Colour(0xffaaaaaa),
+                                           centreX - radius * 0.8f,
+                                           centreY - radius * 0.8f,
+                                           juce::Colour(0xff333333),
+                                           centreX + radius * 0.8f,
+                                           centreY + radius * 0.8f,
+                                           true));
+    g.drawEllipse(centreX - radius * 0.95f,
+                  centreY - radius * 0.95f,
+                  radius * 1.9f,
+                  radius * 1.9f,
+                  radius * 0.1f);
 
-    // Draw the position indicator arc
-    g.setColour(indicatorColor);
-    auto arcStartAngle = rotaryStartAngle;
+    // Add a highlight spot to give a 3D effect
+    g.setColour(juce::Colour(0xaaffffff));
+    g.fillEllipse(centreX - radius * 0.35f,
+                  centreY - radius * 0.35f,
+                  radius * 0.25f,
+                  radius * 0.25f);
 
+    // Draw the position indicator arc with a subtle bevel effect
     if (sliderPos > 0.0f)
     {
-        // Create a path for the arc
+        // Main indicator arc
+        g.setColour(indicatorColor);
         juce::Path arcPath;
-        arcPath.addArc(centreX - arcRadius, centreY - arcRadius,
-                       arcRadius * 2.0f, arcRadius * 2.0f,
-                       arcStartAngle, toAngle, true);
-
-        // Stroke the path
+        arcPath.addArc(centreX - arcRadius,
+                       centreY - arcRadius,
+                       arcRadius * 2.0f,
+                       arcRadius * 2.0f,
+                       rotaryStartAngle,
+                       toAngle,
+                       true);
         g.strokePath(arcPath, juce::PathStrokeType(lineWidth));
+
+        // Add a highlight to the arc for a raised appearance
+        g.setColour(indicatorColor.brighter(0.3f));
+        juce::Path arcHighlight;
+        arcHighlight.addArc(centreX - arcRadius - lineWidth * 0.25f,
+                            centreY - arcRadius - lineWidth * 0.25f,
+                            arcRadius * 2.0f + lineWidth * 0.5f,
+                            arcRadius * 2.0f + lineWidth * 0.5f,
+                            rotaryStartAngle,
+                            toAngle,
+                            true);
+        g.strokePath(arcHighlight, juce::PathStrokeType(lineWidth * 0.5f));
     }
 
     // For gate and velocity sliders, draw a second indicator for the randomized value
@@ -119,7 +163,8 @@ void MidiGeneratorLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y,
         if (editor != nullptr)
         {
             // Get the processor to check current randomized values
-            MidiGeneratorProcessor* processor = dynamic_cast<MidiGeneratorProcessor*>(editor->getAudioProcessor());
+            MidiGeneratorProcessor* processor =
+                dynamic_cast<MidiGeneratorProcessor*>(editor->getAudioProcessor());
 
             if (processor != nullptr)
             {
@@ -133,131 +178,231 @@ void MidiGeneratorLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y,
                 {
                     // Calculate randomized angle
                     float randomizedPos = randomizedValue / 100.0f;
-                    auto randomizedAngle = rotaryStartAngle + randomizedPos * (rotaryEndAngle - rotaryStartAngle);
+                    auto randomizedAngle =
+                        rotaryStartAngle
+                        + randomizedPos * (rotaryEndAngle - rotaryStartAngle);
 
                     // Draw a second indicator with lower alpha for the randomized value
+                    // Use a metallic gradient for the randomized arc
                     juce::Colour randomColor = indicatorColor.withAlpha(0.4f);
-                    g.setColour(randomColor);
 
-                    // Draw the randomized value as a faded arc
+                    // Draw the randomized value as a faded arc with metallic styling
                     juce::Path randomArcPath;
-                    randomArcPath.addArc(centreX - arcRadius * 0.8f, centreY - arcRadius * 0.8f,
-                                         arcRadius * 1.6f, arcRadius * 1.6f,
-                                         arcStartAngle, randomizedAngle, true);
+                    randomArcPath.addArc(centreX - arcRadius * 0.8f,
+                                         centreY - arcRadius * 0.8f,
+                                         arcRadius * 1.6f,
+                                         arcRadius * 1.6f,
+                                         rotaryStartAngle,
+                                         randomizedAngle,
+                                         true);
 
+                    g.setColour(randomColor);
                     g.strokePath(randomArcPath, juce::PathStrokeType(lineWidth * 0.6f));
 
-                    // Draw a small dot at the randomized position
-                    auto dotRadius = 2.0f;
-                    auto dotCentreX = centreX + (radius * 0.8f) * std::cos(randomizedAngle - juce::MathConstants<float>::halfPi);
-                    auto dotCentreY = centreY + (radius * 0.8f) * std::sin(randomizedAngle - juce::MathConstants<float>::halfPi);
+                    // Add subtle highlight for a 3D effect on the randomized arc
+                    g.setColour(randomColor.brighter(0.2f).withAlpha(0.3f));
+                    juce::Path randomArcHighlight;
+                    randomArcHighlight.addArc(centreX - arcRadius * 0.8f - 1,
+                                              centreY - arcRadius * 0.8f - 1,
+                                              arcRadius * 1.6f + 2,
+                                              arcRadius * 1.6f + 2,
+                                              rotaryStartAngle,
+                                              randomizedAngle,
+                                              true);
+                    g.strokePath(randomArcHighlight,
+                                 juce::PathStrokeType(lineWidth * 0.3f));
 
-                    g.fillEllipse(dotCentreX - dotRadius, dotCentreY - dotRadius, dotRadius * 2.0f, dotRadius * 2.0f);
+                    // Draw a small metallic dot at the randomized position
+                    auto dotRadius = 3.0f;
+                    auto dotCentreX =
+                        centreX
+                        + (radius * 0.8f)
+                              * std::cos(randomizedAngle
+                                         - juce::MathConstants<float>::halfPi);
+                    auto dotCentreY =
+                        centreY
+                        + (radius * 0.8f)
+                              * std::sin(randomizedAngle
+                                         - juce::MathConstants<float>::halfPi);
+
+                    // Draw the dot with a metallic gradient
+                    g.setGradientFill(juce::ColourGradient(randomColor.brighter(0.3f),
+                                                           dotCentreX - dotRadius / 2,
+                                                           dotCentreY - dotRadius / 2,
+                                                           randomColor.darker(0.2f),
+                                                           dotCentreX + dotRadius,
+                                                           dotCentreY + dotRadius,
+                                                           true));
+                    g.fillEllipse(dotCentreX - dotRadius,
+                                  dotCentreY - dotRadius,
+                                  dotRadius * 2.0f,
+                                  dotRadius * 2.0f);
+
+                    // Add a tiny highlight to the dot
+                    g.setColour(juce::Colour(0x80ffffff));
+                    g.fillEllipse(dotCentreX - dotRadius * 0.4f,
+                                  dotCentreY - dotRadius * 0.4f,
+                                  dotRadius * 0.6f,
+                                  dotRadius * 0.6f);
                 }
             }
         }
     }
 
-    // Draw the indicator line
+    // Draw the indicator line with a metallic look
     juce::Path p;
-    auto pointerLength = radius * 0.6f;
-    auto pointerThickness = 2.0f;
+    auto pointerLength = radius * 0.65f;
+    auto pointerThickness = 2.5f;
 
-    p.addRectangle(-pointerThickness * 0.5f, -radius + lineWidth, pointerThickness, pointerLength);
-    p.applyTransform(juce::AffineTransform::rotation(toAngle).translated(centreX, centreY));
-    g.setColour(indicatorColor);
+    p.addRoundedRectangle(-pointerThickness * 0.5f,
+                          -radius + lineWidth,
+                          pointerThickness,
+                          pointerLength,
+                          1.0f);
+    p.applyTransform(
+        juce::AffineTransform::rotation(toAngle).translated(centreX, centreY));
+
+    // Draw indicator with slight gradient for 3D effect
+    g.setGradientFill(juce::ColourGradient(
+        indicatorColor.brighter(0.2f),
+        centreX,
+        centreY,
+        indicatorColor.darker(0.2f),
+        centreX + radius * 0.7f * std::cos(toAngle - juce::MathConstants<float>::halfPi),
+        centreY + radius * 0.7f * std::sin(toAngle - juce::MathConstants<float>::halfPi),
+        false));
     g.fillPath(p);
 
-    // Draw indicator dot at the end of the line
-    auto dotRadius = 3.0f;
-    auto dotCentreX = centreX + (radius - lineWidth - pointerLength * 0.5f) * std::cos(toAngle - juce::MathConstants<float>::halfPi);
-    auto dotCentreY = centreY + (radius - lineWidth - pointerLength * 0.5f) * std::sin(toAngle - juce::MathConstants<float>::halfPi);
-
-    g.setColour(indicatorColor);
-    g.fillEllipse(dotCentreX - dotRadius, dotCentreY - dotRadius, dotRadius * 2.0f, dotRadius * 2.0f);
+    // Add a highlight on top of the pointer for 3D effect
+    g.setColour(indicatorColor.brighter(0.5f).withAlpha(0.3f));
+    juce::Path pHighlight;
+    auto hlThickness = pointerThickness * 0.4f;
+    pHighlight.addRoundedRectangle(-hlThickness * 0.5f,
+                                   -radius + lineWidth,
+                                   hlThickness,
+                                   pointerLength * 0.7f,
+                                   0.5f);
+    pHighlight.applyTransform(
+        juce::AffineTransform::rotation(toAngle).translated(centreX, centreY));
+    g.fillPath(pHighlight);
 }
 
-void MidiGeneratorLookAndFeel::drawToggleButton(juce::Graphics& g, juce::ToggleButton& button,
-                                                bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown)
+void MidiGeneratorLookAndFeel::drawScrew(juce::Graphics& g, float x, float y, float size)
 {
-    auto bounds = button.getLocalBounds().toFloat();
-    auto size = juce::jmin(bounds.getWidth(), bounds.getHeight()) - 4.0f;
-    auto r = size / 2.0f;
-    auto centre = bounds.getCentre();
+    const float halfSize = size * 0.5f;
+    const float quarterSize = size * 0.25f;
 
-    // Draw button background
-    juce::Path p;
-    p.addRoundedRectangle(centre.getX() - r, centre.getY() - r, size, size, size * 0.1f);
+    // Draw screw background
+    g.setColour(juce::Colour(0xff5a5a5a));
+    g.fillEllipse(x - halfSize, y - halfSize, size, size);
 
-    g.setColour(button.getToggleState() ? juce::Colours::lightgrey : juce::Colours::darkgrey);
-    g.fillPath(p);
+    // Draw metallic highlight
+    g.setGradientFill(juce::ColourGradient(juce::Colour(0xff8a8a8a),
+                                           x - quarterSize,
+                                           y - quarterSize,
+                                           juce::Colour(0xff3a3a3a),
+                                           x + halfSize,
+                                           y + halfSize,
+                                           true));
+    g.fillEllipse(x - halfSize * 0.9f, y - halfSize * 0.9f, size * 0.9f, size * 0.9f);
 
-    // Draw outline
-    g.setColour(juce::Colours::darkgrey);
-    g.drawRoundedRectangle(centre.getX() - r, centre.getY() - r, size, size, size * 0.1f, 1.0f);
-
-    // Draw check mark if toggled
-    if (button.getToggleState())
-    {
-        g.setColour(juce::Colours::black);
-
-        juce::Path check;
-        auto thickness = size * 0.15f;
-
-        check.startNewSubPath(centre.getX() - r * 0.4f, centre.getY());
-        check.lineTo(centre.getX() - r * 0.1f, centre.getY() + r * 0.4f);
-        check.lineTo(centre.getX() + r * 0.5f, centre.getY() - r * 0.4f);
-
-        g.strokePath(check, juce::PathStrokeType(thickness));
-    }
+    // Draw screw slot
+    g.setColour(juce::Colour(0xff222222));
+    g.drawLine(x - quarterSize, y, x + quarterSize, y, 1.5f);
+    g.drawLine(x, y - quarterSize, x, y + quarterSize, 1.5f);
 }
 
-void MidiGeneratorLookAndFeel::drawTabButton(juce::TabBarButton& button, juce::Graphics& g,
-                                             bool isMouseOver, bool isMouseDown)
+void MidiGeneratorLookAndFeel::drawComboBox(juce::Graphics& g,
+                                            int width,
+                                            int height,
+                                            bool,
+                                            int,
+                                            int,
+                                            int,
+                                            int,
+                                            juce::ComboBox& box)
 {
-    auto activeArea = button.getActiveArea();
-    auto o = button.getTabbedButtonBar().getOrientation();
+    auto cornerSize =
+        box.findParentComponentOfClass<juce::ChoicePropertyComponent>() != nullptr ? 0.0f
+                                                                                   : 3.0f;
+    juce::Rectangle<int> boxBounds(0, 0, width, height);
 
-    auto activeAreaInset = activeArea.reduced(0, isMouseOver ? -1 : 0);
-    bool isTabSelected = button.getToggleState();
+    // Draw metallic background
+    g.setGradientFill(juce::ColourGradient(
+        juce::Colour(0xff505050), 0, 0, juce::Colour(0xff303030), 0, height, false));
+    g.fillRoundedRectangle(boxBounds.toFloat(), cornerSize);
 
-    const juce::Colour tabBackground(button.findColour(juce::TabbedButtonBar::tabOutlineColourId));
-    const juce::Colour textColor = button.findColour(isTabSelected ? juce::TabbedButtonBar::frontTextColourId
-                                                                   : juce::TabbedButtonBar::tabTextColourId);
+    // Draw border
+    g.setColour(box.findColour(juce::ComboBox::outlineColourId));
+    g.drawRoundedRectangle(boxBounds.toFloat().reduced(0.5f, 0.5f), cornerSize, 1.0f);
 
-    auto c = textColor;
+    // Draw arrow button with raised 3D effect
+    juce::Rectangle<int> arrowZone(width - 20, 0, 20, height);
 
-    // Get the correct colors based on tab name
-    if (button.getName().contains("MELODY"))
+    g.setGradientFill(juce::ColourGradient(juce::Colour(0xff606060),
+                                           width - 20,
+                                           0,
+                                           juce::Colour(0xff404040),
+                                           width,
+                                           height,
+                                           false));
+    g.fillRoundedRectangle(arrowZone.toFloat(), cornerSize);
+
+    // Draw highlight on arrow
+    g.setColour(juce::Colour(0x30ffffff));
+    g.drawLine(width - 20, 2, width - 2, 2, 1.0f);
+
+    // Draw arrow
+    g.setColour(box.findColour(juce::ComboBox::arrowColourId));
+    juce::Path path;
+    path.startNewSubPath(width - 15, height * 0.3f);
+    path.lineTo(width - 10, height * 0.7f);
+    path.lineTo(width - 5, height * 0.3f);
+    g.strokePath(path, juce::PathStrokeType(2.0f));
+}
+
+// Add custom label styling for an engraved look
+void MidiGeneratorLookAndFeel::drawLabel(juce::Graphics& g, juce::Label& label)
+{
+    g.fillAll(label.findColour(juce::Label::backgroundColourId));
+
+    if (!label.isBeingEdited())
     {
-        g.setColour(isTabSelected ? juce::Colour(0xff52d97d) // Green
-                                  : juce::Colours::darkgrey);
+        auto alpha = label.isEnabled() ? 1.0f : 0.5f;
+        const juce::Font font(getLabelFont(label));
+
+        g.setColour(
+            label.findColour(juce::Label::textColourId).withMultipliedAlpha(alpha));
+        g.setFont(font);
+
+        auto textArea = getLabelBorderSize(label).subtractedFrom(label.getLocalBounds());
+
+        g.drawFittedText(
+            label.getText(),
+            textArea,
+            label.getJustificationType(),
+            juce::jmax(1,
+                       static_cast<int>(static_cast<float>(textArea.getHeight())
+                                        / font.getHeight())),
+            label.getMinimumHorizontalScale());
+
+        // For section headers, add an engraved effect
+        if (font.getHeight() > 18.0f) // Only for larger fonts (section headers)
+        {
+            g.setColour(juce::Colours::black.withAlpha(0.5f));
+            g.drawFittedText(
+                label.getText(),
+                textArea.translated(1, 1),
+                label.getJustificationType(),
+                juce::jmax(1,
+                           static_cast<int>(static_cast<float>(textArea.getHeight())
+                                            / font.getHeight())),
+                label.getMinimumHorizontalScale());
+        }
     }
-    else if (button.getName().contains("RHYTHM"))
+    else if (label.isEnabled())
     {
-        g.setColour(isTabSelected ? juce::Colour(0xff52bfd9) // Blue
-                                  : juce::Colours::darkgrey);
+        g.setColour(label.findColour(juce::Label::outlineColourId));
+        g.drawRect(label.getLocalBounds());
     }
-    else
-    {
-        g.setColour(isTabSelected ? juce::Colours::lightgrey
-                                  : juce::Colours::darkgrey);
-    }
-    
-    // Draw tab
-    if (o == juce::TabbedButtonBar::TabsAtTop)
-    {
-        activeAreaInset.removeFromBottom(1);
-        g.fillRect(activeAreaInset);
-        
-        if (!isTabSelected)
-            g.fillRect(activeAreaInset.removeFromBottom(1).translated(0, 1));
-    }
-    
-    // Draw tab text
-    auto textArea = activeArea;
-    
-    g.setColour(isTabSelected ? juce::Colours::white : juce::Colours::grey);
-    g.setFont(juce::Font(14.0f, juce::Font::bold)); // Use a default font instead of button.getFont()
-    g.drawFittedText(button.getButtonText(), textArea, juce::Justification::centred, 1);
 }

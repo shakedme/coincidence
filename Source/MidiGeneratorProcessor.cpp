@@ -6,15 +6,22 @@ MidiGeneratorProcessor::MidiGeneratorProcessor()
                          .withInput("Input", juce::AudioChannelSet::stereo(), true)
                          .withOutput("Output", juce::AudioChannelSet::stereo(), true))
     , parameters(*this, nullptr, "PARAMETERS", createParameterLayout())
+    , thumbnailCache(5) // cache 5 thumbnails
 {
-    // Initialize settings
-    // Rate knobs are all at 0 by default
+    // Initialize format manager
+    formatManager.registerBasicFormats();
+
+    // Set up synth voices
+    for (int i = 0; i < 16; ++i)
+        sampler.addVoice(new SamplerVoice());
+
+    sampler.setNoteStealingEnabled(true);
 
     // Update settings from parameters
     updateSettingsFromParameters();
 
     // Start timer for processing active notes
-    startTimerHz(50); // 50Hz refresh rate for timer callbacks
+    startTimerHz(50);
 }
 
 MidiGeneratorProcessor::~MidiGeneratorProcessor()
@@ -60,6 +67,12 @@ juce::AudioProcessorValueTreeState::ParameterLayout
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         "velocity_randomize", "Velocity Randomize", 0.0f, 100.0f, 0.0f));
 
+    layout.add(std::make_unique<juce::AudioParameterChoice>(
+        "rhythm_mode",
+        "Rhythm Mode",
+        juce::StringArray("Normal", "Dotted", "Triplet"),
+        RHYTHM_NORMAL));
+
     // Scale parameters
     layout.add(std::make_unique<juce::AudioParameterChoice>(
         "scale_type",
@@ -79,6 +92,12 @@ juce::AudioProcessorValueTreeState::ParameterLayout
 
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         "octaves_prob", "Octaves Probability", 0.0f, 100.0f, 0.0f));
+
+    layout.add(std::make_unique<juce::AudioParameterBool>(
+        "randomize_samples", "Randomize Samples", false));
+
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "randomize_probability", "Randomize Probability", 0.0f, 100.0f, 100.0f));
 
     return layout;
 }
@@ -116,6 +135,12 @@ void MidiGeneratorProcessor::updateSettingsFromParameters()
     settings.octaves.value =
         static_cast<int>(*parameters.getRawParameterValue("octaves"));
     settings.octaves.probability = *parameters.getRawParameterValue("octaves_prob");
+
+    settings.rhythmMode = static_cast<RhythmMode>(
+        static_cast<int>(*parameters.getRawParameterValue("rhythm_mode")));
+
+    useRandomSample = *parameters.getRawParameterValue("randomize_samples") > 0.5f;
+    randomizeProbability = *parameters.getRawParameterValue("randomize_probability");
 }
 
 //==============================================================================
@@ -174,6 +199,7 @@ void MidiGeneratorProcessor::changeProgramName(int index, const juce::String& ne
 void MidiGeneratorProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     this->sampleRate = sampleRate;
+    sampler.setCurrentPlaybackSampleRate(sampleRate);
     samplePosition = 0;
 
     // Reset timing variables
@@ -285,6 +311,7 @@ void MidiGeneratorProcessor::processBlock(juce::AudioBuffer<float>& buffer,
                                    static_cast<int>(noteEndPosition));
             noteIsActive = false;
             currentActiveNote = -1;
+            currentActiveSample = -1;
         }
     }
 
@@ -380,6 +407,13 @@ void MidiGeneratorProcessor::processBlock(juce::AudioBuffer<float>& buffer,
                 // Calculate velocity
                 int velocity = calculateVelocity();
 
+                // Determine which sample to use (if we have samples loaded)
+                int sampleIndex = -1;
+                if (sampleLoaded && !sampleList.empty())
+                {
+                    sampleIndex = getNextSampleIndex();
+                }
+
                 // Add note-on message
                 processedMidi.addEvent(
                     juce::MidiMessage::noteOn(1, noteToPlay, (juce::uint8) velocity), 0);
@@ -387,6 +421,7 @@ void MidiGeneratorProcessor::processBlock(juce::AudioBuffer<float>& buffer,
                 // Store the active note data
                 currentActiveNote = noteToPlay;
                 currentActiveVelocity = velocity;
+                currentActiveSample = sampleIndex;
                 noteStartTime = samplePosition;
                 noteDuration = noteLengthSamples;
                 noteIsActive = true;
@@ -396,13 +431,30 @@ void MidiGeneratorProcessor::processBlock(juce::AudioBuffer<float>& buffer,
                 {
                     editor->updateKeyboardState(
                         true, currentActiveNote, currentActiveVelocity);
+
+                    // Also update the active sample in the editor if needed
+                    if (sampleIndex >= 0)
+                        editor->updateActiveSample(sampleIndex);
                 }
             }
         }
     }
 
-    // Replace original MIDI buffer with our processed one
-    midiMessages.swapWith(processedMidi);
+    // If we have samples loaded, process the MIDI through our sampler
+    if (sampleLoaded && !sampleList.empty())
+    {
+        // Use JUCE's synthesizer to render the audio
+        sampler.renderNextBlock(buffer, processedMidi, 0, buffer.getNumSamples());
+
+        // Now the buffer contains the synthesized audio
+        // We clear the MIDI buffer since the sampler has processed it
+        processedMidi.clear();
+    }
+    else
+    {
+        // If no samples are loaded, pass through our generated MIDI
+        midiMessages.swapWith(processedMidi);
+    }
 
     // Update sample position
     samplePosition += buffer.getNumSamples();
@@ -483,7 +535,7 @@ double MidiGeneratorProcessor::getNoteDurationInSamples(RateOption rate)
     {
         case RATE_1_2:
             durationInQuarters = 2.0;
-            break; // Half note (NEW)
+            break; // Half note
         case RATE_1_4:
             durationInQuarters = 1.0;
             break; // Quarter note
@@ -498,6 +550,21 @@ double MidiGeneratorProcessor::getNoteDurationInSamples(RateOption rate)
             break; // Thirty-second note
         default:
             durationInQuarters = 1.0;
+            break;
+    }
+
+    // Apply rhythm mode modifications
+    switch (settings.rhythmMode)
+    {
+        case RHYTHM_DOTTED:
+            durationInQuarters *= 1.5; // Dotted note = 1.5x the normal duration
+            break;
+        case RHYTHM_TRIPLET:
+            durationInQuarters *= 2.0 / 3.0; // Triplet = 2/3 the normal duration
+            break;
+        case RHYTHM_NORMAL:
+        default:
+            // No modification for normal rhythm
             break;
     }
 
@@ -517,7 +584,7 @@ bool MidiGeneratorProcessor::shouldTriggerNote(RateOption rate)
     {
         case RATE_1_2:
             durationInQuarters = 2.0;
-            break; // Half note (NEW)
+            break; // Half note
         case RATE_1_4:
             durationInQuarters = 1.0;
             break;
@@ -532,6 +599,21 @@ bool MidiGeneratorProcessor::shouldTriggerNote(RateOption rate)
             break;
         default:
             durationInQuarters = 1.0;
+            break;
+    }
+
+    // Apply rhythm mode modifications
+    switch (settings.rhythmMode)
+    {
+        case RHYTHM_DOTTED:
+            durationInQuarters *= 1.5; // Dotted note = 1.5x the normal duration
+            break;
+        case RHYTHM_TRIPLET:
+            durationInQuarters *= 2.0 / 3.0; // Triplet = 2/3 the normal duration
+            break;
+        case RHYTHM_NORMAL:
+        default:
+            // No modification for normal rhythm
             break;
     }
 
@@ -589,7 +671,8 @@ int MidiGeneratorProcessor::calculateVelocity()
     // Add randomization if needed
     if (settings.velocity.randomize > 0.0f)
     {
-        velocityValue = applyRandomization(settings.velocity.value, settings.velocity.randomize);
+        velocityValue =
+            applyRandomization(settings.velocity.value, settings.velocity.randomize);
         currentRandomizedVelocity = static_cast<float>(velocityValue) * 100;
         velocityValue = velocityValue * 127.0f;
         velocityValue = juce::jlimit(1.0, 127.0, velocityValue);
@@ -729,6 +812,144 @@ juce::Array<int> MidiGeneratorProcessor::getSelectedScale()
         default:
             return majorScale;
     }
+}
+
+juce::String MidiGeneratorProcessor::getRhythmModeText(RhythmMode mode) const
+{
+    switch (mode)
+    {
+        case RHYTHM_DOTTED:
+            return "D";
+        case RHYTHM_TRIPLET:
+            return "T";
+        case RHYTHM_NORMAL:
+        default:
+            return "";
+    }
+}
+
+void MidiGeneratorProcessor::addSample(const juce::File& file)
+{
+    std::unique_ptr<juce::AudioFormatReader> reader(formatManager.createReaderFor(file));
+
+    if (reader != nullptr)
+    {
+        // Create a range of notes to trigger this sample
+        juce::BigInteger allNotes;
+        allNotes.setRange(0, 128, true);
+
+        // Create a new sample info and add to our list
+        auto sampleIndex = sampleList.size();
+        auto newSample = std::make_unique<SampleInfo>(
+            file.getFileNameWithoutExtension(), file, sampleIndex);
+
+        // Create the sampler sound
+        auto samplerSound =
+            new SamplerSound(file.getFileNameWithoutExtension(), *reader, allNotes);
+        newSample->sound.reset(samplerSound);
+
+        // Add the sound to the sampler
+        sampler.addSound(samplerSound);
+
+        // Add to our sample list
+        sampleList.push_back(std::move(newSample));
+
+        // If it's the first sample, select it
+        if (sampleList.size() == 1)
+            currentSelectedSample = 0;
+
+        sampleLoaded = true;
+    }
+}
+
+void MidiGeneratorProcessor::removeSample(int index)
+{
+    if (index >= 0 && index < sampleList.size())
+    {
+        // Remove the sound from the sampler
+        sampler.removeSound(index);
+
+        // Remove from our list
+        sampleList.erase(sampleList.begin() + index);
+
+        // Renumber remaining samples
+        for (size_t i = 0; i < sampleList.size(); ++i)
+            sampleList[i]->index = i;
+
+        // Update current selection
+        if (sampleList.empty())
+        {
+            sampleLoaded = false;
+            currentSelectedSample = -1;
+        }
+        else if (currentSelectedSample >= sampleList.size())
+        {
+            currentSelectedSample = sampleList.size() - 1;
+        }
+    }
+}
+
+void MidiGeneratorProcessor::clearAllSamples()
+{
+    sampler.clearSounds();
+    sampleList.clear();
+    sampleLoaded = false;
+    currentSelectedSample = -1;
+}
+
+void MidiGeneratorProcessor::selectSample(int index)
+{
+    if (index >= 0 && index < sampleList.size())
+    {
+        currentSelectedSample = index;
+    }
+}
+
+int MidiGeneratorProcessor::getNextSampleIndex()
+{
+    if (sampleList.empty())
+        return -1;
+
+    if (!useRandomSample || sampleList.size() == 1)
+        return currentSelectedSample;
+
+    // Check if we should randomize based on probability
+    if (juce::Random::getSystemRandom().nextFloat() * 100.0f < randomizeProbability)
+    {
+        // Choose a random sample from all samples
+        return juce::Random::getSystemRandom().nextInt(sampleList.size());
+    }
+
+    // Default to current selection
+    return currentSelectedSample;
+}
+
+juce::String MidiGeneratorProcessor::getSampleName(int index) const
+{
+    if (index >= 0 && index < sampleList.size())
+        return sampleList[index]->name;
+    return "";
+}
+
+bool MidiGeneratorProcessor::producesMidi()
+{
+    // If samples are loaded, we're producing audio, not MIDI
+    if (sampleLoaded && !sampleList.empty())
+        return false;
+
+    // Otherwise we're producing MIDI
+    return true;
+}
+
+// Updated method to reflect that we're producing audio when samples are loaded
+bool MidiGeneratorProcessor::isMidiEffect()
+{
+    // If samples are loaded, we're not just a MIDI effect
+    if (sampleLoaded && !sampleList.empty())
+        return false;
+
+    // Otherwise behave as a MIDI effect
+    return true;
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
