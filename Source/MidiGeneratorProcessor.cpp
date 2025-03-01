@@ -864,30 +864,46 @@ void MidiGeneratorProcessor::addSample(const juce::File& file)
 
 void MidiGeneratorProcessor::removeSample(int index)
 {
-    if (index >= 0 && index < sampleList.size())
+    if (index < 0 || index >= static_cast<int>(sampleList.size()))
     {
-        // Remove the sound from the sampler
-        sampler.removeSound(index);
+        return;
+    }
 
-        // Remove from our list
-        sampleList.erase(sampleList.begin() + index);
+    // First, get a reference to the sound
+    SamplerSound* soundToRemove = sampleList[index]->sound.get();
 
-        // Renumber remaining samples
-        for (size_t i = 0; i < sampleList.size(); ++i)
-            sampleList[i]->index = i;
+    // Clear the sound from the sampler first to avoid use-after-free
+    sampler.clearSounds();
 
-        // Update current selection
-        if (sampleList.empty())
-        {
-            sampleLoaded = false;
-            currentSelectedSample = -1;
-        }
-        else if (currentSelectedSample >= sampleList.size())
-        {
-            currentSelectedSample = sampleList.size() - 1;
-        }
+    // IMPORTANT: Release ownership of the pointer before erasing from vector
+    // This prevents the unique_ptr from trying to delete the incomplete type
+    sampleList[index]->sound.release();
+
+    // Now it's safe to erase the element from the vector
+    sampleList.erase(sampleList.begin() + index);
+
+    // Manually delete the sound (if you want to)
+    // delete soundToRemove;  // Uncomment if you need to delete it
+
+    // Rebuild the sampler and renumber indices
+    for (size_t i = 0; i < sampleList.size(); ++i)
+    {
+        sampleList[i]->index = i;
+        sampler.addSound(sampleList[i]->sound.get());
+    }
+
+    // Update current selection
+    if (sampleList.empty())
+    {
+        sampleLoaded = false;
+        currentSelectedSample = -1;
+    }
+    else if (currentSelectedSample >= static_cast<int>(sampleList.size()))
+    {
+        currentSelectedSample = sampleList.size() - 1;
     }
 }
+
 
 void MidiGeneratorProcessor::clearAllSamples()
 {
