@@ -48,7 +48,7 @@ public:
 
     // Parameters
     enum RateOption {
-        RATE_1_2 = 0,    // Half note (UPDATED)
+        RATE_1_2 = 0,    // Half note
         RATE_1_4,        // Quarter note
         RATE_1_8,        // Eighth note
         RATE_1_16,       // Sixteenth note
@@ -153,6 +153,7 @@ private:
     juce::Array<int> getSelectedScale();
     void stopActiveNote(juce::MidiBuffer& midiMessages, int samplePosition);
     void updateSettingsFromParameters();
+    float applyRandomization(float value, float randomizeValue) const;
 
     // Create the parameter layout
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();

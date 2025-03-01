@@ -4,8 +4,8 @@
 MidiGeneratorProcessor::MidiGeneratorProcessor()
     : AudioProcessor(BusesProperties()
                          .withInput("Input", juce::AudioChannelSet::stereo(), true)
-                         .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
-    parameters(*this, nullptr, "PARAMETERS", createParameterLayout())
+                         .withOutput("Output", juce::AudioChannelSet::stereo(), true))
+    , parameters(*this, nullptr, "PARAMETERS", createParameterLayout())
 {
     // Initialize settings
     // Rate knobs are all at 0 by default
@@ -23,12 +23,13 @@ MidiGeneratorProcessor::~MidiGeneratorProcessor()
 }
 
 //==============================================================================
-juce::AudioProcessorValueTreeState::ParameterLayout MidiGeneratorProcessor::createParameterLayout()
+juce::AudioProcessorValueTreeState::ParameterLayout
+    MidiGeneratorProcessor::createParameterLayout()
 {
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
 
     // Rate parameters
-    const char* rateNames[NUM_RATE_OPTIONS] = { "1/2", "1/4", "1/8", "1/16", "1/32" };
+    const char* rateNames[NUM_RATE_OPTIONS] = {"1/2", "1/4", "1/8", "1/16", "1/32"};
 
     for (int i = 0; i < NUM_RATE_OPTIONS; ++i)
     {
@@ -36,7 +37,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout MidiGeneratorProcessor::crea
         layout.add(std::make_unique<juce::AudioParameterFloat>(
             "rate_" + juce::String(i) + "_value",
             "Rate " + juce::String(rateNames[i]) + " Value",
-            0.0f, 100.0f, 0.0f)); // Default: 0%
+            0.0f,
+            100.0f,
+            0.0f)); // Default: 0%
     }
 
     // Density parameter (overall probability)
@@ -44,8 +47,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout MidiGeneratorProcessor::crea
         "density", "Density", 0.0f, 100.0f, 50.0f));
 
     // Gate parameters
-    layout.add(std::make_unique<juce::AudioParameterFloat>(
-        "gate", "Gate", 0.0f, 100.0f, 50.0f));
+    layout.add(
+        std::make_unique<juce::AudioParameterFloat>("gate", "Gate", 0.0f, 100.0f, 50.0f));
 
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         "gate_randomize", "Gate Randomize", 0.0f, 100.0f, 0.0f));
@@ -59,18 +62,20 @@ juce::AudioProcessorValueTreeState::ParameterLayout MidiGeneratorProcessor::crea
 
     // Scale parameters
     layout.add(std::make_unique<juce::AudioParameterChoice>(
-        "scale_type", "Scale Type", juce::StringArray("Major", "Minor", "Pentatonic"), 0));
+        "scale_type",
+        "Scale Type",
+        juce::StringArray("Major", "Minor", "Pentatonic"),
+        0));
 
     // Semitone parameters
-    layout.add(std::make_unique<juce::AudioParameterInt>(
-        "semitones", "Semitones", 0, 12, 0));
+    layout.add(
+        std::make_unique<juce::AudioParameterInt>("semitones", "Semitones", 0, 12, 0));
 
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         "semitones_prob", "Semitones Probability", 0.0f, 100.0f, 0.0f));
 
     // Octave parameters
-    layout.add(std::make_unique<juce::AudioParameterInt>(
-        "octaves", "Octaves", 0, 3, 0));
+    layout.add(std::make_unique<juce::AudioParameterInt>("octaves", "Octaves", 0, 3, 0));
 
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         "octaves_prob", "Octaves Probability", 0.0f, 100.0f, 0.0f));
@@ -83,7 +88,8 @@ void MidiGeneratorProcessor::updateSettingsFromParameters()
     // Update rate settings
     for (int i = 0; i < NUM_RATE_OPTIONS; ++i)
     {
-        settings.rates[i].value = *parameters.getRawParameterValue("rate_" + juce::String(i) + "_value");
+        settings.rates[i].value =
+            *parameters.getRawParameterValue("rate_" + juce::String(i) + "_value");
     }
 
     // Update probability/density setting
@@ -102,11 +108,13 @@ void MidiGeneratorProcessor::updateSettingsFromParameters()
         static_cast<int>(*parameters.getRawParameterValue("scale_type")));
 
     // Update semitone settings
-    settings.semitones.value = static_cast<int>(*parameters.getRawParameterValue("semitones"));
+    settings.semitones.value =
+        static_cast<int>(*parameters.getRawParameterValue("semitones"));
     settings.semitones.probability = *parameters.getRawParameterValue("semitones_prob");
 
     // Update octave settings
-    settings.octaves.value = static_cast<int>(*parameters.getRawParameterValue("octaves"));
+    settings.octaves.value =
+        static_cast<int>(*parameters.getRawParameterValue("octaves"));
     settings.octaves.probability = *parameters.getRawParameterValue("octaves_prob");
 }
 
@@ -173,7 +181,8 @@ void MidiGeneratorProcessor::prepareToPlay(double sampleRate, int samplesPerBloc
     lastPpqPosition = 0.0;
 
     // Reset trigger times
-    for (int i = 0; i < NUM_RATE_OPTIONS; i++) {
+    for (int i = 0; i < NUM_RATE_OPTIONS; i++)
+    {
         lastTriggerTimes[i] = 0.0;
     }
 
@@ -193,7 +202,8 @@ void MidiGeneratorProcessor::releaseResources()
     currentActiveNote = -1;
 }
 
-void MidiGeneratorProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+void MidiGeneratorProcessor::processBlock(juce::AudioBuffer<float>& buffer,
+                                          juce::MidiBuffer& midiMessages)
 {
     // Update plugin settings from parameters
     updateSettingsFromParameters();
@@ -209,7 +219,8 @@ void MidiGeneratorProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce
 
     if (playHead != nullptr)
     {
-        juce::Optional<juce::AudioPlayHead::PositionInfo> posInfo = playHead->getPosition();
+        juce::Optional<juce::AudioPlayHead::PositionInfo> posInfo =
+            playHead->getPosition();
 
         if (posInfo.hasValue())
         {
@@ -224,7 +235,7 @@ void MidiGeneratorProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce
     // Process incoming MIDI messages
     juce::MidiBuffer processedMidi;
 
-    for (const auto metadata : midiMessages)
+    for (const auto metadata: midiMessages)
     {
         auto message = metadata.getMessage();
         const int time = metadata.samplePosition;
@@ -270,7 +281,8 @@ void MidiGeneratorProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce
         if (noteEndPosition >= 0 && noteEndPosition < buffer.getNumSamples())
         {
             // Send note off at the exact sample position it should end
-            processedMidi.addEvent(juce::MidiMessage::noteOff(1, currentActiveNote), static_cast<int>(noteEndPosition));
+            processedMidi.addEvent(juce::MidiMessage::noteOff(1, currentActiveNote),
+                                   static_cast<int>(noteEndPosition));
             noteIsActive = false;
             currentActiveNote = -1;
         }
@@ -279,10 +291,22 @@ void MidiGeneratorProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce
     // Generate MIDI notes based on settings if an input note is active
     if (isInputNoteActive)
     {
-        // Check each rate option for triggering a new note
+        // Improved weighted selection approach (Solution 3)
+        struct EligibleRate
+        {
+            RateOption rate;
+            float weight;
+        };
+
+        // Using a fixed-size array instead of a vector to avoid allocation
+        std::array<EligibleRate, NUM_RATE_OPTIONS> eligibleRatesArray {};
+        int eligibleRatesCount = 0;
+        float totalWeight = 0.0f;
+
+        // Collect all rates that should trigger at this position
         for (int rateIndex = 0; rateIndex < NUM_RATE_OPTIONS; ++rateIndex)
         {
-            RateOption rate = static_cast<RateOption>(rateIndex);
+            auto rate = static_cast<RateOption>(rateIndex);
 
             // Only consider rates with non-zero value
             if (settings.rates[rateIndex].value > 0.0f)
@@ -290,63 +314,88 @@ void MidiGeneratorProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce
                 // Check if we should trigger a note at this rate
                 if (shouldTriggerNote(rate))
                 {
-                    // Roll for probability based on rate intensity and density
-                    float rateProb = settings.rates[rateIndex].value;
-                    float overallProb = (rateProb / 100.0f) * (settings.probability / 100.0f) * 100.0f;
+                    // Calculate weight based on rate intensity and density
+                    float rateWeight = settings.rates[rateIndex].value;
+                    float overallWeight =
+                        (rateWeight / 100.0f) * (settings.probability / 100.0f) * 100.0f;
 
-                    if (juce::Random::getSystemRandom().nextFloat() * 100.0f < overallProb)
+                    if (overallWeight > 0.0f)
                     {
-                        // If there's currently a note playing, stop it
-                        if (noteIsActive)
-                        {
-                            stopActiveNote(processedMidi, 0);
-                        }
-
-                        // Calculate randomized values for visualization
-                        if (settings.gate.randomize > 0.0f) {
-                            float randomRange = settings.gate.randomize / 100.0f;
-                            float randomFactor = juce::Random::getSystemRandom().nextFloat() * randomRange;
-                            // Store the randomized value for visualization
-                            currentRandomizedGate = settings.gate.value * (1.0f + randomFactor);
-                            currentRandomizedGate = juce::jlimit(0.0f, 100.0f, currentRandomizedGate);
-                        } else {
-                            currentRandomizedGate = settings.gate.value;
-                        }
-
-                        if (settings.velocity.randomize > 0.0f) {
-                            float randomRange = settings.velocity.randomize / 100.0f;
-                            float randomFactor = juce::Random::getSystemRandom().nextFloat() * randomRange;
-                            // Store the randomized value for visualization
-                            currentRandomizedVelocity = settings.velocity.value * (1.0f + randomFactor);
-                            currentRandomizedVelocity = juce::jlimit(0.0f, 100.0f, currentRandomizedVelocity);
-                        } else {
-                            currentRandomizedVelocity = settings.velocity.value;
-                        }
-
-                        // Calculate note length based on rate and gate
-                        int noteLengthSamples = calculateNoteLength(rate);
-
-                        // Apply scale and modifications
-                        int noteToPlay = applyScaleAndModifications(currentInputNote);
-
-                        // Calculate velocity
-                        int velocity = calculateVelocity();
-
-                        // Add note-on message
-                        processedMidi.addEvent(juce::MidiMessage::noteOn(1, noteToPlay, (juce::uint8)velocity), 0);
-
-                        // Store the active note data
-                        currentActiveNote = noteToPlay;
-                        currentActiveVelocity = velocity;
-                        noteStartTime = samplePosition;
-                        noteDuration = noteLengthSamples;
-                        noteIsActive = true;
-
-                        // Update keyboard state
-                        if (auto* editor = dynamic_cast<MidiGeneratorEditor*>(getActiveEditor())) {
-                            editor->updateKeyboardState(true, currentActiveNote, currentActiveVelocity);
-                        }
+                        eligibleRatesArray[eligibleRatesCount] = {rate, overallWeight};
+                        eligibleRatesCount++;
+                        totalWeight += overallWeight;
                     }
+                }
+            }
+        }
+
+        // Only proceed if we have eligible rates
+        if (totalWeight > 0.0f && eligibleRatesCount > 0)
+        {
+            // Determine if any note should play
+            float triggerProbability = std::min(totalWeight / 100.0f, 1.0f);
+
+            if (juce::Random::getSystemRandom().nextFloat() < triggerProbability)
+            {
+                // Unbiased selection using normalized probabilities
+                int selectedIndex = -1;
+                float randomValue = juce::Random::getSystemRandom().nextFloat();
+                float cumulativeProbability = 0.0f;
+
+                for (int i = 0; i < eligibleRatesCount; ++i)
+                {
+                    // Calculate each rate's normalized probability of selection
+                    float rateProbability = eligibleRatesArray[i].weight / totalWeight;
+                    cumulativeProbability += rateProbability;
+
+                    // If random value falls within this rate's range, select it
+                    if (randomValue <= cumulativeProbability)
+                    {
+                        selectedIndex = i;
+                        break;
+                    }
+                }
+
+                // If somehow we didn't select anything (floating point precision error)
+                if (selectedIndex == -1)
+                {
+                    selectedIndex = eligibleRatesCount - 1;
+                }
+
+                // Use the selected rate
+                RateOption selectedRate = eligibleRatesArray[selectedIndex].rate;
+
+                // If there's currently a note playing, stop it
+                if (noteIsActive)
+                {
+                    stopActiveNote(processedMidi, 0);
+                }
+
+                // Calculate note length based on selected rate and gate
+                int noteLengthSamples = calculateNoteLength(selectedRate);
+
+                // Apply scale and modifications
+                int noteToPlay = applyScaleAndModifications(currentInputNote);
+
+                // Calculate velocity
+                int velocity = calculateVelocity();
+
+                // Add note-on message
+                processedMidi.addEvent(
+                    juce::MidiMessage::noteOn(1, noteToPlay, (juce::uint8) velocity), 0);
+
+                // Store the active note data
+                currentActiveNote = noteToPlay;
+                currentActiveVelocity = velocity;
+                noteStartTime = samplePosition;
+                noteDuration = noteLengthSamples;
+                noteIsActive = true;
+
+                // Update keyboard state
+                if (auto* editor = dynamic_cast<MidiGeneratorEditor*>(getActiveEditor()))
+                {
+                    editor->updateKeyboardState(
+                        true, currentActiveNote, currentActiveVelocity);
                 }
             }
         }
@@ -359,15 +408,24 @@ void MidiGeneratorProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce
     samplePosition += buffer.getNumSamples();
 }
 
-void MidiGeneratorProcessor::stopActiveNote(juce::MidiBuffer& midiMessages, int samplePosition)
+float MidiGeneratorProcessor::applyRandomization(float value, float randomizeValue) const
+{
+    float maxValue = juce::jmin(100.0f, value + randomizeValue);
+    return juce::jmap(juce::Random::getSystemRandom().nextFloat(), value, maxValue) / 100;
+}
+
+void MidiGeneratorProcessor::stopActiveNote(juce::MidiBuffer& midiMessages,
+                                            int currentSamplePosition)
 {
     if (noteIsActive && currentActiveNote >= 0)
     {
         // Send note off message - channel 1 (fixed)
-        midiMessages.addEvent(juce::MidiMessage::noteOff(1, currentActiveNote), samplePosition);
+        midiMessages.addEvent(juce::MidiMessage::noteOff(1, currentActiveNote),
+                              currentSamplePosition);
 
         // Update keyboard state
-        if (auto* editor = dynamic_cast<MidiGeneratorEditor*>(getActiveEditor())) {
+        if (auto* editor = dynamic_cast<MidiGeneratorEditor*>(getActiveEditor()))
+        {
             editor->updateKeyboardState(false, currentActiveNote, 0);
         }
 
@@ -399,7 +457,7 @@ void MidiGeneratorProcessor::setStateInformation(const void* data, int sizeInByt
 {
     std::unique_ptr<juce::XmlElement> xmlState(getXmlFromBinary(data, sizeInBytes));
 
-    if (xmlState.get() != nullptr)
+    if (xmlState != nullptr)
         if (xmlState->hasTagName(parameters.state.getType()))
             parameters.replaceState(juce::ValueTree::fromXml(*xmlState));
 }
@@ -423,12 +481,24 @@ double MidiGeneratorProcessor::getNoteDurationInSamples(RateOption rate)
 
     switch (rate)
     {
-        case RATE_1_2:   durationInQuarters = 2.0; break;   // Half note (NEW)
-        case RATE_1_4:   durationInQuarters = 1.0; break;   // Quarter note
-        case RATE_1_8:   durationInQuarters = 0.5; break;   // Eighth note
-        case RATE_1_16:  durationInQuarters = 0.25; break;  // Sixteenth note
-        case RATE_1_32:  durationInQuarters = 0.125; break; // Thirty-second note
-        default:         durationInQuarters = 1.0; break;
+        case RATE_1_2:
+            durationInQuarters = 2.0;
+            break; // Half note (NEW)
+        case RATE_1_4:
+            durationInQuarters = 1.0;
+            break; // Quarter note
+        case RATE_1_8:
+            durationInQuarters = 0.5;
+            break; // Eighth note
+        case RATE_1_16:
+            durationInQuarters = 0.25;
+            break; // Sixteenth note
+        case RATE_1_32:
+            durationInQuarters = 0.125;
+            break; // Thirty-second note
+        default:
+            durationInQuarters = 1.0;
+            break;
     }
 
     double durationInSeconds = secondsPerQuarterNote * durationInQuarters;
@@ -445,12 +515,24 @@ bool MidiGeneratorProcessor::shouldTriggerNote(RateOption rate)
 
     switch (rate)
     {
-        case RATE_1_2:   durationInQuarters = 2.0; break;   // Half note (NEW)
-        case RATE_1_4:   durationInQuarters = 1.0; break;
-        case RATE_1_8:   durationInQuarters = 0.5; break;
-        case RATE_1_16:  durationInQuarters = 0.25; break;
-        case RATE_1_32:  durationInQuarters = 0.125; break;
-        default:         durationInQuarters = 1.0; break;
+        case RATE_1_2:
+            durationInQuarters = 2.0;
+            break; // Half note (NEW)
+        case RATE_1_4:
+            durationInQuarters = 1.0;
+            break;
+        case RATE_1_8:
+            durationInQuarters = 0.5;
+            break;
+        case RATE_1_16:
+            durationInQuarters = 0.25;
+            break;
+        case RATE_1_32:
+            durationInQuarters = 0.125;
+            break;
+        default:
+            durationInQuarters = 1.0;
+            break;
     }
 
     // If PPQ position went backwards (loop point or rewind), reset the last trigger time
@@ -460,7 +542,8 @@ bool MidiGeneratorProcessor::shouldTriggerNote(RateOption rate)
     }
 
     // Calculate how many divisions have passed since the last trigger
-    double divisionsSinceLastTrigger = (ppqPosition - lastTriggerTimes[rate]) / durationInQuarters;
+    double divisionsSinceLastTrigger =
+        (ppqPosition - lastTriggerTimes[rate]) / durationInQuarters;
 
     // If at least one full division has passed, we should trigger again
     if (divisionsSinceLastTrigger >= 1.0)
@@ -481,25 +564,14 @@ int MidiGeneratorProcessor::calculateNoteLength(RateOption rate)
     // Apply gate percentage (0-100%)
     double gateValue = settings.gate.value / 100.0; // Convert to 0.0-1.0
 
-    // Even at 100% gate, use exactly 95% to ensure consistent timing with a small gap
-    if (gateValue > 0.95) {
-        gateValue = 0.95;
-    }
-
     // Only apply randomization if it's actually enabled
     if (settings.gate.randomize > 0.0f)
     {
-        float randomRange = settings.gate.randomize / 100.0f;
-
-        // Generate a random value between 0 and randomRange
-        float randomValue = juce::Random::getSystemRandom().nextFloat() * randomRange;
-
-        // Apply the randomization to the gate value
-        gateValue += randomValue;
-
-        // Ensure gate value is in valid range
-        gateValue = juce::jlimit(0.01, 0.95, gateValue);
+        gateValue = applyRandomization(settings.gate.value, settings.gate.randomize);
+        currentRandomizedGate = static_cast<float>(gateValue) * 100;
     }
+
+    gateValue = juce::jlimit(0.01, 0.95, gateValue);
 
     // Calculate final note length in samples - use a precise calculation
     int lengthInSamples = static_cast<int>(baseDuration * gateValue);
@@ -517,11 +589,9 @@ int MidiGeneratorProcessor::calculateVelocity()
     // Add randomization if needed
     if (settings.velocity.randomize > 0.0f)
     {
-        float randomRange = settings.velocity.randomize / 100.0f * 127.0f;
-
-        // Randomization (0 to +range)
-        velocityValue += juce::Random::getSystemRandom().nextFloat() * randomRange;
-        // Clamp between 1 and 127
+        velocityValue = applyRandomization(settings.velocity.value, settings.velocity.randomize);
+        currentRandomizedVelocity = static_cast<float>(velocityValue) * 100;
+        velocityValue = velocityValue * 127.0f;
         velocityValue = juce::jlimit(1.0, 127.0, velocityValue);
     }
 
@@ -544,13 +614,16 @@ int MidiGeneratorProcessor::applyScaleAndModifications(int noteNumber)
     if (settings.semitones.value > 0 && settings.semitones.probability > 0.0f)
     {
         // Roll for semitone variation
-        if (juce::Random::getSystemRandom().nextFloat() * 100.0f < settings.semitones.probability)
+        if (juce::Random::getSystemRandom().nextFloat() * 100.0f
+            < settings.semitones.probability)
         {
             // Calculate the semitone variation (1 to max)
-            int semitoneAmount = 1 + juce::Random::getSystemRandom().nextInt(settings.semitones.value);
+            int semitoneAmount =
+                1 + juce::Random::getSystemRandom().nextInt(settings.semitones.value);
 
             // If bidirectional, randomly choose up or down
-            if (settings.semitones.bidirectional && juce::Random::getSystemRandom().nextBool())
+            if (settings.semitones.bidirectional
+                && juce::Random::getSystemRandom().nextBool())
             {
                 semitoneAmount = -semitoneAmount;
             }
@@ -577,13 +650,16 @@ int MidiGeneratorProcessor::applyScaleAndModifications(int noteNumber)
     if (settings.octaves.value > 0 && settings.octaves.probability > 0.0f)
     {
         // Roll for octave variation
-        if (juce::Random::getSystemRandom().nextFloat() * 100.0f < settings.octaves.probability)
+        if (juce::Random::getSystemRandom().nextFloat() * 100.0f
+            < settings.octaves.probability)
         {
             // Calculate the octave variation (1 to max)
-            int octaveAmount = 1 + juce::Random::getSystemRandom().nextInt(settings.octaves.value);
+            int octaveAmount =
+                1 + juce::Random::getSystemRandom().nextInt(settings.octaves.value);
 
             // If bidirectional, randomly choose up or down
-            if (settings.octaves.bidirectional && juce::Random::getSystemRandom().nextBool())
+            if (settings.octaves.bidirectional
+                && juce::Random::getSystemRandom().nextBool())
             {
                 octaveAmount = -octaveAmount;
             }
@@ -606,7 +682,9 @@ bool MidiGeneratorProcessor::isNoteInScale(int note, juce::Array<int> scale, int
     return scale.contains(scaleDegree);
 }
 
-int MidiGeneratorProcessor::findClosestNoteInScale(int note, juce::Array<int> scale, int root)
+int MidiGeneratorProcessor::findClosestNoteInScale(int note,
+                                                   juce::Array<int> scale,
+                                                   int root)
 {
     // If the note is already in the scale, return it
     if (isNoteInScale(note, scale, root))
@@ -620,7 +698,7 @@ int MidiGeneratorProcessor::findClosestNoteInScale(int note, juce::Array<int> sc
     int closestDistance = 12;
     int closestNote = note;
 
-    for (int scaleDegree : scale)
+    for (int scaleDegree: scale)
     {
         // Calculate the actual MIDI note number
         int scaleNote = (octave * 12) + scaleDegree;
