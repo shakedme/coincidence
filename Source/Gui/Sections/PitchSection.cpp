@@ -3,10 +3,10 @@
 //
 
 #include "PitchSection.h"
-#include "../../Audio/MidiGeneratorParams.h"
+#include "../../Audio/Params.h"
 
-PitchSectionComponent::PitchSectionComponent(MidiGeneratorEditor& editor,
-                                             MidiGeneratorProcessor& processor)
+PitchSectionComponent::PitchSectionComponent(PluginEditor& editor,
+                                             PluginProcessor& processor)
     : BaseSectionComponent(editor, processor, "PITCH", juce::Colour(0xff52d97d))
 {
     setupScaleTypeControls();
@@ -14,46 +14,59 @@ PitchSectionComponent::PitchSectionComponent(MidiGeneratorEditor& editor,
     setupOctaveControls();
 }
 
+PitchSectionComponent::~PitchSectionComponent()
+{
+    clearAttachments();
+}
+
+void PitchSectionComponent::paint(juce::Graphics& g)
+{
+    BaseSectionComponent::paint(g);
+
+    auto bounds = getLocalBounds();
+    g.drawLine(getWidth() / 2, 100, getWidth() / 2, bounds.getHeight() - 10, 1.0f);
+}
+
 void PitchSectionComponent::resized()
 {
     auto area = getLocalBounds();
 
-    // Set up header
-    sectionLabel->setBounds(area.getX(), 5, area.getWidth(), 25); // Reduced from 30
+    // Scale type dropdown at the top - center it
+    const int comboBoxWidth = juce::jmin(180, area.getWidth() - 20);
+    scaleTypeComboBox->setBounds(area.getCentreX() - comboBoxWidth/2, firstRowY, comboBoxWidth, 25);
+    scaleLabel->setBounds(area.getCentreX() - 40, 75, 80, 18);
 
-    // Scale type dropdown at the top
-    scaleTypeComboBox->setBounds(area.getCentreX() - 90, 35, 180, 25); // Reduced size
-    scaleLabel->setBounds(area.getCentreX() - 40, 65, 80, 18); // Moved up
-
-    // Semitone and Octave controls
-    const int knobSize = 45; // Reduced from 60
+    // Semitone and Octave controls - make them stack vertically instead of side by side
+    const int knobSize = 45;
     const int labelHeight = 18;
-    const int twoKnobPadding = (area.getWidth() - (2 * knobSize)) / 3;
+    const int quarterWidth = area.getWidth() / 4;
+    const int leftColumnX = quarterWidth - knobSize / 2;
+    const int rightColumnX = quarterWidth * 3 - knobSize / 2;
+    const int knobPadding = 15;
 
-    // Middle row - Semitone controls
-    const int middleRowY = 95; // Reduced from 120
-    semitonesKnob->setBounds(area.getX() + twoKnobPadding, middleRowY, knobSize, knobSize);
-    semitonesLabel->setBounds(area.getX() + twoKnobPadding, middleRowY + knobSize, knobSize, labelHeight);
+    const int firstRowY = 90;
+    const int secondRowY = firstRowY + knobSize + labelHeight + knobPadding;
 
-    semitonesProbabilityKnob->setBounds(area.getX() + 2 * twoKnobPadding + knobSize, middleRowY, knobSize, knobSize);
-    semitonesProbabilityLabel->setBounds(area.getX() + 2 * twoKnobPadding + knobSize, middleRowY + knobSize, knobSize, labelHeight);
+    // First row
+    semitonesKnob->setBounds(leftColumnX, firstRowY, knobSize, knobSize);
+    semitonesLabel->setBounds(leftColumnX, firstRowY + knobSize, knobSize, labelHeight);
+    octavesKnob->setBounds(rightColumnX, firstRowY, knobSize, knobSize);
+    octavesLabel->setBounds(rightColumnX, firstRowY + knobSize, knobSize, labelHeight);
 
-    // Bottom row - Octave controls
-    const int bottomRowY = middleRowY + knobSize + labelHeight + 15; // Reduced from 30
-    octavesKnob->setBounds(area.getX() + twoKnobPadding, bottomRowY, knobSize, knobSize);
-    octavesLabel->setBounds(area.getX() + twoKnobPadding, bottomRowY + knobSize, knobSize, labelHeight);
-
-    octavesProbabilityKnob->setBounds(area.getX() + 2 * twoKnobPadding + knobSize, bottomRowY, knobSize, knobSize);
-    octavesProbabilityLabel->setBounds(area.getX() + 2 * twoKnobPadding + knobSize, bottomRowY + knobSize, knobSize, labelHeight);
+    // Second row
+    semitonesProbabilityKnob->setBounds(leftColumnX, secondRowY, knobSize, knobSize);
+    semitonesProbabilityLabel->setBounds(leftColumnX, secondRowY + knobSize, knobSize, labelHeight);
+    octavesProbabilityKnob->setBounds(rightColumnX, secondRowY, knobSize, knobSize);
+    octavesProbabilityLabel->setBounds(rightColumnX, secondRowY + knobSize, knobSize, labelHeight);
 }
 
 void PitchSectionComponent::setupScaleTypeControls()
 {
     // Create scale type combo box
     scaleTypeComboBox = std::make_unique<juce::ComboBox>();
-    scaleTypeComboBox->addItem("MAJOR", MidiGeneratorParams::SCALE_MAJOR + 1);
-    scaleTypeComboBox->addItem("MINOR", MidiGeneratorParams::SCALE_MINOR + 1);
-    scaleTypeComboBox->addItem("PENTATONIC", MidiGeneratorParams::SCALE_PENTATONIC + 1);
+    scaleTypeComboBox->addItem("MAJOR", Params::SCALE_MAJOR + 1);
+    scaleTypeComboBox->addItem("MINOR", Params::SCALE_MINOR + 1);
+    scaleTypeComboBox->addItem("PENTATONIC", Params::SCALE_PENTATONIC + 1);
     scaleTypeComboBox->setJustificationType(juce::Justification::centred);
     scaleTypeComboBox->setColour(juce::ComboBox::backgroundColourId, juce::Colour(0xff3a3a3a));
     scaleTypeComboBox->setColour(juce::ComboBox::textColourId, juce::Colours::white);
@@ -113,7 +126,7 @@ void PitchSectionComponent::setupOctaveControls()
     addAndMakeVisible(octavesKnob.get());
 
     // Create octaves label
-    octavesLabel = std::unique_ptr<juce::Label>(createLabel("SHIFT", juce::Justification::centred));
+    octavesLabel = std::unique_ptr<juce::Label>(createLabel("OCTAVE", juce::Justification::centred));
     octavesLabel->setFont(juce::Font(11.0f, juce::Font::bold));
     addAndMakeVisible(octavesLabel.get());
 

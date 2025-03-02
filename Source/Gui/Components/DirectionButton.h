@@ -1,0 +1,162 @@
+//
+// Created by Shaked Melman on 02/03/2025.
+//
+
+#ifndef JUCECMAKEREPO_DIRECTIONBUTTON_H
+#define JUCECMAKEREPO_DIRECTIONBUTTON_H
+
+#pragma once
+
+#include <juce_gui_basics/juce_gui_basics.h>
+#include "../../Audio/Params.h"
+
+class DirectionButton : public juce::Component
+{
+public:
+    DirectionButton()
+    {
+        setSize(20, 20);
+    }
+
+    void paint(juce::Graphics& g) override
+    {
+        // Background
+        auto bounds = getLocalBounds().toFloat().reduced(1.0f);
+
+        // Determine if the mouse is currently over this button
+        bool isOver = isMouseOver();
+        bool isDown = isMouseButtonDown();
+
+        // Color based on state
+        juce::Colour arrowColor;
+        if (isSelected)
+            arrowColor = highlightColor;
+        else if (isDown)
+            arrowColor = juce::Colours::white.withAlpha(0.8f);
+        else if (isOver)
+            arrowColor = juce::Colours::white.withAlpha(0.6f);
+        else
+            arrowColor = juce::Colours::white.withAlpha(0.4f);
+
+        g.setColour(arrowColor);
+
+        // Draw the appropriate direction arrows
+        switch (type)
+        {
+            case Params::DirectionType::LEFT:
+                drawLeftArrow(g, bounds, arrowColor);
+                break;
+
+            case Params::DirectionType::BIDIRECTIONAL:
+                drawBidirectionalArrows(g, bounds, arrowColor);
+                break;
+
+            case Params::DirectionType::RIGHT:
+                drawRightArrow(g, bounds, arrowColor);
+                break;
+        }
+    }
+
+    void mouseDown(const juce::MouseEvent& e) override
+    {
+        setSelected(true);
+        if (onSelectionChanged)
+            onSelectionChanged(type);
+
+        repaint();
+    }
+
+    void mouseEnter(const juce::MouseEvent& e) override
+    {
+        repaint();
+    }
+
+    void mouseExit(const juce::MouseEvent& e) override
+    {
+        repaint();
+    }
+
+    void setType(Params::DirectionType newType)
+    {
+        type = newType;
+        repaint();
+    }
+
+    Params::DirectionType getType() const
+    {
+        return type;
+    }
+
+    void setSelected(bool shouldBeSelected)
+    {
+        isSelected = shouldBeSelected;
+        repaint();
+    }
+
+    bool getSelected() const
+    {
+        return isSelected;
+    }
+
+    void setHighlightColor(juce::Colour color)
+    {
+        highlightColor = color;
+        repaint();
+    }
+
+    std::function<void(Params::DirectionType)> onSelectionChanged;
+
+private:
+    void drawLeftArrow(juce::Graphics& g, juce::Rectangle<float> bounds, juce::Colour color)
+    {
+        float arrowSize = bounds.getHeight() * 0.5f;
+        float centerY = bounds.getCentreY();
+
+        juce::Path arrow;
+        arrow.startNewSubPath(bounds.getRight() - 4, centerY - arrowSize / 2);
+        arrow.lineTo(bounds.getX() + 4, centerY);
+        arrow.lineTo(bounds.getRight() - 4, centerY + arrowSize / 2);
+
+        g.strokePath(arrow, juce::PathStrokeType(2.0f));
+    }
+
+    void drawRightArrow(juce::Graphics& g, juce::Rectangle<float> bounds, juce::Colour color)
+    {
+        float arrowSize = bounds.getHeight() * 0.5f;
+        float centerY = bounds.getCentreY();
+
+        juce::Path arrow;
+        arrow.startNewSubPath(bounds.getX() + 4, centerY - arrowSize / 2);
+        arrow.lineTo(bounds.getRight() - 4, centerY);
+        arrow.lineTo(bounds.getX() + 4, centerY + arrowSize / 2);
+
+        g.strokePath(arrow, juce::PathStrokeType(2.0f));
+    }
+
+    void drawBidirectionalArrows(juce::Graphics& g, juce::Rectangle<float> bounds, juce::Colour color)
+    {
+        float arrowSize = bounds.getHeight() * 0.4f;
+        float centerY = bounds.getCentreY();
+        float centerX = bounds.getCentreX();
+
+        // Left arrow
+        juce::Path leftArrow;
+        leftArrow.startNewSubPath(centerX - 2, centerY - arrowSize / 2);
+        leftArrow.lineTo(bounds.getX() + 4, centerY);
+        leftArrow.lineTo(centerX - 2, centerY + arrowSize / 2);
+
+        // Right arrow
+        juce::Path rightArrow;
+        rightArrow.startNewSubPath(centerX + 2, centerY - arrowSize / 2);
+        rightArrow.lineTo(bounds.getRight() - 4, centerY);
+        rightArrow.lineTo(centerX + 2, centerY + arrowSize / 2);
+
+        g.strokePath(leftArrow, juce::PathStrokeType(2.0f));
+        g.strokePath(rightArrow, juce::PathStrokeType(2.0f));
+    }
+
+    Params::DirectionType type = Params::DirectionType::BIDIRECTIONAL;
+    bool isSelected = false;
+    juce::Colour highlightColor = juce::Colours::lime;
+};
+#endif //JUCECMAKEREPO_DIRECTIONBUTTON_H

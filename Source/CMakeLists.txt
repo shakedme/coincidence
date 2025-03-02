@@ -19,15 +19,15 @@ juce_add_plugin("${BaseTargetName}"
         PRODUCT_NAME "Jammer")
 
 target_sources(${BaseTargetName} PRIVATE
-        Gui/MidiGeneratorLookAndFeel.cpp
-        Gui/MidiGeneratorEditor.cpp
+        Gui/LookAndFeel.cpp
+        Gui/PluginEditor.cpp
         Gui/Sections/BaseSection.cpp
         Gui/Sections/GlitchSection.cpp
         Gui/Sections/GrooveSection.cpp
         Gui/Sections/PitchSection.cpp
         Gui/Sections/SampleSection.cpp
-        Audio/MidiGeneratorParams.cpp
-        Audio/MidiGeneratorProcessor.cpp
+        Audio/Params.cpp
+        Audio/PluginProcessor.cpp
         Audio/SampleManager.cpp
         Audio/Sampler.cpp
         )
@@ -39,8 +39,9 @@ target_compile_definitions(${BaseTargetName}
         JUCE_VST3_CAN_REPLACE_VST2=0)
 
 target_link_libraries(${BaseTargetName} PRIVATE
-        shared_plugin_helpers
         juce_audio_utils
         juce_recommended_config_flags
         juce_recommended_lto_flags
-        juce_recommended_warning_flags)
+        juce_recommended_warning_flags
+        melatonin_inspector
+        )

@@ -10,10 +10,11 @@
 class PitchSectionComponent : public BaseSectionComponent
 {
 public:
-    PitchSectionComponent(MidiGeneratorEditor& editor, MidiGeneratorProcessor& processor);
-    ~PitchSectionComponent() override = default;
+    PitchSectionComponent(PluginEditor& editor, PluginProcessor& processor);
+    ~PitchSectionComponent() override;
 
     void resized() override;
+    void paint(juce::Graphics& g) override;
 
 private:
     // UI Components

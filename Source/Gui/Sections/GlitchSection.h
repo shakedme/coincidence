@@ -10,8 +10,8 @@
 class GlitchSectionComponent : public BaseSectionComponent
 {
 public:
-    GlitchSectionComponent(MidiGeneratorEditor& editor, MidiGeneratorProcessor& processor);
-    ~GlitchSectionComponent() override = default;
+    GlitchSectionComponent(PluginEditor& editor, PluginProcessor& processor);
+    ~GlitchSectionComponent() override;
 
     void resized() override;
 

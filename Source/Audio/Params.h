@@ -3,12 +3,13 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 
 // Forward declaration
-class MidiGeneratorProcessor;
+class PluginProcessor;
 
 /**
  * Common types and constants for the MIDI Generator plugin
  */
-namespace MidiGeneratorParams {
+namespace Params
+{
 
 // Rate options
 enum RateOption {
@@ -41,16 +42,25 @@ struct RateSettings {
     float value = 0.0f;  // 0-100% intensity
 };
 
+enum DirectionType
+{
+    LEFT = 0,
+    BIDIRECTIONAL,
+    RIGHT
+};
+
 // Gate settings
 struct GateSettings {
     float value = 50.0f;       // 0-100%
     float randomize = 0.0f;    // 0-100% (how much to randomize the gate)
+    DirectionType direction = RIGHT; // Direction of randomization
 };
 
 // Velocity settings
 struct VelocitySettings {
     float value = 100.0f;      // 0-100%
     float randomize = 0.0f;    // 0-100% (how much to randomize the velocity)
+    DirectionType direction = RIGHT; // Direction of randomization
 };
 
 // Semitone settings
@@ -70,7 +80,7 @@ struct OctaveSettings {
 // Generator settings
 struct GeneratorSettings {
     // Rhythm settings
-    RateSettings rates[MidiGeneratorParams::NUM_RATE_OPTIONS];
+    RateSettings rates[Params::NUM_RATE_OPTIONS];
     GateSettings gate;
     RhythmMode rhythmMode = RHYTHM_NORMAL;
     VelocitySettings velocity;

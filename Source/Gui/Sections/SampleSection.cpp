@@ -4,8 +4,8 @@
 
 #include "SampleSection.h"
 
-SampleSectionComponent::SampleSectionComponent(MidiGeneratorEditor& editor,
-                                               MidiGeneratorProcessor& processor)
+SampleSectionComponent::SampleSectionComponent(PluginEditor& editor,
+                                               PluginProcessor& processor)
     : BaseSectionComponent(editor, processor, "SAMPLE", juce::Colour(0xffbf52d9))
 {
     // Create sample list table
@@ -13,14 +13,20 @@ SampleSectionComponent::SampleSectionComponent(MidiGeneratorEditor& editor,
     sampleListBox->setHeaderHeight(20); // Reduced from 22
 
     // Make the list box transparent
-    sampleListBox->setColour(juce::ListBox::backgroundColourId, juce::Colours::transparentBlack);
-    sampleListBox->setColour(juce::ListBox::outlineColourId, juce::Colours::transparentBlack);
-    sampleListBox->setColour(juce::TableListBox::backgroundColourId, juce::Colours::transparentBlack);
+    sampleListBox->setColour(juce::ListBox::backgroundColourId,
+                             juce::Colours::transparentBlack);
+    sampleListBox->setColour(juce::ListBox::outlineColourId,
+                             juce::Colours::transparentBlack);
+    sampleListBox->setColour(juce::TableListBox::backgroundColourId,
+                             juce::Colours::transparentBlack);
 
     // Make header background transparent
-    sampleListBox->getHeader().setColour(juce::TableHeaderComponent::backgroundColourId, juce::Colours::transparentBlack);
-    sampleListBox->getHeader().setColour(juce::TableHeaderComponent::outlineColourId, juce::Colour(0xff4a4a4a));
-    sampleListBox->getHeader().setColour(juce::TableHeaderComponent::textColourId, juce::Colours::white);
+    sampleListBox->getHeader().setColour(juce::TableHeaderComponent::backgroundColourId,
+                                         juce::Colours::transparentBlack);
+    sampleListBox->getHeader().setColour(juce::TableHeaderComponent::outlineColourId,
+                                         juce::Colour(0xff4a4a4a));
+    sampleListBox->getHeader().setColour(juce::TableHeaderComponent::textColourId,
+                                         juce::Colours::white);
 
     // Add column with a better name that won't overflow
     sampleListBox->getHeader().addColumn("Samples", 1, 200);
@@ -91,12 +97,17 @@ SampleSectionComponent::SampleSectionComponent(MidiGeneratorEditor& editor,
             processor.parameters, "randomize_probability", *randomizeProbabilitySlider));
 }
 
+SampleSectionComponent::~SampleSectionComponent()
+{
+    clearAttachments();
+}
+
 void SampleSectionComponent::resized()
 {
     auto area = getLocalBounds();
 
     // Set up header
-    sectionLabel->setBounds(area.getX(), 57, area.getWidth(), 25); // Reduced from 30
+//    sectionLabel->setBounds(area.getX(), 57, area.getWidth(), 25); // Reduced from 30
 
     // Sample section layout
     int controlsY = 30; // Reduced from 40
@@ -144,7 +155,8 @@ void SampleSectionComponent::paint(juce::Graphics& g)
         auto dropArea = contentArea.reduced(15, 15);
 
         g.setFont(juce::Font(18.0f, juce::Font::bold));
-        g.setColour(isCurrentlyOver ? getSectionColour() : juce::Colours::white.withAlpha(0.8f));
+        g.setColour(isCurrentlyOver ? getSectionColour()
+                                    : juce::Colours::white.withAlpha(0.8f));
 
         juce::String message = "Please drop a sample";
         if (isCurrentlyOver)
@@ -175,10 +187,13 @@ void SampleSectionComponent::paint(juce::Graphics& g)
             arrow.closeSubPath();
 
             // Use a metallic gradient for the arrow to match the plugin style
-            g.setGradientFill(juce::ColourGradient(
-                getSectionColour().brighter(0.2f), centerX, centerY - arrowHeight,
-                getSectionColour().darker(0.2f), centerX, centerY,
-                false));
+            g.setGradientFill(juce::ColourGradient(getSectionColour().brighter(0.2f),
+                                                   centerX,
+                                                   centerY - arrowHeight,
+                                                   getSectionColour().darker(0.2f),
+                                                   centerX,
+                                                   centerY,
+                                                   false));
             g.fillPath(arrow);
 
             // Add a highlight edge
@@ -212,10 +227,13 @@ void SampleSectionComponent::paint(juce::Graphics& g)
         // Draw a subtle metallic background for the list area
         auto listArea = contentArea.withTrimmedRight(contentArea.getWidth() * 0.4);
 
-        g.setGradientFill(juce::ColourGradient(
-            juce::Colour(0xff3a3a3a), listArea.getX(), listArea.getY(),
-            juce::Colour(0xff2a2a2a), listArea.getX(), listArea.getBottom(),
-            false));
+        g.setGradientFill(juce::ColourGradient(juce::Colour(0xff3a3a3a),
+                                               listArea.getX(),
+                                               listArea.getY(),
+                                               juce::Colour(0xff2a2a2a),
+                                               listArea.getX(),
+                                               listArea.getBottom(),
+                                               false));
         g.fillRoundedRectangle(listArea.reduced(5).toFloat(), 4.0f);
         g.setColour(juce::Colour(0xff4a4a4a));
         g.drawRoundedRectangle(listArea.reduced(5).toFloat(), 4.0f, 1.0f);
@@ -223,10 +241,13 @@ void SampleSectionComponent::paint(juce::Graphics& g)
         // Draw a metallic background for the controls area
         auto controlsArea = contentArea.withTrimmedLeft(contentArea.getWidth() * 0.6 + 5);
 
-        g.setGradientFill(juce::ColourGradient(
-            juce::Colour(0xff3a3a3a), controlsArea.getX(), controlsArea.getY(),
-            juce::Colour(0xff2a2a2a), controlsArea.getX(), controlsArea.getBottom(),
-            false));
+        g.setGradientFill(juce::ColourGradient(juce::Colour(0xff3a3a3a),
+                                               controlsArea.getX(),
+                                               controlsArea.getY(),
+                                               juce::Colour(0xff2a2a2a),
+                                               controlsArea.getX(),
+                                               controlsArea.getBottom(),
+                                               false));
         g.fillRoundedRectangle(controlsArea.reduced(5).toFloat(), 4.0f);
         g.setColour(juce::Colour(0xff4a4a4a));
         g.drawRoundedRectangle(controlsArea.reduced(5).toFloat(), 4.0f, 1.0f);

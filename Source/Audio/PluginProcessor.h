@@ -1,24 +1,24 @@
 #pragma once
 
 #include <juce_audio_utils/juce_audio_utils.h>
-#include "MidiGeneratorParams.h"
+#include "Params.h"
 #include "SampleManager.h"
 
 // Forward declarations
-class MidiGeneratorEditor;
-class MidiGeneratorLookAndFeel;
+class PluginEditor;
+class LookAndFeel;
 
 /**
  * MidiGeneratorProcessor - Main processor class for the MIDI generator plugin
  */
-class MidiGeneratorProcessor
+class PluginProcessor
     : public juce::AudioProcessor
     , private juce::Timer
 {
 public:
     //==============================================================================
-    MidiGeneratorProcessor();
-    ~MidiGeneratorProcessor() override;
+    PluginProcessor();
+    ~PluginProcessor() override;
 
     //==============================================================================
     void prepareToPlay(double sampleRate, int samplesPerBlock) override;
@@ -71,7 +71,7 @@ public:
     float getCurrentRandomizedVelocity() const { return currentRandomizedVelocity; }
     
     // Helper methods for UI
-    juce::String getRhythmModeText(MidiGeneratorParams::RhythmMode mode) const;
+    juce::String getRhythmModeText(Params::RhythmMode mode) const;
 
 private:
     //==============================================================================
@@ -79,7 +79,7 @@ private:
     SampleManager sampleManager;
 
     // Plugin state
-    MidiGeneratorParams::GeneratorSettings settings;
+    Params::GeneratorSettings settings;
 
     // MIDI generation state
     // Monophonic note tracking
@@ -100,7 +100,7 @@ private:
     double bpm = 120.0;
     double ppqPosition = 0.0;
     double lastPpqPosition = 0.0;
-    double lastTriggerTimes[MidiGeneratorParams::NUM_RATE_OPTIONS] = {0.0};
+    double lastTriggerTimes[Params::NUM_RATE_OPTIONS] = {0.0};
 
     // Sample management state
     bool useRandomSample = false;
@@ -115,9 +115,9 @@ private:
     void stopActiveNote(juce::MidiBuffer& midiMessages, int samplePosition);
     
     // Note timing and generation
-    double getNoteDurationInSamples(MidiGeneratorParams::RateOption rate);
-    bool shouldTriggerNote(MidiGeneratorParams::RateOption rate);
-    int calculateNoteLength(MidiGeneratorParams::RateOption rate);
+    double getNoteDurationInSamples(Params::RateOption rate);
+    bool shouldTriggerNote(Params::RateOption rate);
+    int calculateNoteLength(Params::RateOption rate);
     int calculateVelocity();
     
     // Note modification
@@ -127,11 +127,12 @@ private:
     juce::Array<int> getSelectedScale();
     
     // Helper for randomization
-    float applyRandomization(float value, float randomizeValue) const;
+    float applyRandomization(float value, float randomizeValue,
+                             Params::DirectionType direction) const;
 
     struct EligibleRate
     {
-        MidiGeneratorParams::RateOption rate;
+        Params::RateOption rate;
         float weight;
     };
 
@@ -140,11 +141,11 @@ private:
     void processIncomingMidi(const juce::MidiBuffer& midiMessages, juce::MidiBuffer& processedMidi, int numSamples);
     void checkActiveNotes(juce::MidiBuffer& midiMessages, int numSamples);
     std::vector<EligibleRate> collectEligibleRates(float& totalWeight);
-    MidiGeneratorParams::RateOption selectRateFromEligible(const std::vector<EligibleRate>& eligibleRates, float totalWeight);
+    Params::RateOption selectRateFromEligible(const std::vector<EligibleRate>& eligibleRates, float totalWeight);
     void generateNewNotes(juce::MidiBuffer& midiMessages);
-    void playNewNote(MidiGeneratorParams::RateOption selectedRate, juce::MidiBuffer& midiMessages);
+    void playNewNote(Params::RateOption selectedRate, juce::MidiBuffer& midiMessages);
     void processAudio(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& processedMidi, juce::MidiBuffer& midiMessages);
 
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MidiGeneratorProcessor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginProcessor)
 };

@@ -1,8 +1,8 @@
-#include "MidiGeneratorLookAndFeel.h"
-#include "MidiGeneratorEditor.h"
-#include "../Audio/MidiGeneratorProcessor.h"
+#include "LookAndFeel.h"
+#include "PluginEditor.h"
+#include "../Audio/PluginProcessor.h"
 
-MidiGeneratorLookAndFeel::MidiGeneratorLookAndFeel()
+LookAndFeel::LookAndFeel()
 {
     // Set up color scheme
     setColour(juce::ResizableWindow::backgroundColourId, juce::Colour(0xff2a2a2a));
@@ -32,7 +32,7 @@ MidiGeneratorLookAndFeel::MidiGeneratorLookAndFeel()
     setColour(juce::ComboBox::arrowColourId, juce::Colours::white);
 }
 
-void MidiGeneratorLookAndFeel::drawRotarySlider(juce::Graphics& g,
+void LookAndFeel::drawRotarySlider(juce::Graphics& g,
                                                 int x,
                                                 int y,
                                                 int width,
@@ -149,15 +149,15 @@ void MidiGeneratorLookAndFeel::drawRotarySlider(juce::Graphics& g,
     {
         // Simplified approach to find processor
         juce::Component* parent = slider.getParentComponent();
-        MidiGeneratorProcessor* processor = nullptr;
+        PluginProcessor* processor = nullptr;
         
         // Try to find an editor that contains our processor
         while (parent != nullptr)
         {
-            auto* editor = dynamic_cast<MidiGeneratorEditor*>(parent);
+            auto* editor = dynamic_cast<PluginEditor*>(parent);
             if (editor != nullptr)
             {
-                processor = dynamic_cast<MidiGeneratorProcessor*>(editor->getAudioProcessor());
+                processor = dynamic_cast<PluginProcessor*>(editor->getAudioProcessor());
                 break;
             }
             parent = parent->getParentComponent();
@@ -284,7 +284,7 @@ void MidiGeneratorLookAndFeel::drawRotarySlider(juce::Graphics& g,
     g.fillPath(pHighlight);
 }
 
-void MidiGeneratorLookAndFeel::drawScrew(juce::Graphics& g, float x, float y, float size)
+void LookAndFeel::drawScrew(juce::Graphics& g, float x, float y, float size)
 {
     const float halfSize = size * 0.5f;
     const float quarterSize = size * 0.25f;
@@ -309,7 +309,7 @@ void MidiGeneratorLookAndFeel::drawScrew(juce::Graphics& g, float x, float y, fl
     g.drawLine(x, y - quarterSize, x, y + quarterSize, 1.5f);
 }
 
-void MidiGeneratorLookAndFeel::drawComboBox(juce::Graphics& g,
+void LookAndFeel::drawComboBox(juce::Graphics& g,
                                             int width,
                                             int height,
                                             bool,
@@ -359,7 +359,7 @@ void MidiGeneratorLookAndFeel::drawComboBox(juce::Graphics& g,
 }
 
 // Add custom label styling for an engraved look
-void MidiGeneratorLookAndFeel::drawLabel(juce::Graphics& g, juce::Label& label)
+void LookAndFeel::drawLabel(juce::Graphics& g, juce::Label& label)
 {
     g.fillAll(label.findColour(juce::Label::backgroundColourId));
 

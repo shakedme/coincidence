@@ -1,10 +1,10 @@
-#include "MidiGeneratorProcessor.h"
-#include "../Gui/MidiGeneratorEditor.h"
+#include "PluginProcessor.h"
+#include "../Gui/PluginEditor.h"
 
-using namespace MidiGeneratorParams;
+using namespace Params;
 
 //==============================================================================
-MidiGeneratorProcessor::MidiGeneratorProcessor()
+PluginProcessor::PluginProcessor()
     : AudioProcessor(BusesProperties()
                          .withInput("Input", juce::AudioChannelSet::stereo(), true)
                          .withOutput("Output", juce::AudioChannelSet::stereo(), true))
@@ -17,16 +17,16 @@ MidiGeneratorProcessor::MidiGeneratorProcessor()
     startTimerHz(50);
 }
 
-MidiGeneratorProcessor::~MidiGeneratorProcessor()
+PluginProcessor::~PluginProcessor()
 {
     stopTimer();
 }
 
 //==============================================================================
-void MidiGeneratorProcessor::updateSettingsFromParameters()
+void PluginProcessor::updateSettingsFromParameters()
 {
     // Update rate settings
-    for (int i = 0; i < MidiGeneratorParams::NUM_RATE_OPTIONS; ++i)
+    for (int i = 0; i < Params::NUM_RATE_OPTIONS; ++i)
     {
         settings.rates[i].value =
             *parameters.getRawParameterValue("rate_" + juce::String(i) + "_value");
@@ -38,10 +38,14 @@ void MidiGeneratorProcessor::updateSettingsFromParameters()
     // Update gate settings
     settings.gate.value = *parameters.getRawParameterValue("gate");
     settings.gate.randomize = *parameters.getRawParameterValue("gate_randomize");
+    settings.gate.direction = static_cast<DirectionType>(
+        static_cast<int>(*parameters.getRawParameterValue("gate_direction")));
 
     // Update velocity settings
     settings.velocity.value = *parameters.getRawParameterValue("velocity");
     settings.velocity.randomize = *parameters.getRawParameterValue("velocity_randomize");
+    settings.velocity.direction = static_cast<DirectionType>(
+        static_cast<int>(*parameters.getRawParameterValue("velocity_direction")));
 
     // Update scale settings
     settings.scaleType = static_cast<ScaleType>(
@@ -65,17 +69,17 @@ void MidiGeneratorProcessor::updateSettingsFromParameters()
 }
 
 //==============================================================================
-const juce::String MidiGeneratorProcessor::getName() const
+const juce::String PluginProcessor::getName() const
 {
     return JucePlugin_Name;
 }
 
-bool MidiGeneratorProcessor::acceptsMidi() const
+bool PluginProcessor::acceptsMidi() const
 {
     return true;
 }
 
-bool MidiGeneratorProcessor::producesMidi() const
+bool PluginProcessor::producesMidi() const
 {
     // If samples are loaded, we're producing audio, not MIDI
     if (sampleManager.isSampleLoaded())
@@ -85,7 +89,7 @@ bool MidiGeneratorProcessor::producesMidi() const
     return true;
 }
 
-bool MidiGeneratorProcessor::isMidiEffect() const
+bool PluginProcessor::isMidiEffect() const
 {
     // If samples are loaded, we're not just a MIDI effect
     if (sampleManager.isSampleLoaded())
@@ -95,39 +99,39 @@ bool MidiGeneratorProcessor::isMidiEffect() const
     return true;
 }
 
-double MidiGeneratorProcessor::getTailLengthSeconds() const
+double PluginProcessor::getTailLengthSeconds() const
 {
     return 0.0;
 }
 
-int MidiGeneratorProcessor::getNumPrograms()
+int PluginProcessor::getNumPrograms()
 {
     return 1;
 }
 
-int MidiGeneratorProcessor::getCurrentProgram()
+int PluginProcessor::getCurrentProgram()
 {
     return 0;
 }
 
-void MidiGeneratorProcessor::setCurrentProgram(int index)
+void PluginProcessor::setCurrentProgram(int index)
 {
     juce::ignoreUnused(index);
 }
 
-const juce::String MidiGeneratorProcessor::getProgramName(int index)
+const juce::String PluginProcessor::getProgramName(int index)
 {
     juce::ignoreUnused(index);
     return {};
 }
 
-void MidiGeneratorProcessor::changeProgramName(int index, const juce::String& newName)
+void PluginProcessor::changeProgramName(int index, const juce::String& newName)
 {
     juce::ignoreUnused(index, newName);
 }
 
 //==============================================================================
-void MidiGeneratorProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
+void PluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     this->sampleRate = sampleRate;
     sampleManager.prepareToPlay(sampleRate);
@@ -138,7 +142,7 @@ void MidiGeneratorProcessor::prepareToPlay(double sampleRate, int samplesPerBloc
     lastPpqPosition = 0.0;
 
     // Reset trigger times
-    for (int i = 0; i < MidiGeneratorParams::NUM_RATE_OPTIONS; i++)
+    for (int i = 0; i < Params::NUM_RATE_OPTIONS; i++)
     {
         lastTriggerTimes[i] = 0.0;
     }
@@ -150,7 +154,7 @@ void MidiGeneratorProcessor::prepareToPlay(double sampleRate, int samplesPerBloc
     currentActiveNote = -1;
 }
 
-void MidiGeneratorProcessor::releaseResources()
+void PluginProcessor::releaseResources()
 {
     // Clear any active notes
     noteIsActive = false;
@@ -159,7 +163,7 @@ void MidiGeneratorProcessor::releaseResources()
     currentActiveNote = -1;
 }
 
-void MidiGeneratorProcessor::updateTimingInfo()
+void PluginProcessor::updateTimingInfo()
 {
     // Store the previous ppq position
     lastPpqPosition = ppqPosition;
@@ -169,7 +173,8 @@ void MidiGeneratorProcessor::updateTimingInfo()
 
     if (playHead != nullptr)
     {
-        juce::Optional<juce::AudioPlayHead::PositionInfo> posInfo = playHead->getPosition();
+        juce::Optional<juce::AudioPlayHead::PositionInfo> posInfo =
+            playHead->getPosition();
 
         if (posInfo.hasValue())
         {
@@ -183,11 +188,11 @@ void MidiGeneratorProcessor::updateTimingInfo()
 }
 
 // Process incoming MIDI messages
-void MidiGeneratorProcessor::processIncomingMidi(const juce::MidiBuffer& midiMessages,
+void PluginProcessor::processIncomingMidi(const juce::MidiBuffer& midiMessages,
                                                  juce::MidiBuffer& processedMidi,
                                                  int numSamples)
 {
-    for (const auto metadata : midiMessages)
+    for (const auto metadata: midiMessages)
     {
         auto message = metadata.getMessage();
         const int time = metadata.samplePosition;
@@ -225,7 +230,8 @@ void MidiGeneratorProcessor::processIncomingMidi(const juce::MidiBuffer& midiMes
 }
 
 // Check if active notes need to be turned off
-void MidiGeneratorProcessor::checkActiveNotes(juce::MidiBuffer& midiMessages, int numSamples)
+void PluginProcessor::checkActiveNotes(juce::MidiBuffer& midiMessages,
+                                              int numSamples)
 {
     if (noteIsActive && isInputNoteActive)
     {
@@ -246,15 +252,17 @@ void MidiGeneratorProcessor::checkActiveNotes(juce::MidiBuffer& midiMessages, in
 }
 
 // Collect all rates that should trigger at this position
-std::vector<MidiGeneratorProcessor::EligibleRate> MidiGeneratorProcessor::collectEligibleRates(float& totalWeight)
+std::vector<PluginProcessor::EligibleRate>
+    PluginProcessor::collectEligibleRates(float& totalWeight)
 {
     std::vector<EligibleRate> eligibleRates;
     totalWeight = 0.0f;
 
     // Collect all rates that should trigger at this position
-    for (int rateIndex = 0; rateIndex < MidiGeneratorParams::NUM_RATE_OPTIONS; ++rateIndex)
+    for (int rateIndex = 0; rateIndex < Params::NUM_RATE_OPTIONS;
+         ++rateIndex)
     {
-        auto rate = static_cast<MidiGeneratorParams::RateOption>(rateIndex);
+        auto rate = static_cast<Params::RateOption>(rateIndex);
 
         // Only consider rates with non-zero value
         if (settings.rates[rateIndex].value > 0.0f)
@@ -280,7 +288,7 @@ std::vector<MidiGeneratorProcessor::EligibleRate> MidiGeneratorProcessor::collec
 }
 
 // Select a rate from eligible rates based on weighted probability
-MidiGeneratorParams::RateOption MidiGeneratorProcessor::selectRateFromEligible(
+Params::RateOption PluginProcessor::selectRateFromEligible(
     const std::vector<EligibleRate>& eligibleRates, float totalWeight)
 {
     int selectedIndex = -1;
@@ -311,7 +319,7 @@ MidiGeneratorParams::RateOption MidiGeneratorProcessor::selectRateFromEligible(
 }
 
 // Generate new notes based on settings
-void MidiGeneratorProcessor::generateNewNotes(juce::MidiBuffer& midiMessages)
+void PluginProcessor::generateNewNotes(juce::MidiBuffer& midiMessages)
 {
     float totalWeight = 0.0f;
     auto eligibleRates = collectEligibleRates(totalWeight);
@@ -325,7 +333,8 @@ void MidiGeneratorProcessor::generateNewNotes(juce::MidiBuffer& midiMessages)
         if (juce::Random::getSystemRandom().nextFloat() < triggerProbability)
         {
             // Select a rate based on weighted probability
-            MidiGeneratorParams::RateOption selectedRate = selectRateFromEligible(eligibleRates, totalWeight);
+            Params::RateOption selectedRate =
+                selectRateFromEligible(eligibleRates, totalWeight);
 
             // If there's currently a note playing, stop it
             if (noteIsActive)
@@ -340,7 +349,7 @@ void MidiGeneratorProcessor::generateNewNotes(juce::MidiBuffer& midiMessages)
 }
 
 // Generate and play a new note with the selected rate
-void MidiGeneratorProcessor::playNewNote(MidiGeneratorParams::RateOption selectedRate,
+void PluginProcessor::playNewNote(Params::RateOption selectedRate,
                                          juce::MidiBuffer& midiMessages)
 {
     // Calculate note length based on selected rate and gate
@@ -356,7 +365,8 @@ void MidiGeneratorProcessor::playNewNote(MidiGeneratorParams::RateOption selecte
     int sampleIndex = -1;
     if (sampleManager.isSampleLoaded())
     {
-        sampleIndex = sampleManager.getNextSampleIndex(useRandomSample, randomizeProbability);
+        sampleIndex =
+            sampleManager.getNextSampleIndex(useRandomSample, randomizeProbability);
     }
 
     // Add note-on message
@@ -372,15 +382,14 @@ void MidiGeneratorProcessor::playNewNote(MidiGeneratorParams::RateOption selecte
     noteIsActive = true;
 
     // Update keyboard state
-    if (auto* editor = dynamic_cast<MidiGeneratorEditor*>(getActiveEditor()))
+    if (auto* editor = dynamic_cast<PluginEditor*>(getActiveEditor()))
     {
-        editor->updateKeyboardState(
-            true, currentActiveNote, currentActiveVelocity);
+        editor->updateKeyboardState(true, currentActiveNote, currentActiveVelocity);
     }
 }
 
 // Process audio if samples are loaded
-void MidiGeneratorProcessor::processAudio(juce::AudioBuffer<float>& buffer,
+void PluginProcessor::processAudio(juce::AudioBuffer<float>& buffer,
                                           juce::MidiBuffer& processedMidi,
                                           juce::MidiBuffer& midiMessages)
 {
@@ -388,7 +397,8 @@ void MidiGeneratorProcessor::processAudio(juce::AudioBuffer<float>& buffer,
     if (sampleManager.isSampleLoaded())
     {
         // Use JUCE's synthesizer to render the audio
-        sampleManager.getSampler().renderNextBlock(buffer, processedMidi, 0, buffer.getNumSamples());
+        sampleManager.getSampler().renderNextBlock(
+            buffer, processedMidi, 0, buffer.getNumSamples());
 
         // Now the buffer contains the synthesized audio
         // We clear the MIDI buffer since the sampler has processed it
@@ -401,7 +411,8 @@ void MidiGeneratorProcessor::processAudio(juce::AudioBuffer<float>& buffer,
     }
 }
 
-void MidiGeneratorProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
+                                          juce::MidiBuffer& midiMessages)
 {
     // Update plugin settings from parameters
     updateSettingsFromParameters();
@@ -434,23 +445,42 @@ void MidiGeneratorProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce
     samplePosition += buffer.getNumSamples();
 }
 
-float MidiGeneratorProcessor::applyRandomization(float value, float randomizeValue) const
+float PluginProcessor::applyRandomization(
+    float value, float randomizeValue,
+                                          Params::DirectionType direction) const
 {
     float maxValue = juce::jmin(100.0f, value + randomizeValue);
-    return juce::jmap(juce::Random::getSystemRandom().nextFloat(), value, maxValue) / 100;
+    float minValue = juce::jmax(0.0f, value - randomizeValue);
+    float rightValue =
+        juce::jmap(juce::Random::getSystemRandom().nextFloat(), value, maxValue) / 100;
+    float leftValue =
+        juce::jmap(juce::Random::getSystemRandom().nextFloat(), minValue, value) / 100;
+
+    if (direction == Params::DirectionType::RIGHT)
+    {
+        return rightValue;
+    }
+    else if (direction == Params::DirectionType::LEFT)
+    {
+        return leftValue;
+    }
+    else
+    {
+        return juce::Random::getSystemRandom().nextFloat() > 0.5 ? rightValue : leftValue;
+    }
 }
 
-void MidiGeneratorProcessor::stopActiveNote(juce::MidiBuffer& midiMessages,
-                                           int currentSamplePosition)
+void PluginProcessor::stopActiveNote(juce::MidiBuffer& midiMessages,
+                                            int currentSamplePosition)
 {
     if (noteIsActive && currentActiveNote >= 0)
     {
         // Send note off message - channel 1 (fixed)
         midiMessages.addEvent(juce::MidiMessage::noteOff(1, currentActiveNote),
-                             currentSamplePosition);
+                              currentSamplePosition);
 
         // Update keyboard state
-        if (auto* editor = dynamic_cast<MidiGeneratorEditor*>(getActiveEditor()))
+        if (auto* editor = dynamic_cast<PluginEditor*>(getActiveEditor()))
         {
             editor->updateKeyboardState(false, currentActiveNote, 0);
         }
@@ -461,25 +491,25 @@ void MidiGeneratorProcessor::stopActiveNote(juce::MidiBuffer& midiMessages,
 }
 
 //==============================================================================
-bool MidiGeneratorProcessor::hasEditor() const
+bool PluginProcessor::hasEditor() const
 {
     return true;
 }
 
-juce::AudioProcessorEditor* MidiGeneratorProcessor::createEditor()
+juce::AudioProcessorEditor* PluginProcessor::createEditor()
 {
-    return new MidiGeneratorEditor(*this);
+    return new PluginEditor(*this);
 }
 
 //==============================================================================
-void MidiGeneratorProcessor::getStateInformation(juce::MemoryBlock& destData)
+void PluginProcessor::getStateInformation(juce::MemoryBlock& destData)
 {
     auto state = parameters.copyState();
     std::unique_ptr<juce::XmlElement> xml(state.createXml());
     copyXmlToBinary(*xml, destData);
 }
 
-void MidiGeneratorProcessor::setStateInformation(const void* data, int sizeInBytes)
+void PluginProcessor::setStateInformation(const void* data, int sizeInBytes)
 {
     std::unique_ptr<juce::XmlElement> xmlState(getXmlFromBinary(data, sizeInBytes));
 
@@ -489,7 +519,7 @@ void MidiGeneratorProcessor::setStateInformation(const void* data, int sizeInByt
 }
 
 //==============================================================================
-void MidiGeneratorProcessor::timerCallback()
+void PluginProcessor::timerCallback()
 {
     // This timer is no longer needed for note handling as we now process
     // note-offs precisely in the audio thread. This could be used for
@@ -497,7 +527,7 @@ void MidiGeneratorProcessor::timerCallback()
 }
 
 //==============================================================================
-double MidiGeneratorProcessor::getNoteDurationInSamples(RateOption rate)
+double PluginProcessor::getNoteDurationInSamples(RateOption rate)
 {
     // Calculate duration in quarter notes
     double quarterNotesPerSecond = bpm / 60.0;
@@ -549,7 +579,7 @@ double MidiGeneratorProcessor::getNoteDurationInSamples(RateOption rate)
     return juce::jmax(1.0, durationInSamples);
 }
 
-bool MidiGeneratorProcessor::shouldTriggerNote(RateOption rate)
+bool PluginProcessor::shouldTriggerNote(RateOption rate)
 {
     // Calculate the duration in quarter notes
     double durationInQuarters;
@@ -612,7 +642,7 @@ bool MidiGeneratorProcessor::shouldTriggerNote(RateOption rate)
     return false;
 }
 
-int MidiGeneratorProcessor::calculateNoteLength(RateOption rate)
+int PluginProcessor::calculateNoteLength(RateOption rate)
 {
     // Get base duration in samples for this rate
     double baseDuration = getNoteDurationInSamples(rate);
@@ -623,7 +653,8 @@ int MidiGeneratorProcessor::calculateNoteLength(RateOption rate)
     // Only apply randomization if it's actually enabled
     if (settings.gate.randomize > 0.0f)
     {
-        gateValue = applyRandomization(settings.gate.value, settings.gate.randomize);
+        gateValue = applyRandomization(
+            settings.gate.value, settings.gate.randomize, settings.gate.direction);
         currentRandomizedGate = static_cast<float>(gateValue) * 100;
     }
 
@@ -637,7 +668,7 @@ int MidiGeneratorProcessor::calculateNoteLength(RateOption rate)
     return std::max(lengthInSamples, minLengthSamples);
 }
 
-int MidiGeneratorProcessor::calculateVelocity()
+int PluginProcessor::calculateVelocity()
 {
     // Start with base velocity value (0-127)
     double velocityValue = settings.velocity.value / 100.0 * 127.0;
@@ -645,8 +676,9 @@ int MidiGeneratorProcessor::calculateVelocity()
     // Add randomization if needed
     if (settings.velocity.randomize > 0.0f)
     {
-        velocityValue =
-            applyRandomization(settings.velocity.value, settings.velocity.randomize);
+        velocityValue = applyRandomization(settings.velocity.value,
+                                           settings.velocity.randomize,
+                                           settings.velocity.direction);
         currentRandomizedVelocity = static_cast<float>(velocityValue) * 100;
         velocityValue = velocityValue * 127.0f;
         velocityValue = juce::jlimit(1.0, 127.0, velocityValue);
@@ -655,7 +687,7 @@ int MidiGeneratorProcessor::calculateVelocity()
     return static_cast<int>(velocityValue);
 }
 
-int MidiGeneratorProcessor::applyScaleAndModifications(int noteNumber)
+int PluginProcessor::applyScaleAndModifications(int noteNumber)
 {
     // Start with the input note
     int finalNote = noteNumber;
@@ -730,7 +762,7 @@ int MidiGeneratorProcessor::applyScaleAndModifications(int noteNumber)
     return juce::jlimit(0, 127, finalNote);
 }
 
-bool MidiGeneratorProcessor::isNoteInScale(int note, juce::Array<int> scale, int root)
+bool PluginProcessor::isNoteInScale(int note, juce::Array<int> scale, int root)
 {
     // Convert note to scale degree (0-11)
     int scaleDegree = (note % 12);
@@ -739,9 +771,9 @@ bool MidiGeneratorProcessor::isNoteInScale(int note, juce::Array<int> scale, int
     return scale.contains(scaleDegree);
 }
 
-int MidiGeneratorProcessor::findClosestNoteInScale(int note,
-                                                  juce::Array<int> scale,
-                                                  int root)
+int PluginProcessor::findClosestNoteInScale(int note,
+                                                   juce::Array<int> scale,
+                                                   int root)
 {
     // If the note is already in the scale, return it
     if (isNoteInScale(note, scale, root))
@@ -774,7 +806,7 @@ int MidiGeneratorProcessor::findClosestNoteInScale(int note,
     return closestNote;
 }
 
-juce::Array<int> MidiGeneratorProcessor::getSelectedScale()
+juce::Array<int> PluginProcessor::getSelectedScale()
 {
     switch (settings.scaleType)
     {
@@ -788,7 +820,7 @@ juce::Array<int> MidiGeneratorProcessor::getSelectedScale()
     }
 }
 
-juce::String MidiGeneratorProcessor::getRhythmModeText(RhythmMode mode) const
+juce::String PluginProcessor::getRhythmModeText(RhythmMode mode) const
 {
     switch (mode)
     {
@@ -803,32 +835,32 @@ juce::String MidiGeneratorProcessor::getRhythmModeText(RhythmMode mode) const
 }
 
 // Sample Management Forwarding Methods
-void MidiGeneratorProcessor::addSample(const juce::File& file)
+void PluginProcessor::addSample(const juce::File& file)
 {
     sampleManager.addSample(file);
 }
 
-void MidiGeneratorProcessor::removeSample(int index)
+void PluginProcessor::removeSample(int index)
 {
     sampleManager.removeSample(index);
 }
 
-void MidiGeneratorProcessor::clearAllSamples()
+void PluginProcessor::clearAllSamples()
 {
     sampleManager.clearAllSamples();
 }
 
-void MidiGeneratorProcessor::selectSample(int index)
+void PluginProcessor::selectSample(int index)
 {
     sampleManager.selectSample(index);
 }
 
-int MidiGeneratorProcessor::getNumSamples() const
+int PluginProcessor::getNumSamples() const
 {
     return sampleManager.getNumSamples();
 }
 
-juce::String MidiGeneratorProcessor::getSampleName(int index) const
+juce::String PluginProcessor::getSampleName(int index) const
 {
     return sampleManager.getSampleName(index);
 }
@@ -836,5 +868,5 @@ juce::String MidiGeneratorProcessor::getSampleName(int index) const
 // AudioProcessor factory function
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
-    return new MidiGeneratorProcessor();
+    return new PluginProcessor();
 }

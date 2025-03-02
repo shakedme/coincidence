@@ -12,8 +12,8 @@ class SampleSectionComponent : public BaseSectionComponent,
                                public juce::FileDragAndDropTarget
 {
 public:
-    SampleSectionComponent(MidiGeneratorEditor& editor, MidiGeneratorProcessor& processor);
-    ~SampleSectionComponent() override = default;
+    SampleSectionComponent(PluginEditor& editor, PluginProcessor& processor);
+    ~SampleSectionComponent() override;
 
     void resized() override;
     void paint(juce::Graphics& g) override;

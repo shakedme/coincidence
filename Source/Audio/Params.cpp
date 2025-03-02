@@ -1,15 +1,16 @@
-#include "MidiGeneratorParams.h"
+#include "Params.h"
 
-namespace MidiGeneratorParams {
+namespace Params
+{
 
 juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
 {
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
 
     // Rate parameters
-    const char* rateNames[MidiGeneratorParams::NUM_RATE_OPTIONS] = {"1/2", "1/4", "1/8", "1/16", "1/32"};
+    const char* rateNames[Params::NUM_RATE_OPTIONS] = {"1/2", "1/4", "1/8", "1/16", "1/32"};
 
-    for (int i = 0; i < MidiGeneratorParams::NUM_RATE_OPTIONS; ++i)
+    for (int i = 0; i < Params::NUM_RATE_OPTIONS; ++i)
     {
         // Rate value parameter (0-100%)
         layout.add(std::make_unique<juce::AudioParameterInt>(
@@ -69,6 +70,18 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
 
     layout.add(std::make_unique<juce::AudioParameterInt>(
         "randomize_probability", "Randomize Probability", 0.0f, 100.0f, 100.0f));
+
+    layout.add(std::make_unique<juce::AudioParameterChoice>(
+        "gate_direction",
+        "Gate Direction",
+        juce::StringArray("Left", "Bidirectional", "Right"),
+        BIDIRECTIONAL)); // Default to bidirectional (index 1)
+
+    layout.add(std::make_unique<juce::AudioParameterChoice>(
+        "velocity_direction",
+        "Velocity Direction",
+        juce::StringArray("Left", "Bidirectional", "Right"),
+        BIDIRECTIONAL)); // Default to bidirectional (index 1)
 
     return layout;
 }

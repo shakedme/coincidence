@@ -6,18 +6,34 @@
 #define JUCECMAKEREPO_BASESECTION_H
 
 #include "juce_audio_utils/juce_audio_utils.h"
-#include "../../Audio/MidiGeneratorProcessor.h"
+#include "../../Audio/PluginProcessor.h"
+#include "../LookAndFeel.h"
+
+static constexpr int HEADER_HEIGHT = 30;
+static constexpr int TITLE_FONT_SIZE = 20;
+
 
 class BaseSectionComponent : public juce::Component
 {
 public:
-    BaseSectionComponent(MidiGeneratorEditor& editor,
-                         MidiGeneratorProcessor& processor,
+    BaseSectionComponent(PluginEditor& editor,
+                         PluginProcessor& processor,
                          const juce::String& title,
                          juce::Colour colour);
 
-    virtual ~BaseSectionComponent() override = default;
+    virtual ~BaseSectionComponent() override
+    {
+#if DEBUG_DESTRUCTION
+        DBG("BaseSectionComponent [" + sectionTitle + "] destructor START");
+        DBG("    sliderAttachments size: " + juce::String(sliderAttachments.size()));
+#endif
 
+        // Let normal destruction happen
+
+#if DEBUG_DESTRUCTION
+        DBG("BaseSectionComponent [" + sectionTitle + "] destructor END");
+#endif
+    }
     virtual void resized() override = 0;
     virtual void paint(juce::Graphics& g) override;
 
@@ -25,21 +41,29 @@ public:
     juce::Colour getSectionColour() const { return sectionColour; }
 
 protected:
-    MidiGeneratorEditor& editor;
-    MidiGeneratorProcessor& processor;
+    PluginEditor& editor;
+    PluginProcessor& processor;
     juce::String sectionTitle;
     juce::Colour sectionColour;
     std::unique_ptr<juce::Label> sectionLabel;
 
-    // Helper methods
-    juce::Label* createLabel(const juce::String& text, juce::Justification justification = juce::Justification::centred);
-    juce::Slider* createRotarySlider(const juce::String& tooltip);
-
     // Parameter attachments
-    std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>> sliderAttachments;
-    std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment>> buttonAttachments;
-    std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment>> comboBoxAttachments;
-};
+    std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>>
+        sliderAttachments;
+    std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment>>
+        buttonAttachments;
+    std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment>>
+        comboBoxAttachments;
 
+    int firstRowY = 45;
+
+    // Helper methods
+    juce::Label*
+        createLabel(const juce::String& text,
+                    juce::Justification justification = juce::Justification::centred);
+    juce::Slider* createRotarySlider(const juce::String& tooltip);
+    void drawMetallicPanel(juce::Graphics& g);
+    void clearAttachments();
+};
 
 #endif //JUCECMAKEREPO_BASESECTION_H

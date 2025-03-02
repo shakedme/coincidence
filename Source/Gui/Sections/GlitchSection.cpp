@@ -4,8 +4,8 @@
 
 #include "GlitchSection.h"
 
-GlitchSectionComponent::GlitchSectionComponent(MidiGeneratorEditor& editor,
-                                               MidiGeneratorProcessor& processor)
+GlitchSectionComponent::GlitchSectionComponent(PluginEditor& editor,
+                                               PluginProcessor& processor)
     : BaseSectionComponent(editor, processor, "GLITCH", juce::Colour(0xffd9a652))
 {
     // Create dummy knobs for the Glitch section
@@ -32,12 +32,17 @@ GlitchSectionComponent::GlitchSectionComponent(MidiGeneratorEditor& editor,
     }
 }
 
+GlitchSectionComponent::~GlitchSectionComponent()
+{
+    clearAttachments();
+}
+
 void GlitchSectionComponent::resized()
 {
     auto area = getLocalBounds();
 
     // Set up header
-    sectionLabel->setBounds(area.getX(), 35, area.getWidth(), 25); // Reduced from 30
+//    sectionLabel->setBounds(area.getX(), 5, area.getWidth(), 25); // Reduced from 30
 
     // Configure Glitch section - evenly distribute 6 knobs
     const int knobSize = 45; // Reduced from 60
@@ -45,7 +50,7 @@ void GlitchSectionComponent::resized()
     const int numGlitchKnobs = 6;
     const int glitchKnobPadding =
         (area.getWidth() - (numGlitchKnobs * knobSize)) / (numGlitchKnobs + 1);
-    const int glitchKnobY = 75;
+    const int glitchKnobY = firstRowY;
 
     for (int i = 0; i < numGlitchKnobs; ++i)
     {

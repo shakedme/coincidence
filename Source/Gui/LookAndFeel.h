@@ -3,15 +3,15 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 
 // Forward declarations
-class MidiGeneratorProcessor;
+class PluginProcessor;
 
 /**
  * Custom look and feel for the plugin UI
  */
-class MidiGeneratorLookAndFeel : public juce::LookAndFeel_V4
+class LookAndFeel : public juce::LookAndFeel_V4
 {
 public:
-    MidiGeneratorLookAndFeel();
+    LookAndFeel();
 
     void drawRotarySlider(juce::Graphics& g,
                         int x,
@@ -24,7 +24,7 @@ public:
                         juce::Slider& slider) override;
 
     void drawScrew(juce::Graphics& g, float x, float y, float size);
-    
+
     void drawComboBox(juce::Graphics& g,
                     int width,
                     int height,
@@ -34,6 +34,6 @@ public:
                     int,
                     int,
                     juce::ComboBox& box) override;
-                    
+
     void drawLabel(juce::Graphics& g, juce::Label& label) override;
 };
