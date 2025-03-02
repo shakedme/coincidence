@@ -58,6 +58,9 @@ void PitchSectionComponent::resized()
     semitonesProbabilityLabel->setBounds(leftColumnX, secondRowY + knobSize, knobSize, labelHeight);
     octavesProbabilityKnob->setBounds(rightColumnX, secondRowY, knobSize, knobSize);
     octavesProbabilityLabel->setBounds(rightColumnX, secondRowY + knobSize, knobSize, labelHeight);
+
+    arpeggiatorModeToggle->setBounds(leftColumnX - 10, secondRowY + knobSize + labelHeight + 10, 80, 25);
+    semitonesDirectionSelector->setBounds(leftColumnX, secondRowY + knobSize + labelHeight + 40, knobSize + 20, 25);
 }
 
 void PitchSectionComponent::setupScaleTypeControls()
@@ -108,7 +111,33 @@ void PitchSectionComponent::setupSemitoneControls()
     semitonesProbabilityLabel->setFont(juce::Font(11.0f, juce::Font::bold));
     addAndMakeVisible(semitonesProbabilityLabel.get());
 
+    arpeggiatorModeToggle = std::make_unique<juce::ToggleButton>("Arp Mode");
+    arpeggiatorModeToggle->setToggleState(false, juce::dontSendNotification);
+    addAndMakeVisible(arpeggiatorModeToggle.get());
+
+    semitonesDirectionSelector = std::make_unique<DirectionSelector>("DIR", juce::Colour(0xff52d97d));
+
+    // Set initial value from parameter
+    auto* semitonesDirectionParam = dynamic_cast<juce::AudioParameterChoice*>(
+        processor.parameters.getParameter("semitones_direction"));
+
+    if (semitonesDirectionParam)
+        semitonesDirectionSelector->setDirection(static_cast<Params::DirectionType>(semitonesDirectionParam->getIndex()));
+
+    semitonesDirectionSelector->onDirectionChanged = [this](Params::DirectionType direction) {
+        auto* param = processor.parameters.getParameter("semitones_direction");
+        if (param) {
+            param->beginChangeGesture();
+            param->setValueNotifyingHost(param->convertTo0to1(static_cast<int>(direction)));
+            param->endChangeGesture();
+        }
+    };
+    addAndMakeVisible(semitonesDirectionSelector.get());
+
     // Create parameter attachments
+    buttonAttachments.push_back(
+        std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
+            processor.parameters, "arpeggiator_mode", *arpeggiatorModeToggle));
     sliderAttachments.push_back(
         std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
             processor.parameters, "semitones", *semitonesKnob));

@@ -32,7 +32,7 @@ public:
 private:
     PluginProcessor& processor;
     LookAndFeel customLookAndFeel;
-    melatonin::Inspector inspector { *this };
+//    melatonin::Inspector inspector { *this };
 
     // UI Sections
     std::unique_ptr<GrooveSectionComponent> grooveSection;

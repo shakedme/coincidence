@@ -83,6 +83,15 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
         juce::StringArray("Left", "Bidirectional", "Right"),
         BIDIRECTIONAL)); // Default to bidirectional (index 1)
 
+    layout.add(std::make_unique<juce::AudioParameterChoice>(
+        "semitones_direction",
+        "Semitones Direction",
+        juce::StringArray("Left", "Bidirectional", "Right"),
+        BIDIRECTIONAL)); // Default to bidirectional (index 1)
+
+    layout.add(std::make_unique<juce::AudioParameterBool>(
+        "arpeggiator_mode", "Arpeggiator Mode", false));
+
     return layout;
 }
 

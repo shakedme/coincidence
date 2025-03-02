@@ -68,6 +68,8 @@ struct SemitoneSettings {
     int value = 0;             // Number of semitones
     float probability = 0.0f;  // 0-100% chance of modifying note by semitones
     bool bidirectional = false; // Whether to allow negative semitones
+    DirectionType direction = BIDIRECTIONAL; // Direction for arpeggiator
+    bool arpeggiatorMode = false;// Whether to use sequential arpeggiator mode
 };
 
 // Octave settings

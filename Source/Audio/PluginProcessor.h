@@ -110,6 +110,10 @@ private:
     std::atomic<float> currentRandomizedGate{0.0f};
     std::atomic<float> currentRandomizedVelocity{0.0f};
 
+    // Arpeggiator state
+    int currentArpStep = 0;
+    bool arpDirectionUp = true;
+
     // Helper methods for MIDI generation
     void updateSettingsFromParameters();
     void stopActiveNote(juce::MidiBuffer& midiMessages, int samplePosition);

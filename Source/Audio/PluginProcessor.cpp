@@ -51,10 +51,13 @@ void PluginProcessor::updateSettingsFromParameters()
     settings.scaleType = static_cast<ScaleType>(
         static_cast<int>(*parameters.getRawParameterValue("scale_type")));
 
-    // Update semitone settings
     settings.semitones.value =
         static_cast<int>(*parameters.getRawParameterValue("semitones"));
     settings.semitones.probability = *parameters.getRawParameterValue("semitones_prob");
+    settings.semitones.direction = static_cast<DirectionType>(
+        static_cast<int>(*parameters.getRawParameterValue("semitones_direction")));
+    settings.semitones.arpeggiatorMode =
+        *parameters.getRawParameterValue("arpeggiator_mode") > 0.5f;
 
     // Update octave settings
     settings.octaves.value =
@@ -189,8 +192,8 @@ void PluginProcessor::updateTimingInfo()
 
 // Process incoming MIDI messages
 void PluginProcessor::processIncomingMidi(const juce::MidiBuffer& midiMessages,
-                                                 juce::MidiBuffer& processedMidi,
-                                                 int numSamples)
+                                          juce::MidiBuffer& processedMidi,
+                                          int numSamples)
 {
     for (const auto metadata: midiMessages)
     {
@@ -203,12 +206,6 @@ void PluginProcessor::processIncomingMidi(const juce::MidiBuffer& midiMessages,
             currentInputNote = message.getNoteNumber();
             currentInputVelocity = message.getVelocity();
             isInputNoteActive = true;
-
-            // If we have an active note, stop it before triggering a new one
-            if (noteIsActive)
-            {
-                stopActiveNote(processedMidi, time);
-            }
         }
         // Handle note off
         else if (message.isNoteOff() && message.getNoteNumber() == currentInputNote)
@@ -230,8 +227,7 @@ void PluginProcessor::processIncomingMidi(const juce::MidiBuffer& midiMessages,
 }
 
 // Check if active notes need to be turned off
-void PluginProcessor::checkActiveNotes(juce::MidiBuffer& midiMessages,
-                                              int numSamples)
+void PluginProcessor::checkActiveNotes(juce::MidiBuffer& midiMessages, int numSamples)
 {
     if (noteIsActive && isInputNoteActive)
     {
@@ -259,8 +255,7 @@ std::vector<PluginProcessor::EligibleRate>
     totalWeight = 0.0f;
 
     // Collect all rates that should trigger at this position
-    for (int rateIndex = 0; rateIndex < Params::NUM_RATE_OPTIONS;
-         ++rateIndex)
+    for (int rateIndex = 0; rateIndex < Params::NUM_RATE_OPTIONS; ++rateIndex)
     {
         auto rate = static_cast<Params::RateOption>(rateIndex);
 
@@ -329,18 +324,15 @@ void PluginProcessor::generateNewNotes(juce::MidiBuffer& midiMessages)
     {
         // Determine if any note should play
         float triggerProbability = std::min(totalWeight / 100.0f, 1.0f);
+        bool shouldPlayNote =
+            juce::Random::getSystemRandom().nextFloat() < triggerProbability
+            || settings.probability == 100.0f;
 
         if (juce::Random::getSystemRandom().nextFloat() < triggerProbability)
         {
             // Select a rate based on weighted probability
             Params::RateOption selectedRate =
                 selectRateFromEligible(eligibleRates, totalWeight);
-
-            // If there's currently a note playing, stop it
-            if (noteIsActive)
-            {
-                stopActiveNote(midiMessages, 0);
-            }
 
             // Generate and play a new note
             playNewNote(selectedRate, midiMessages);
@@ -350,7 +342,7 @@ void PluginProcessor::generateNewNotes(juce::MidiBuffer& midiMessages)
 
 // Generate and play a new note with the selected rate
 void PluginProcessor::playNewNote(Params::RateOption selectedRate,
-                                         juce::MidiBuffer& midiMessages)
+                                  juce::MidiBuffer& midiMessages)
 {
     // Calculate note length based on selected rate and gate
     int noteLengthSamples = calculateNoteLength(selectedRate);
@@ -390,8 +382,8 @@ void PluginProcessor::playNewNote(Params::RateOption selectedRate,
 
 // Process audio if samples are loaded
 void PluginProcessor::processAudio(juce::AudioBuffer<float>& buffer,
-                                          juce::MidiBuffer& processedMidi,
-                                          juce::MidiBuffer& midiMessages)
+                                   juce::MidiBuffer& processedMidi,
+                                   juce::MidiBuffer& midiMessages)
 {
     // If we have samples loaded, process the MIDI through our sampler
     if (sampleManager.isSampleLoaded())
@@ -412,7 +404,7 @@ void PluginProcessor::processAudio(juce::AudioBuffer<float>& buffer,
 }
 
 void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
-                                          juce::MidiBuffer& midiMessages)
+                                   juce::MidiBuffer& midiMessages)
 {
     // Update plugin settings from parameters
     updateSettingsFromParameters();
@@ -432,8 +424,8 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     // Check if active notes need to be turned off
     checkActiveNotes(processedMidi, buffer.getNumSamples());
 
-    // Generate new notes if input note is active
-    if (isInputNoteActive)
+    // Generate new notes if input note is active and no note is currently playing
+    if (isInputNoteActive && !noteIsActive)
     {
         generateNewNotes(processedMidi);
     }
@@ -445,8 +437,8 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     samplePosition += buffer.getNumSamples();
 }
 
-float PluginProcessor::applyRandomization(
-    float value, float randomizeValue,
+float PluginProcessor::applyRandomization(float value,
+                                          float randomizeValue,
                                           Params::DirectionType direction) const
 {
     float maxValue = juce::jmin(100.0f, value + randomizeValue);
@@ -471,7 +463,7 @@ float PluginProcessor::applyRandomization(
 }
 
 void PluginProcessor::stopActiveNote(juce::MidiBuffer& midiMessages,
-                                            int currentSamplePosition)
+                                     int currentSamplePosition)
 {
     if (noteIsActive && currentActiveNote >= 0)
     {
@@ -658,7 +650,7 @@ int PluginProcessor::calculateNoteLength(RateOption rate)
         currentRandomizedGate = static_cast<float>(gateValue) * 100;
     }
 
-    gateValue = juce::jlimit(0.01, 0.95, gateValue);
+    gateValue = juce::jlimit(0.01, 0.98, gateValue);
 
     // Calculate final note length in samples - use a precise calculation
     int lengthInSamples = static_cast<int>(baseDuration * gateValue);
@@ -706,22 +698,75 @@ int PluginProcessor::applyScaleAndModifications(int noteNumber)
         if (juce::Random::getSystemRandom().nextFloat() * 100.0f
             < settings.semitones.probability)
         {
-            // Calculate the semitone variation (1 to max)
-            int semitoneAmount =
-                1 + juce::Random::getSystemRandom().nextInt(settings.semitones.value);
-
-            // If bidirectional, randomly choose up or down
-            if (settings.semitones.bidirectional
-                && juce::Random::getSystemRandom().nextBool())
+            if (settings.semitones.arpeggiatorMode)
             {
-                semitoneAmount = -semitoneAmount;
+                // Arpeggiator mode - sequential stepping
+                switch (settings.semitones.direction)
+                {
+                    case Params::DirectionType::LEFT:
+                        // Down
+                        currentArpStep--;
+                        if (currentArpStep < 0)
+                            currentArpStep = settings.semitones.value;
+                        break;
+
+                    case Params::DirectionType::BIDIRECTIONAL:
+                        // Bidirectional (up then down)
+                        if (arpDirectionUp)
+                        {
+                            currentArpStep++;
+                            if (currentArpStep >= settings.semitones.value)
+                            {
+                                currentArpStep = settings.semitones.value;
+                                arpDirectionUp = false;
+                            }
+                        }
+                        else
+                        {
+                            currentArpStep--;
+                            if (currentArpStep <= 0)
+                            {
+                                currentArpStep = 0;
+                                arpDirectionUp = true;
+                            }
+                        }
+                        break;
+
+                    case Params::DirectionType::RIGHT:
+                    default:
+                        // Up
+                        currentArpStep++;
+                        if (currentArpStep > settings.semitones.value)
+                            currentArpStep = 0;
+                        break;
+                }
+
+                // Apply step to create the arpeggiator pattern
+                finalNote += currentArpStep;
+
+                // Map to the closest note in scale
+                finalNote = findClosestNoteInScale(finalNote, scale, noteRoot);
             }
+            else
+            {
+                // Original random mode (unchanged)
+                // Calculate the semitone variation (1 to max)
+                int semitoneAmount =
+                    1 + juce::Random::getSystemRandom().nextInt(settings.semitones.value);
 
-            // Apply semitone shift to the note
-            finalNote += semitoneAmount;
+                // If bidirectional, randomly choose up or down
+                if (settings.semitones.bidirectional
+                    && juce::Random::getSystemRandom().nextBool())
+                {
+                    semitoneAmount = -semitoneAmount;
+                }
 
-            // Map to the closest note in scale
-            finalNote = findClosestNoteInScale(finalNote, scale, noteRoot);
+                // Apply semitone shift to the note
+                finalNote += semitoneAmount;
+
+                // Map to the closest note in scale
+                finalNote = findClosestNoteInScale(finalNote, scale, noteRoot);
+            }
         }
         else if (!isNoteInScale(finalNote, scale, noteRoot))
         {
@@ -771,9 +816,7 @@ bool PluginProcessor::isNoteInScale(int note, juce::Array<int> scale, int root)
     return scale.contains(scaleDegree);
 }
 
-int PluginProcessor::findClosestNoteInScale(int note,
-                                                   juce::Array<int> scale,
-                                                   int root)
+int PluginProcessor::findClosestNoteInScale(int note, juce::Array<int> scale, int root)
 {
     // If the note is already in the scale, return it
     if (isNoteInScale(note, scale, root))
