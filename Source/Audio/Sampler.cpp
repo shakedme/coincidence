@@ -1,5 +1,9 @@
 #include "Sampler.h"
 
+//==============================================================================
+// SamplerSound Implementation
+//==============================================================================
+
 SamplerSound::SamplerSound(const juce::String& soundName,
                            juce::AudioFormatReader& source,
                            const juce::BigInteger& midiNotes)
@@ -27,16 +31,19 @@ bool SamplerSound::appliesToChannel(int /*midiChannel*/)
     return true;
 }
 
-// SamplerVoice implementation
+//==============================================================================
+// SamplerVoice Implementation
+//==============================================================================
+
 SamplerVoice::SamplerVoice()
 {
-
 }
 
 bool SamplerVoice::canPlaySound(juce::SynthesiserSound* sound)
 {
     return dynamic_cast<SamplerSound*>(sound) != nullptr;
 }
+
 void SamplerVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
                                    int startSample,
                                    int numSamples)

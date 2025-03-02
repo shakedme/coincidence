@@ -19,10 +19,17 @@ juce_add_plugin("${BaseTargetName}"
         PRODUCT_NAME "Jammer")
 
 target_sources(${BaseTargetName} PRIVATE
-        MidiGeneratorEditor.cpp
-        MidiGeneratorProcessor.cpp
-        MidiGeneratorLookAndFeel.cpp
-        Sampler.cpp
+        Gui/MidiGeneratorLookAndFeel.cpp
+        Gui/MidiGeneratorEditor.cpp
+        Gui/Sections/BaseSection.cpp
+        Gui/Sections/GlitchSection.cpp
+        Gui/Sections/GrooveSection.cpp
+        Gui/Sections/PitchSection.cpp
+        Gui/Sections/SampleSection.cpp
+        Audio/MidiGeneratorParams.cpp
+        Audio/MidiGeneratorProcessor.cpp
+        Audio/SampleManager.cpp
+        Audio/Sampler.cpp
         )
 
 target_compile_definitions(${BaseTargetName}

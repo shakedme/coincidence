@@ -1,4 +1,6 @@
-#include "MidiGeneratorProcessor.h"
+#include "MidiGeneratorLookAndFeel.h"
+#include "MidiGeneratorEditor.h"
+#include "../Audio/MidiGeneratorProcessor.h"
 
 MidiGeneratorLookAndFeel::MidiGeneratorLookAndFeel()
 {
@@ -30,7 +32,6 @@ MidiGeneratorLookAndFeel::MidiGeneratorLookAndFeel()
     setColour(juce::ComboBox::arrowColourId, juce::Colours::white);
 }
 
-// This is the complete drawRotarySlider method with both metallic styling and randomization visualization
 void MidiGeneratorLookAndFeel::drawRotarySlider(juce::Graphics& g,
                                                 int x,
                                                 int y,
@@ -146,105 +147,101 @@ void MidiGeneratorLookAndFeel::drawRotarySlider(juce::Graphics& g,
     // Find the editor by searching up through the component hierarchy
     if ((slider.getName() == "gate" || slider.getName() == "velocity"))
     {
-        // Simplified approach to find the editor
+        // Simplified approach to find processor
         juce::Component* parent = slider.getParentComponent();
-        MidiGeneratorEditor* editor = nullptr;
-
-        // Try to find the editor by traversing up the component tree
+        MidiGeneratorProcessor* processor = nullptr;
+        
+        // Try to find an editor that contains our processor
         while (parent != nullptr)
         {
-            editor = dynamic_cast<MidiGeneratorEditor*>(parent);
+            auto* editor = dynamic_cast<MidiGeneratorEditor*>(parent);
             if (editor != nullptr)
+            {
+                processor = dynamic_cast<MidiGeneratorProcessor*>(editor->getAudioProcessor());
                 break;
-
+            }
             parent = parent->getParentComponent();
         }
 
-        if (editor != nullptr)
+        if (processor != nullptr)
         {
-            // Get the processor to check current randomized values
-            MidiGeneratorProcessor* processor =
-                dynamic_cast<MidiGeneratorProcessor*>(editor->getAudioProcessor());
+            // Get the current randomized values
+            float randomizedValue = 0.0f;
+            if (slider.getName() == "gate")
+                randomizedValue = processor->getCurrentRandomizedGate();
+            else if (slider.getName() == "velocity")
+                randomizedValue = processor->getCurrentRandomizedVelocity();
 
-            if (processor != nullptr)
+            if (randomizedValue > 0.0f)
             {
-                float randomizedValue = 0.0f;
-                if (slider.getName() == "gate")
-                    randomizedValue = processor->getCurrentRandomizedGate();
-                else if (slider.getName() == "velocity")
-                    randomizedValue = processor->getCurrentRandomizedVelocity();
+                // Calculate randomized angle
+                float randomizedPos = randomizedValue / 100.0f;
+                auto randomizedAngle =
+                    rotaryStartAngle
+                    + randomizedPos * (rotaryEndAngle - rotaryStartAngle);
 
-                if (randomizedValue > 0.0f)
-                {
-                    // Calculate randomized angle
-                    float randomizedPos = randomizedValue / 100.0f;
-                    auto randomizedAngle =
-                        rotaryStartAngle
-                        + randomizedPos * (rotaryEndAngle - rotaryStartAngle);
+                // Draw a second indicator with lower alpha for the randomized value
+                // Use a metallic gradient for the randomized arc
+                juce::Colour randomColor = indicatorColor.withAlpha(0.4f);
 
-                    // Draw a second indicator with lower alpha for the randomized value
-                    // Use a metallic gradient for the randomized arc
-                    juce::Colour randomColor = indicatorColor.withAlpha(0.4f);
+                // Draw the randomized value as a faded arc with metallic styling
+                juce::Path randomArcPath;
+                randomArcPath.addArc(centreX - arcRadius * 0.8f,
+                                     centreY - arcRadius * 0.8f,
+                                     arcRadius * 1.6f,
+                                     arcRadius * 1.6f,
+                                     rotaryStartAngle,
+                                     randomizedAngle,
+                                     true);
 
-                    // Draw the randomized value as a faded arc with metallic styling
-                    juce::Path randomArcPath;
-                    randomArcPath.addArc(centreX - arcRadius * 0.8f,
-                                         centreY - arcRadius * 0.8f,
-                                         arcRadius * 1.6f,
-                                         arcRadius * 1.6f,
-                                         rotaryStartAngle,
-                                         randomizedAngle,
-                                         true);
+                g.setColour(randomColor);
+                g.strokePath(randomArcPath, juce::PathStrokeType(lineWidth * 0.6f));
 
-                    g.setColour(randomColor);
-                    g.strokePath(randomArcPath, juce::PathStrokeType(lineWidth * 0.6f));
+                // Add subtle highlight for a 3D effect on the randomized arc
+                g.setColour(randomColor.brighter(0.2f).withAlpha(0.3f));
+                juce::Path randomArcHighlight;
+                randomArcHighlight.addArc(centreX - arcRadius * 0.8f - 1,
+                                          centreY - arcRadius * 0.8f - 1,
+                                          arcRadius * 1.6f + 2,
+                                          arcRadius * 1.6f + 2,
+                                          rotaryStartAngle,
+                                          randomizedAngle,
+                                          true);
+                g.strokePath(randomArcHighlight,
+                             juce::PathStrokeType(lineWidth * 0.3f));
 
-                    // Add subtle highlight for a 3D effect on the randomized arc
-                    g.setColour(randomColor.brighter(0.2f).withAlpha(0.3f));
-                    juce::Path randomArcHighlight;
-                    randomArcHighlight.addArc(centreX - arcRadius * 0.8f - 1,
-                                              centreY - arcRadius * 0.8f - 1,
-                                              arcRadius * 1.6f + 2,
-                                              arcRadius * 1.6f + 2,
-                                              rotaryStartAngle,
-                                              randomizedAngle,
-                                              true);
-                    g.strokePath(randomArcHighlight,
-                                 juce::PathStrokeType(lineWidth * 0.3f));
+                // Draw a small metallic dot at the randomized position
+                auto dotRadius = 3.0f;
+                auto dotCentreX =
+                    centreX
+                    + (radius * 0.8f)
+                          * std::cos(randomizedAngle
+                                     - juce::MathConstants<float>::halfPi);
+                auto dotCentreY =
+                    centreY
+                    + (radius * 0.8f)
+                          * std::sin(randomizedAngle
+                                     - juce::MathConstants<float>::halfPi);
 
-                    // Draw a small metallic dot at the randomized position
-                    auto dotRadius = 3.0f;
-                    auto dotCentreX =
-                        centreX
-                        + (radius * 0.8f)
-                              * std::cos(randomizedAngle
-                                         - juce::MathConstants<float>::halfPi);
-                    auto dotCentreY =
-                        centreY
-                        + (radius * 0.8f)
-                              * std::sin(randomizedAngle
-                                         - juce::MathConstants<float>::halfPi);
+                // Draw the dot with a metallic gradient
+                g.setGradientFill(juce::ColourGradient(randomColor.brighter(0.3f),
+                                                       dotCentreX - dotRadius / 2,
+                                                       dotCentreY - dotRadius / 2,
+                                                       randomColor.darker(0.2f),
+                                                       dotCentreX + dotRadius,
+                                                       dotCentreY + dotRadius,
+                                                       true));
+                g.fillEllipse(dotCentreX - dotRadius,
+                              dotCentreY - dotRadius,
+                              dotRadius * 2.0f,
+                              dotRadius * 2.0f);
 
-                    // Draw the dot with a metallic gradient
-                    g.setGradientFill(juce::ColourGradient(randomColor.brighter(0.3f),
-                                                           dotCentreX - dotRadius / 2,
-                                                           dotCentreY - dotRadius / 2,
-                                                           randomColor.darker(0.2f),
-                                                           dotCentreX + dotRadius,
-                                                           dotCentreY + dotRadius,
-                                                           true));
-                    g.fillEllipse(dotCentreX - dotRadius,
-                                  dotCentreY - dotRadius,
-                                  dotRadius * 2.0f,
-                                  dotRadius * 2.0f);
-
-                    // Add a tiny highlight to the dot
-                    g.setColour(juce::Colour(0x80ffffff));
-                    g.fillEllipse(dotCentreX - dotRadius * 0.4f,
-                                  dotCentreY - dotRadius * 0.4f,
-                                  dotRadius * 0.6f,
-                                  dotRadius * 0.6f);
-                }
+                // Add a tiny highlight to the dot
+                g.setColour(juce::Colour(0x80ffffff));
+                g.fillEllipse(dotCentreX - dotRadius * 0.4f,
+                              dotCentreY - dotRadius * 0.4f,
+                              dotRadius * 0.6f,
+                              dotRadius * 0.6f);
             }
         }
     }

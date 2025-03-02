@@ -1,0 +1,93 @@
+#pragma once
+
+#include <juce_audio_utils/juce_audio_utils.h>
+
+// Forward declaration
+class MidiGeneratorProcessor;
+
+/**
+ * Common types and constants for the MIDI Generator plugin
+ */
+namespace MidiGeneratorParams {
+
+// Rate options
+enum RateOption {
+    RATE_1_2 = 0,  // Half note
+    RATE_1_4,      // Quarter note
+    RATE_1_8,      // Eighth note
+    RATE_1_16,     // Sixteenth note
+    RATE_1_32,     // Thirty-second note
+    NUM_RATE_OPTIONS
+};
+
+// Scale types
+enum ScaleType {
+    SCALE_MAJOR = 0,
+    SCALE_MINOR,
+    SCALE_PENTATONIC,
+    NUM_SCALE_TYPES
+};
+
+// Rhythm modes
+enum RhythmMode {
+    RHYTHM_NORMAL = 0,
+    RHYTHM_DOTTED,
+    RHYTHM_TRIPLET,
+    NUM_RHYTHM_MODES
+};
+
+// Rate settings
+struct RateSettings {
+    float value = 0.0f;  // 0-100% intensity
+};
+
+// Gate settings
+struct GateSettings {
+    float value = 50.0f;       // 0-100%
+    float randomize = 0.0f;    // 0-100% (how much to randomize the gate)
+};
+
+// Velocity settings
+struct VelocitySettings {
+    float value = 100.0f;      // 0-100%
+    float randomize = 0.0f;    // 0-100% (how much to randomize the velocity)
+};
+
+// Semitone settings
+struct SemitoneSettings {
+    int value = 0;             // Number of semitones
+    float probability = 0.0f;  // 0-100% chance of modifying note by semitones
+    bool bidirectional = false; // Whether to allow negative semitones
+};
+
+// Octave settings
+struct OctaveSettings {
+    int value = 0;            // Number of octaves
+    float probability = 0.0f; // 0-100% chance of modifying note by octaves
+    bool bidirectional = false; // Whether to allow negative octaves
+};
+
+// Generator settings
+struct GeneratorSettings {
+    // Rhythm settings
+    RateSettings rates[MidiGeneratorParams::NUM_RATE_OPTIONS];
+    GateSettings gate;
+    RhythmMode rhythmMode = RHYTHM_NORMAL;
+    VelocitySettings velocity;
+    float probability = 100.0f; // 0-100% chance of triggering a note
+
+    // Melody settings
+    ScaleType scaleType = SCALE_MAJOR;
+    SemitoneSettings semitones;
+    OctaveSettings octaves;
+};
+
+// Create the parameter layout for the processor
+juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+
+// Scale patterns (semitone intervals from root)
+static inline const juce::Array<int> majorScale = {0, 2, 4, 5, 7, 9, 11};
+static inline const juce::Array<int> minorScale = {0, 2, 3, 5, 7, 8, 10};
+static inline const juce::Array<int> pentatonicScale = {0, 2, 4, 7, 9};
+
+} // namespace MidiGeneratorParams

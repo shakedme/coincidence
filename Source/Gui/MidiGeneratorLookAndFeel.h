@@ -1,0 +1,39 @@
+#pragma once
+
+#include <juce_audio_utils/juce_audio_utils.h>
+
+// Forward declarations
+class MidiGeneratorProcessor;
+
+/**
+ * Custom look and feel for the plugin UI
+ */
+class MidiGeneratorLookAndFeel : public juce::LookAndFeel_V4
+{
+public:
+    MidiGeneratorLookAndFeel();
+
+    void drawRotarySlider(juce::Graphics& g,
+                        int x,
+                        int y,
+                        int width,
+                        int height,
+                        float sliderPos,
+                        float rotaryStartAngle,
+                        float rotaryEndAngle,
+                        juce::Slider& slider) override;
+
+    void drawScrew(juce::Graphics& g, float x, float y, float size);
+    
+    void drawComboBox(juce::Graphics& g,
+                    int width,
+                    int height,
+                    bool,
+                    int,
+                    int,
+                    int,
+                    int,
+                    juce::ComboBox& box) override;
+                    
+    void drawLabel(juce::Graphics& g, juce::Label& label) override;
+};

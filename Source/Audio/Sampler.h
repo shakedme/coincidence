@@ -1,13 +1,11 @@
-//
-// Created by Shaked Melman on 01/03/2025.
-//
+#pragma once
 
-#ifndef JUCECMAKEREPO_SAMPLERSOUND_H
-#define JUCECMAKEREPO_SAMPLERSOUND_H
-
-#include "juce_audio_utils/juce_audio_utils.h"
+#include <juce_audio_utils/juce_audio_utils.h>
 #include <juce_audio_basics/juce_audio_basics.h>
 
+/**
+ * SamplerSound - Custom implementation of SynthesiserSound for sample playback
+ */
 class SamplerSound : public juce::SynthesiserSound
 {
 public:
@@ -32,6 +30,9 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SamplerSound)
 };
 
+/**
+ * SamplerVoice - Custom implementation of SynthesiserVoice for sample playback
+ */
 class SamplerVoice : public juce::SynthesiserVoice
 {
 public:
@@ -41,7 +42,10 @@ public:
     void renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
                          int startSample,
                          int numSamples) override;
-    void startNote(int midiNoteNumber, float velocity, juce::SynthesiserSound* sound, int currentPitchWheelPosition) override;
+    void startNote(int midiNoteNumber, 
+                  float velocity, 
+                  juce::SynthesiserSound* sound, 
+                  int currentPitchWheelPosition) override;
     void stopNote(float velocity, bool allowTailOff) override;
     void pitchWheelMoved(int newPitchWheelValue) override;
     void controllerMoved(int controllerNumber, int newControllerValue) override;
@@ -54,5 +58,3 @@ private:
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SamplerVoice)
 };
-
-#endif //JUCECMAKEREPO_SAMPLERSOUND_H
