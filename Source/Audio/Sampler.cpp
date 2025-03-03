@@ -37,26 +37,84 @@ bool SamplerSound::appliesToChannel(int /*midiChannel*/)
 
 SamplerVoice::SamplerVoice()
 {
+    // Initialize state
+    reset();
+}
+
+void SamplerVoice::reset()
+{
+    playing = false;
+    currentSampleIndex = -1;
+    sourceSamplePosition = 0.0;
+    pitchRatio = 1.0;
+    lgain = 0.0f;
+    rgain = 0.0f;
 }
 
 bool SamplerVoice::canPlaySound(juce::SynthesiserSound* sound)
 {
-    return dynamic_cast<SamplerSound*>(sound) != nullptr;
+    // First check if it's a SamplerSound
+    auto* samplerSound = dynamic_cast<SamplerSound*>(sound);
+    if (samplerSound == nullptr)
+        return false;
+    
+    // If we have a valid sample index set through controller, use that instead of the voice's sample index
+    // This allows controller-based sample switching to override the assigned sound
+    if (currentGlobalSampleIndex >= 0) {
+        int soundIndex = samplerSound->getIndex();
+        
+        // If it matches the global sample index OR if this voice is not currently playing anything,
+        // allow it to play this sound
+        return soundIndex == currentGlobalSampleIndex || !isVoiceActive();
+    }
+    
+    // If no specific sample index is set, any sampler sound can be played
+    return true;
+}
+
+// New helper method to check if the voice is active
+bool SamplerVoice::isVoiceActive() const
+{
+    return playing && getCurrentlyPlayingSound() != nullptr;
 }
 
 void SamplerVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
                                    int startSample,
                                    int numSamples)
 {
-    if (!playing)
+    if (!playing || !getCurrentlyPlayingSound())
         return;
 
-    auto* sound = static_cast<SamplerSound*>(getCurrentlyPlayingSound().get());
+    // Get the sound that the voice was assigned
+    auto* assignedSound = static_cast<SamplerSound*>(getCurrentlyPlayingSound().get());
 
-    if (sound == nullptr)
+    if (assignedSound == nullptr)
+    {
+        // Safety check: if we have no sound but we're still "playing", clear the note
+        playing = false;
+        clearCurrentNote();
         return;
+    }
 
-    auto& data = *sound->getAudioData();
+    // Try to get the correct sound for the current index if it's different from the assigned sound
+    SamplerSound* soundToUse = assignedSound;
+    
+    // Only try to switch samples if we have a specific index set and it's different from the assigned sound
+    int assignedIndex = assignedSound->getIndex();
+    if (currentSampleIndex >= 0 && assignedIndex != currentSampleIndex)
+    {
+        // Try to find the correct sound by index
+        SamplerSound* correctSound = getCorrectSoundForIndex(currentSampleIndex);
+        
+        if (correctSound != nullptr && correctSound->isActive())
+        {
+            // Use the correct sound's audio data
+            soundToUse = correctSound;
+        }
+    }
+
+    // Get audio data from the sound we decided to use
+    auto& data = *soundToUse->getAudioData();
     const int numChannels = data.getNumChannels();
     const int numSourceSamples = data.getNumSamples();
 
@@ -108,53 +166,77 @@ void SamplerVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
     }
 }
 
+// Initialize static members
+int SamplerVoice::currentGlobalSampleIndex = -1;
+std::map<int, SamplerSound*> SamplerVoice::indexToSoundMap;
+
 void SamplerVoice::startNote(int midiNoteNumber,
                              float velocity,
                              juce::SynthesiserSound* sound,
-                             int /*currentPitchWheelPosition*/)
+                             int currentPitchWheelPosition)
 {
+    // Reset voice state first
+    reset();
+    
+    // Cast to our custom sound class
     if (auto* samplerSound = dynamic_cast<SamplerSound*>(sound))
     {
+        // If we're not actively playing this sound, return
+        if (!samplerSound->isActive())
+            return;
+            
+        // Restore sample index selection logic
+        // First, prioritize any sample index set through the controller
+        if (currentGlobalSampleIndex >= 0) {
+            currentSampleIndex = currentGlobalSampleIndex;
+            
+            // Get the correct sound for this index if it exists
+            if (SamplerSound* correctSound = getCorrectSoundForIndex(currentSampleIndex)) {
+                // If the correct sound exists but isn't the assigned sound, 
+                // still use the assigned sound's parameters but note the index change
+                if (correctSound != samplerSound) {
+                    // We'll continue with the assigned sound but use the requested index
+                    // This keeps voice allocation stable while enabling sample switching
+                }
+            }
+        } else {
+            // Use the sample's own index as a fallback
+            currentSampleIndex = samplerSound->getIndex();
+        }
+
         // Calculate the pitch ratio based on the midi note
         double midiNoteHz = juce::MidiMessage::getMidiNoteInHertz(midiNoteNumber);
         double soundMidiNoteHz = juce::MidiMessage::getMidiNoteInHertz(60); // C4 as reference
         pitchRatio = midiNoteHz / soundMidiNoteHz;
-
+        
         // Account for source sample rate difference
         pitchRatio *= getSampleRate() / samplerSound->getSourceSampleRate();
-
-        // Reset the playback position
+        
+        // Reset source sample position to start of audio data
         sourceSamplePosition = 0.0;
-
+            
         // Set the output gains based on velocity (0.0-1.0)
-        float velocityGain = velocity;
+        // MIDI velocity is 0-127, so if velocity is already in that range, don't divide
+        float velocityGain = (velocity <= 1.0f) ? velocity : (velocity / 127.0f);
         lgain = velocityGain;
         rgain = velocityGain;
-
-        // Mark as playing
+            
+        // Flag that we're now playing
         playing = true;
-    }
-    else
-    {
-        jassertfalse; // This should never happen, but just in case
     }
 }
 
 void SamplerVoice::stopNote(float /*velocity*/, bool allowTailOff)
 {
-    if (allowTailOff)
-    {
-        // If allowing tail off, you might implement a fade out here
-        // For simplicity, we'll just stop immediately
-        clearCurrentNote();
-        playing = false;
-    }
-    else
-    {
-        // Stop immediately
-        clearCurrentNote();
-        playing = false;
-    }
+    // If allowTailOff is true, we should allow the note to fade out naturally
+    // But for now, we're just stopping immediately regardless
+    playing = false;
+    
+    // Clear the current note to release this voice back to the pool
+    clearCurrentNote();
+    
+    // Reset all voice state
+    reset();
 }
 
 void SamplerVoice::pitchWheelMoved(int newPitchWheelValue)
@@ -175,9 +257,63 @@ void SamplerVoice::pitchWheelMoved(int newPitchWheelValue)
     // pitchRatio = basePitchRatio * pitchMultiplier;
 }
 
-void SamplerVoice::controllerMoved(int /*controllerNumber*/, int /*newControllerValue*/)
+void SamplerVoice::controllerMoved(int controllerNumber, int newControllerValue)
 {
-    // Handle MIDI controllers like modulation, expression, etc.
-    // This is a simple implementation that doesn't do anything
-    // You might want to implement this based on your requirements
+    // Check if this is our sample index controller (controller 32)
+    if (controllerNumber == 32) {
+        // Make sure the index exists before setting it
+        if (getCorrectSoundForIndex(newControllerValue) != nullptr) {
+            // Store the sample index for use when playing
+            currentSampleIndex = newControllerValue;
+            
+            // Also update the global sample index
+            currentGlobalSampleIndex = newControllerValue;
+            
+            // Log that we received a controller message for sample selection
+            juce::String message = "Controller 32 received with value: " + juce::String(newControllerValue);
+            juce::Logger::writeToLog(message);
+        } else {
+            // Log that we couldn't find a sound for this index
+            juce::String message = "No sound found for index: " + juce::String(newControllerValue);
+            juce::Logger::writeToLog(message);
+        }
+    }
+    
+    // Other controllers can be handled here if needed
 }
+
+void SamplerVoice::registerSoundWithIndex(SamplerSound* sound, int index)
+{
+    if (sound != nullptr)
+    {
+        // Store the sound in our map
+        indexToSoundMap[index] = sound;
+        
+        // Log the current state of the map
+        juce::String mapContents = "Sound map after registration - Size: " + 
+                                 juce::String(indexToSoundMap.size()) + ", Indices: ";
+        
+        for (const auto& pair : indexToSoundMap)
+        {
+            mapContents += juce::String(pair.first) + " ";
+        }
+    }
+}
+
+SamplerSound* SamplerVoice::getCorrectSoundForIndex(int index)
+{
+    // Look up the sound by index in our map
+    auto it = indexToSoundMap.find(index);
+    if (it != indexToSoundMap.end()) {
+        return it->second;
+    }
+    
+    // If the map is not empty, just use the first available sound as a fallback
+    if (!indexToSoundMap.empty()) {
+        auto firstSound = indexToSoundMap.begin()->second;
+        return firstSound;
+    }
+    
+    return nullptr;
+}
+

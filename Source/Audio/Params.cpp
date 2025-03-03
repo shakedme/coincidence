@@ -65,11 +65,12 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
     layout.add(std::make_unique<juce::AudioParameterInt>(
         "octaves_prob", "Octaves Probability", 0.0f, 100.0f, 0.0f));
 
-    layout.add(std::make_unique<juce::AudioParameterBool>(
-        "randomize_samples", "Randomize Samples", false));
-
-    layout.add(std::make_unique<juce::AudioParameterInt>(
-        "randomize_probability", "Randomize Probability", 0.0f, 100.0f, 100.0f));
+    // Sample direction parameter (replacing randomize_samples and randomize_probability)
+    layout.add(std::make_unique<juce::AudioParameterChoice>(
+        "sample_direction",
+        "Sample Direction",
+        juce::StringArray("Sequential", "Bidirectional", "Random"),
+        RIGHT)); // Default to right/random (index 2)
 
     layout.add(std::make_unique<juce::AudioParameterChoice>(
         "gate_direction",

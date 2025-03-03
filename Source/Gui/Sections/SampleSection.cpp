@@ -34,67 +34,35 @@ SampleSectionComponent::SampleSectionComponent(PluginEditor& editor,
 
     // Sample management buttons
     addSampleButton = std::make_unique<juce::TextButton>("Add");
-    //    addSampleButton->onClick = [this]()
-    //    {
-    //        juce::FileChooser chooser(
-    //            "Select a sample to load...",
-    //            juce::File::getSpecialLocation(juce::File::userHomeDirectory),
-    //            "*.wav;*.aif;*.aiff");
-    //
-    //        chooser.launchAsync(juce::FileBrowserComponent::openMode,
-    //                            [this](const juce::FileChooser& chooser)
-    //                            {
-    //                                if (chooser.getResult().existsAsFile())
-    //                                {
-    //                                    auto file = chooser.getResult();
-    //                                    processor.addSample(file);
-    //                                    sampleListBox->updateContent();
-    //                                }
-    //                            });
-    //    };
     addAndMakeVisible(addSampleButton.get());
 
     removeSampleButton = std::make_unique<juce::TextButton>("Remove");
-    //    removeSampleButton->onClick = [this]()
-    //    {
-    //        int selectedRow = sampleListBox->getSelectedRow();
-    //        if (selectedRow >= 0)
-    //        {
-    //            processor.removeSample(selectedRow);
-    //            sampleListBox->updateContent();
-    //        }
-    //    };
     addAndMakeVisible(removeSampleButton.get());
 
-    // Randomization controls
-    randomizeToggle = std::make_unique<juce::ToggleButton>("Randomize Samples");
-    randomizeToggle->setToggleState(false, juce::dontSendNotification);
-    addAndMakeVisible(randomizeToggle.get());
+    // Sample direction selector (replacing randomization controls)
+    sampleDirectionSelector = std::make_unique<DirectionSelector>("PLAYBACK MODE", juce::Colour(0xffbf52d9));
+    
+    // Set initial value from parameter
+    auto* sampleDirectionParam = dynamic_cast<juce::AudioParameterChoice*>(
+        processor.parameters.getParameter("sample_direction"));
 
-    randomizeProbabilitySlider = std::make_unique<juce::Slider>(
-        juce::Slider::LinearHorizontal, juce::Slider::TextBoxRight);
-    randomizeProbabilitySlider->setRange(0.0, 100.0, 1.0);
-    randomizeProbabilitySlider->setValue(100.0);
-    randomizeProbabilitySlider->setTextValueSuffix("%");
-    addAndMakeVisible(randomizeProbabilitySlider.get());
+    if (sampleDirectionParam)
+        sampleDirectionSelector->setDirection(static_cast<Params::DirectionType>(sampleDirectionParam->getIndex()));
 
-    randomizeProbabilityLabel = std::unique_ptr<juce::Label>(
-        createLabel("Probability", juce::Justification::centredLeft));
-    addAndMakeVisible(randomizeProbabilityLabel.get());
+    sampleDirectionSelector->onDirectionChanged = [this, &processor](Params::DirectionType direction) {
+        auto* param = processor.parameters.getParameter("sample_direction");
+        if (param) {
+            param->beginChangeGesture();
+        }
+        param->setValueNotifyingHost(param->convertTo0to1(static_cast<int>(direction)));
+        param->endChangeGesture();
+    };
+    addAndMakeVisible(sampleDirectionSelector.get());
 
     sampleNameLabel = std::unique_ptr<juce::Label>(
         createLabel("No samples loaded", juce::Justification::centred));
     sampleNameLabel->setFont(juce::Font(11.0f));
     addAndMakeVisible(sampleNameLabel.get());
-
-    // Add parameter attachments for controls
-    buttonAttachments.push_back(
-        std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
-            processor.parameters, "randomize_samples", *randomizeToggle));
-
-    sliderAttachments.push_back(
-        std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-            processor.parameters, "randomize_probability", *randomizeProbabilitySlider));
 }
 
 SampleSectionComponent::~SampleSectionComponent()
@@ -127,15 +95,16 @@ void SampleSectionComponent::resized()
     // Sample name display
     sampleNameLabel->setBounds(area.getX(), buttonY - 30, sampleListWidth, 25);
 
-    // Right side controls
+    // Right side controls - now just the direction selector
     int controlsX = area.getX() + sampleListWidth + 15; // Reduced from 20
     int controlsWidth = area.getWidth() - sampleListWidth - 25; // Reduced margin
 
-    randomizeToggle->setBounds(controlsX, controlsY, controlsWidth, 25);
-
-    randomizeProbabilityLabel->setBounds(controlsX, controlsY + 35, 75, 25); // Moved up
-    randomizeProbabilitySlider->setBounds(
-        controlsX + 80, controlsY + 35, controlsWidth - 90, 25); // Reduced margin
+    // Position the sample direction selector in the center of right panel
+    sampleDirectionSelector->setBounds(
+        controlsX + (controlsWidth - 80) / 2, // Center it horizontally
+        controlsY + 60, // Place it in the middle vertically
+        80, // Width
+        60); // Height with enough room for label
 }
 
 void SampleSectionComponent::paint(juce::Graphics& g)
@@ -149,108 +118,29 @@ void SampleSectionComponent::paint(juce::Graphics& g)
     // Get the content area (excluding the header area)
     auto contentArea = getLocalBounds().withTrimmedTop(40);
 
-    if (noSamplesLoaded || isCurrentlyOver)
+    // If no samples are loaded, show a message and disable controls
+    if (noSamplesLoaded)
     {
-        // Draw the metallic drop area that resembles the styling of other sections
-        auto dropArea = contentArea.reduced(15, 15);
+        g.setColour(juce::Colours::white.withAlpha(0.5f));
+        g.setFont(juce::Font(14.0f));
+        g.drawText("Drag & Drop Samples Here",
+                   contentArea,
+                   juce::Justification::centred);
 
-        g.setFont(juce::Font(18.0f, juce::Font::bold));
-        g.setColour(isCurrentlyOver ? getSectionColour()
-                                    : juce::Colours::white.withAlpha(0.8f));
-
-        juce::String message = "Please drop a sample";
-        if (isCurrentlyOver)
-            message = "Release to add sample";
-
-        g.drawText(message, dropArea, juce::Justification::centred, true);
-
-        // Add format hint text
-        g.setFont(juce::Font(11.0f));
-        g.setColour(juce::Colours::white.withAlpha(0.6f));
-        g.drawText("(.wav, .aif, .mp3, etc.)",
-                   dropArea.withTrimmedTop(40),
-                   juce::Justification::centredTop,
-                   true);
-
-        // Add drop arrow icon when dragging over
-        if (isCurrentlyOver)
+        // Show drop zone
+        if (draggedOver)
         {
-            int arrowWidth = 40;
-            int arrowHeight = 25;
-            int centerX = dropArea.getCentreX();
-            int centerY = dropArea.getCentreY() + 35;
-
-            juce::Path arrow;
-            arrow.startNewSubPath(centerX - arrowWidth / 2, centerY - arrowHeight);
-            arrow.lineTo(centerX + arrowWidth / 2, centerY - arrowHeight);
-            arrow.lineTo(centerX, centerY);
-            arrow.closeSubPath();
-
-            // Use a metallic gradient for the arrow to match the plugin style
-            g.setGradientFill(juce::ColourGradient(getSectionColour().brighter(0.2f),
-                                                   centerX,
-                                                   centerY - arrowHeight,
-                                                   getSectionColour().darker(0.2f),
-                                                   centerX,
-                                                   centerY,
-                                                   false));
-            g.fillPath(arrow);
-
-            // Add a highlight edge
-            g.setColour(juce::Colours::white.withAlpha(0.4f));
-            g.strokePath(arrow, juce::PathStrokeType(1.0f));
+            g.setColour(juce::Colours::white.withAlpha(0.2f));
+            g.drawRect(contentArea.reduced(10), 2);
         }
 
-        // Hide the actual components when no samples are loaded
-        if (noSamplesLoaded)
-        {
-            sampleListBox->setVisible(false);
-            addSampleButton->setVisible(false);
-            removeSampleButton->setVisible(false);
-            randomizeToggle->setVisible(false);
-            randomizeProbabilitySlider->setVisible(false);
-            randomizeProbabilityLabel->setVisible(false);
-            sampleNameLabel->setVisible(false);
-        }
+        // Hide the sample direction selector when no samples are loaded
+        sampleDirectionSelector->setVisible(false);
     }
     else
     {
-        // When samples are loaded, ensure controls are visible
-        sampleListBox->setVisible(true);
-        addSampleButton->setVisible(true);
-        removeSampleButton->setVisible(true);
-        randomizeToggle->setVisible(true);
-        randomizeProbabilitySlider->setVisible(true);
-        randomizeProbabilityLabel->setVisible(true);
-        sampleNameLabel->setVisible(true);
-
-        // Draw a subtle metallic background for the list area
-        auto listArea = contentArea.withTrimmedRight(contentArea.getWidth() * 0.4);
-
-        g.setGradientFill(juce::ColourGradient(juce::Colour(0xff3a3a3a),
-                                               listArea.getX(),
-                                               listArea.getY(),
-                                               juce::Colour(0xff2a2a2a),
-                                               listArea.getX(),
-                                               listArea.getBottom(),
-                                               false));
-        g.fillRoundedRectangle(listArea.reduced(5).toFloat(), 4.0f);
-        g.setColour(juce::Colour(0xff4a4a4a));
-        g.drawRoundedRectangle(listArea.reduced(5).toFloat(), 4.0f, 1.0f);
-
-        // Draw a metallic background for the controls area
-        auto controlsArea = contentArea.withTrimmedLeft(contentArea.getWidth() * 0.6 + 5);
-
-        g.setGradientFill(juce::ColourGradient(juce::Colour(0xff3a3a3a),
-                                               controlsArea.getX(),
-                                               controlsArea.getY(),
-                                               juce::Colour(0xff2a2a2a),
-                                               controlsArea.getX(),
-                                               controlsArea.getBottom(),
-                                               false));
-        g.fillRoundedRectangle(controlsArea.reduced(5).toFloat(), 4.0f);
-        g.setColour(juce::Colour(0xff4a4a4a));
-        g.drawRoundedRectangle(controlsArea.reduced(5).toFloat(), 4.0f, 1.0f);
+        // Show the sample direction selector when samples are loaded
+        sampleDirectionSelector->setVisible(true);
     }
 }
 
@@ -322,7 +212,7 @@ bool SampleSectionComponent::isInterestedInFileDrag(const juce::StringArray& fil
 void SampleSectionComponent::filesDropped(const juce::StringArray& files, int x, int y)
 {
     // First, reset the drag state
-    isCurrentlyOver = false;
+    draggedOver = false;
 
     // Process the dropped files
     bool needsUpdate = false;
@@ -357,15 +247,27 @@ void SampleSectionComponent::filesDropped(const juce::StringArray& files, int x,
 
 void SampleSectionComponent::fileDragEnter(const juce::StringArray& files, int x, int y)
 {
-    if (isInterestedInFileDrag(files))
+    // Check if any of the files are valid audio files
+    bool hasValidFiles = false;
+    for (const auto& file : files)
     {
-        isCurrentlyOver = true;
+        juce::File f(file);
+        if (f.hasFileExtension("wav;aif;aiff;mp3;ogg;flac"))
+        {
+            hasValidFiles = true;
+            break;
+        }
+    }
+
+    if (hasValidFiles)
+    {
+        draggedOver = true;
         repaint();
     }
 }
 
 void SampleSectionComponent::fileDragExit(const juce::StringArray& files)
 {
-    isCurrentlyOver = false;
+    draggedOver = false;
     repaint();
 }

@@ -12,10 +12,11 @@ SampleManager::SampleManager()
     // Initialize format manager
     formatManager.registerBasicFormats();
     
-    // Set up synth voices
-    for (int i = 0; i < 16; ++i)
+    // Set up synth voices - increase from 32 to 64 voices for more polyphony
+    for (int i = 0; i < 64; ++i)
         sampler.addVoice(new SamplerVoice());
 
+    // Enable voice stealing to handle when all voices are in use
     sampler.setNoteStealingEnabled(true);
 }
 
@@ -27,6 +28,9 @@ SampleManager::~SampleManager()
 void SampleManager::prepareToPlay(double sampleRate)
 {
     sampler.setCurrentPlaybackSampleRate(sampleRate);
+    
+    // Reset all voices to ensure they're in a clean state
+    sampler.allNotesOff(0, true);
 }
 
 void SampleManager::addSample(const juce::File& file)
@@ -41,16 +45,24 @@ void SampleManager::addSample(const juce::File& file)
 
         // Create a new sample info and add to our list
         auto sampleIndex = sampleList.size();
+
         auto newSample = std::make_unique<SampleInfo>(
             file.getFileNameWithoutExtension(), file, sampleIndex);
 
         // Create the sampler sound
         auto samplerSound =
             new SamplerSound(file.getFileNameWithoutExtension(), *reader, allNotes);
+        
+        // Set the index on the sampler sound so it can be identified later
+        samplerSound->setIndex(sampleIndex);
+        
         newSample->sound.reset(samplerSound);
 
         // Add the sound to the sampler
         sampler.addSound(samplerSound);
+        
+        // Register this sound with our SamplerVoice to be accessible by index
+        SamplerVoice::registerSoundWithIndex(samplerSound, sampleIndex);
 
         // Add to our sample list
         sampleList.push_back(std::move(newSample));
@@ -81,11 +93,20 @@ void SampleManager::removeSample(int index)
     // Now it's safe to erase the element from the vector
     sampleList.erase(sampleList.begin() + index);
 
-    // Rebuild the sampler and renumber indices
+    // Rebuild the sampler with fresh sound objects and renumber indices
     for (size_t i = 0; i < sampleList.size(); ++i)
     {
         sampleList[i]->index = i;
-        sampler.addSound(sampleList[i]->sound.get());
+        SamplerSound* sound = sampleList[i]->sound.get();
+        
+        // Update the index on the SamplerSound as well
+        if (sound != nullptr) {
+            sound->setIndex(i);
+            sampler.addSound(sound);
+            
+            // Re-register the sound with the updated index
+            SamplerVoice::registerSoundWithIndex(sound, i);
+        }
     }
 
     // Update current selection
@@ -104,6 +125,9 @@ void SampleManager::clearAllSamples()
     sampler.clearSounds();
     sampleList.clear();
     currentSelectedSample = -1;
+    
+    // Clear our sound registration map as well
+    SamplerVoice::clearSoundRegistrations();
 }
 
 void SampleManager::selectSample(int index)
@@ -114,23 +138,94 @@ void SampleManager::selectSample(int index)
     }
 }
 
-int SampleManager::getNextSampleIndex(bool useRandomSample, float randomizeProbability)
+int SampleManager::getNextSampleIndex(Params::DirectionType direction)
 {
     if (sampleList.empty())
         return -1;
 
-    if (!useRandomSample || sampleList.size() == 1)
-        return currentSelectedSample;
+    // If only one sample, always return it
+    if (sampleList.size() == 1)
+        return 0;
 
-    // Check if we should randomize based on probability
-    if (juce::Random::getSystemRandom().nextFloat() * 100.0f < randomizeProbability)
+    int nextIndex = 0;
+    
+    switch (direction)
     {
-        // Choose a random sample from all samples
-        return juce::Random::getSystemRandom().nextInt(sampleList.size());
+        case Params::LEFT: // Sequential backward
+        {
+            if (currentPlayIndex < 0)
+                currentPlayIndex = currentSelectedSample >= 0 ? currentSelectedSample : 0;
+            
+            // Move backward (left)
+            currentPlayIndex--;
+            if (currentPlayIndex < 0)
+                currentPlayIndex = sampleList.size() - 1;
+            
+            nextIndex = currentPlayIndex;
+            break;
+        }
+        
+        case Params::BIDIRECTIONAL: // Ping-pong between samples
+        {
+            if (currentPlayIndex < 0)
+                currentPlayIndex = currentSelectedSample >= 0 ? currentSelectedSample : 0;
+            
+            if (isAscending)
+            {
+                currentPlayIndex++;
+                if (currentPlayIndex >= sampleList.size())
+                {
+                    currentPlayIndex = sampleList.size() - 2;
+                    isAscending = false;
+                    
+                    // Special case for just 2 samples
+                    if (currentPlayIndex < 0)
+                        currentPlayIndex = 0;
+                }
+            }
+            else
+            {
+                currentPlayIndex--;
+                if (currentPlayIndex < 0)
+                {
+                    currentPlayIndex = 1;
+                    isAscending = true;
+                    
+                    // Special case for just 2 samples
+                    if (currentPlayIndex >= sampleList.size())
+                        currentPlayIndex = 0;
+                }
+            }
+            
+            nextIndex = currentPlayIndex;
+            break;
+        }
+        
+        case Params::RIGHT: // Random selection
+        default:
+        {
+            // Choose a random sample from all samples
+            nextIndex = juce::Random::getSystemRandom().nextInt(sampleList.size());
+            currentPlayIndex = nextIndex;
+            break;
+        }
     }
-
-    // Default to current selection
-    return currentSelectedSample;
+    
+    // Add debugging
+    juce::String directionText;
+    switch (direction) {
+        case Params::LEFT: directionText = "LEFT"; break;
+        case Params::RIGHT: directionText = "RIGHT"; break;
+        case Params::BIDIRECTIONAL: directionText = "BIDIRECTIONAL"; break;
+        default: directionText = "UNKNOWN";
+    }
+    
+    juce::String debugMsg = "SampleManager: Selected sample " + juce::String(nextIndex) + 
+                           " from " + juce::String(sampleList.size()) + 
+                           " samples using direction " + directionText;
+    juce::Logger::writeToLog(debugMsg);
+    
+    return nextIndex;
 }
 
 juce::String SampleManager::getSampleName(int index) const

@@ -4,6 +4,7 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <vector>
 #include <memory>
+#include "Params.h"
 
 class SampleManager
 {
@@ -26,7 +27,7 @@ public:
     void removeSample(int index);
     void clearAllSamples();
     void selectSample(int index);
-    int getNextSampleIndex(bool useRandomSample, float randomizeProbability);
+    int getNextSampleIndex(Params::DirectionType direction);
     
     // Getters
     int getNumSamples() const { return sampleList.size(); }
@@ -41,8 +42,17 @@ public:
     void prepareToPlay(double sampleRate);
 
 private:
-    juce::Synthesiser sampler;
-    juce::AudioFormatManager formatManager;
-    std::vector<std::unique_ptr<SampleInfo>> sampleList;
+    // Current sample state
     int currentSelectedSample = -1;
+    int currentPlayIndex = -1; // Tracks the index for sequential/bidirectional playback
+    bool isAscending = true;   // For bidirectional mode
+    
+    // Loaded samples
+    std::vector<std::unique_ptr<SampleInfo>> sampleList;
+    
+    // Playback engine
+    juce::Synthesiser sampler;
+    
+    // Format manager for loading audio files
+    juce::AudioFormatManager formatManager;
 };

@@ -2,6 +2,7 @@
 
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <juce_audio_basics/juce_audio_basics.h>
+#include <map>
 
 /**
  * SamplerSound - Custom implementation of SynthesiserSound for sample playback
@@ -20,12 +21,22 @@ public:
     // Getters for sample data
     juce::AudioBuffer<float>* getAudioData() { return &audioData; }
     double getSourceSampleRate() const { return sourceSampleRate; }
+    
+    // Control sound activation
+    void setAppropriatelyActive(bool isActive) { isAppropriatelyActive = isActive; }
+    bool isActive() const { return isAppropriatelyActive; }
+    
+    // Get the sample index for identification
+    int getIndex() const { return index; }
+    void setIndex(int idx) { index = idx; }
 
 private:
     juce::String name;
     juce::AudioBuffer<float> audioData;
     juce::BigInteger midiNotes;
     double sourceSampleRate;
+    bool isAppropriatelyActive = true; // By default, all sounds are active
+    int index = -1; // Sample index
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SamplerSound)
 };
@@ -50,11 +61,36 @@ public:
     void pitchWheelMoved(int newPitchWheelValue) override;
     void controllerMoved(int controllerNumber, int newControllerValue) override;
 
+    // Reset all voice state
+    void reset();
+    
+    // Helper method to check if voice is active
+    bool isVoiceActive() const;
+
+    // Static method to set the current sample index
+    static void setCurrentSampleIndex(int sampleIndex) { currentGlobalSampleIndex = sampleIndex; }
+    
+    // Static method to get the current sample index
+    static int getCurrentSampleIndex() { return currentGlobalSampleIndex; }
+    
+    // New method to register a sound with a specific index
+    static void registerSoundWithIndex(SamplerSound* sound, int index);
+    
+    // Method to get the appropriate SamplerSound for the current index
+    static SamplerSound* getCorrectSoundForIndex(int index);
+    
+    // Method to clear all sound registrations
+    static void clearSoundRegistrations() { indexToSoundMap.clear(); }
 private:
     double pitchRatio = 1.0;
     double sourceSamplePosition = 0.0;
     float lgain = 0.0f, rgain = 0.0f;
     bool playing = false;
+    int currentSampleIndex = -1;
+    
+    // Static shared sample index and sound map
+    static int currentGlobalSampleIndex;
+    static std::map<int, SamplerSound*> indexToSoundMap;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SamplerVoice)
 };

@@ -30,6 +30,11 @@ target_sources(${BaseTargetName} PRIVATE
         Audio/PluginProcessor.cpp
         Audio/SampleManager.cpp
         Audio/Sampler.cpp
+        Audio/TimingManager.cpp
+        Audio/ScaleManager.cpp
+        Audio/NoteGenerator.cpp
+        Audio/JammerAudioProcessor.cpp
+        Audio/FileLogger.cpp
         )
 
 target_compile_definitions(${BaseTargetName}
