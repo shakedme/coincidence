@@ -74,6 +74,20 @@ public:
     juce::String getRhythmModeText(Params::RhythmMode mode) const;
 
 private:
+    struct PendingNote {
+        int noteNumber;
+        int velocity;
+        juce::int64 startSamplePosition; // Absolute sample position
+        juce::int64 durationInSamples;
+        int sampleIndex = -1; // For sample playback
+    };
+
+    struct EligibleRate
+    {
+        Params::RateOption rate;
+        float weight;
+    };
+
     //==============================================================================
     // Sample management
     SampleManager sampleManager;
@@ -81,18 +95,19 @@ private:
     // Plugin state
     Params::GeneratorSettings settings;
 
+
     // MIDI generation state
     // Monophonic note tracking
     int currentActiveNote = -1;
     int currentActiveVelocity = 0;
-    juce::int64 noteStartTime = 0;
-    juce::int64 noteDuration = 0;
+    juce::int64 noteStartPosition = 0;
+    juce::int64 noteDurationInSamples = 0;
     bool noteIsActive = false;
 
     int currentInputNote = -1;
     int currentInputVelocity = 0;
     bool isInputNoteActive = false;
-    int currentActiveSample = -1;
+    int currentActiveSampleIdx = -1;
 
     // Timing state
     double sampleRate = 44100.0;
@@ -101,6 +116,9 @@ private:
     double ppqPosition = 0.0;
     double lastPpqPosition = 0.0;
     double lastTriggerTimes[Params::NUM_RATE_OPTIONS] = {0.0};
+    std::vector<PendingNote> pendingNotes;
+    bool loopJustDetected = false;
+    double lastContinuousPpqPosition = 0.0;  // For detecting transport loops
 
     // Sample management state
     bool useRandomSample = false;
@@ -134,12 +152,6 @@ private:
     float applyRandomization(float value, float randomizeValue,
                              Params::DirectionType direction) const;
 
-    struct EligibleRate
-    {
-        Params::RateOption rate;
-        float weight;
-    };
-
     // Helper methods for processBlock
     void updateTimingInfo();
     void processIncomingMidi(const juce::MidiBuffer& midiMessages, juce::MidiBuffer& processedMidi, int numSamples);
@@ -149,7 +161,33 @@ private:
     void generateNewNotes(juce::MidiBuffer& midiMessages);
     void playNewNote(Params::RateOption selectedRate, juce::MidiBuffer& midiMessages);
     void processAudio(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& processedMidi, juce::MidiBuffer& midiMessages);
+    void processPendingNotes(juce::MidiBuffer& midiMessages, int numSamples);
 
+    // Add this member variable to PluginProcessor.h private section
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginProcessor)
+};
+
+class FileLogger : public juce::Logger
+{
+public:
+    FileLogger()
+    {
+        logFile = juce::File::getSpecialLocation(juce::File::userDesktopDirectory)
+                      .getChildFile("plugin_debug.log");
+
+        if (!logFile.existsAsFile())
+            logFile.create();
+    }
+
+    void logMessage(const juce::String& message) override
+    {
+        juce::Time currentTime = juce::Time::getCurrentTime();
+        juce::String timestamp = currentTime.toString(true, true);
+
+        logFile.appendText("[" + timestamp + "] " + message + "\n", false, false);
+    }
+
+private:
+    juce::File logFile;
 };

@@ -15,6 +15,9 @@ PluginProcessor::PluginProcessor()
 
     // Start timer for processing active notes
     startTimerHz(50);
+
+    //    auto* fileLogger = new FileLogger();
+    //    juce::Logger::setCurrentLogger(fileLogger);
 }
 
 PluginProcessor::~PluginProcessor()
@@ -155,6 +158,9 @@ void PluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     isInputNoteActive = false;
     currentInputNote = -1;
     currentActiveNote = -1;
+
+    // Clear any pending notes
+    pendingNotes.clear();
 }
 
 void PluginProcessor::releaseResources()
@@ -170,6 +176,7 @@ void PluginProcessor::updateTimingInfo()
 {
     // Store the previous ppq position
     lastPpqPosition = ppqPosition;
+    lastContinuousPpqPosition = ppqPosition; // Save before updates
 
     // Get current playhead information
     auto playHead = getPlayHead();
@@ -185,7 +192,26 @@ void PluginProcessor::updateTimingInfo()
                 bpm = *posInfo->getBpm();
 
             if (posInfo->getPpqPosition().hasValue())
+            {
                 ppqPosition = *posInfo->getPpqPosition();
+
+                // Detect a loop - PPQ position has jumped backward significantly
+                // Small jumps backward (less than a quarter note) could be jitter, ignore those
+                if (ppqPosition < lastContinuousPpqPosition - 0.25)
+                {
+                    loopJustDetected = true;
+
+                    // Reset timing state for all rates
+                    for (int i = 0; i < Params::NUM_RATE_OPTIONS; i++)
+                    {
+                        lastTriggerTimes[i] = 0.0;
+                    }
+                }
+                else
+                {
+                    loopJustDetected = false;
+                }
+            }
         }
     }
 }
@@ -232,7 +258,8 @@ void PluginProcessor::checkActiveNotes(juce::MidiBuffer& midiMessages, int numSa
     if (noteIsActive && isInputNoteActive)
     {
         // Calculate when the note should end (in samples relative to the start of this buffer)
-        juce::int64 noteEndPosition = (noteStartTime + noteDuration) - samplePosition;
+        juce::int64 noteEndPosition =
+            (noteStartPosition + noteDurationInSamples) - samplePosition;
 
         // If the note should end during this buffer
         if (noteEndPosition >= 0 && noteEndPosition < numSamples)
@@ -242,7 +269,7 @@ void PluginProcessor::checkActiveNotes(juce::MidiBuffer& midiMessages, int numSa
                                   static_cast<int>(noteEndPosition));
             noteIsActive = false;
             currentActiveNote = -1;
-            currentActiveSample = -1;
+            currentActiveSampleIdx = -1;
         }
     }
 }
@@ -319,7 +346,7 @@ void PluginProcessor::generateNewNotes(juce::MidiBuffer& midiMessages)
     float totalWeight = 0.0f;
     auto eligibleRates = collectEligibleRates(totalWeight);
 
-    // Only proceed if we have eligible rates
+    // Only proceed if  we have eligible rates
     if (totalWeight > 0.0f && !eligibleRates.empty())
     {
         // Determine if any note should play
@@ -328,7 +355,7 @@ void PluginProcessor::generateNewNotes(juce::MidiBuffer& midiMessages)
             juce::Random::getSystemRandom().nextFloat() < triggerProbability
             || settings.probability == 100.0f;
 
-        if (juce::Random::getSystemRandom().nextFloat() < triggerProbability)
+        if (shouldPlayNote)
         {
             // Select a rate based on weighted probability
             Params::RateOption selectedRate =
@@ -340,20 +367,107 @@ void PluginProcessor::generateNewNotes(juce::MidiBuffer& midiMessages)
     }
 }
 
-// Generate and play a new note with the selected rate
 void PluginProcessor::playNewNote(Params::RateOption selectedRate,
                                   juce::MidiBuffer& midiMessages)
 {
-    // Calculate note length based on selected rate and gate
+    // Calculate the duration in quarter notes for this rate
+    double durationInQuarters;
+    switch (selectedRate)
+    {
+        case RATE_1_2:
+            durationInQuarters = 2.0;
+            break;
+        case RATE_1_4:
+            durationInQuarters = 1.0;
+            break;
+        case RATE_1_8:
+            durationInQuarters = 0.5;
+            break;
+        case RATE_1_16:
+            durationInQuarters = 0.25;
+            break;
+        case RATE_1_32:
+            durationInQuarters = 0.125;
+            break;
+        default:
+            durationInQuarters = 1.0;
+            break;
+    }
+
+    // Apply rhythm mode modifications
+    switch (settings.rhythmMode)
+    {
+        case RHYTHM_DOTTED:
+            durationInQuarters *= 1.5;
+            break;
+        case RHYTHM_TRIPLET:
+            durationInQuarters *= 2.0 / 3.0;
+            break;
+        default:
+            break;
+    }
+
+    // Calculate next expected grid position
+    double nextExpectedGridPoint;
+
+    // Special case for loop points or first trigger
+    if (loopJustDetected || lastTriggerTimes[selectedRate] <= 0.0)
+    {
+        // At loop points, align with the closest grid
+        double gridStartPpq =
+            std::floor(ppqPosition / durationInQuarters) * durationInQuarters;
+
+        // If we're very close to a grid point, use that
+        double ppqSinceGrid = ppqPosition - gridStartPpq;
+        double triggerWindowInPPQ = 0.05 * std::max(1.0, bpm / 120.0);
+
+        if (ppqSinceGrid < triggerWindowInPPQ)
+        {
+            nextExpectedGridPoint = gridStartPpq;
+        }
+        else
+        {
+            // Otherwise use the next grid point
+            nextExpectedGridPoint = gridStartPpq + durationInQuarters;
+        }
+    }
+    else
+    {
+        // Normal case - calculate next grid from last trigger
+        nextExpectedGridPoint = lastTriggerTimes[selectedRate] + durationInQuarters;
+
+        // Safety check - if next grid is too far in future, reset
+        if (nextExpectedGridPoint > ppqPosition + 4.0)
+        {
+            double gridStartPpq =
+                std::floor(ppqPosition / durationInQuarters) * durationInQuarters;
+            nextExpectedGridPoint = gridStartPpq + durationInQuarters;
+        }
+    }
+
+    // Calculate precise sample position for this grid point
+    double samplesPerQuarterNote = (60.0 / bpm) * sampleRate;
+    double ppqOffsetFromCurrent = nextExpectedGridPoint - ppqPosition;
+
+    // Convert to sample offset - this ensures grid alignment
+    int sampleOffset = static_cast<int>(ppqOffsetFromCurrent * samplesPerQuarterNote);
+
+    // If we somehow missed the grid point, play ASAP
+    if (sampleOffset < 0)
+    {
+        sampleOffset = 0;
+    }
+
+    juce::int64 absoluteNotePosition = samplePosition + sampleOffset;
+
+    // Calculate note properties
     int noteLengthSamples = calculateNoteLength(selectedRate);
-
-    // Apply scale and modifications
+    const int minimumNoteDuration = static_cast<int>(sampleRate * 0.01);
+    noteLengthSamples = std::max(noteLengthSamples, minimumNoteDuration);
     int noteToPlay = applyScaleAndModifications(currentInputNote);
-
-    // Calculate velocity
     int velocity = calculateVelocity();
 
-    // Determine which sample to use (if we have samples loaded)
+    // Determine which sample to use
     int sampleIndex = -1;
     if (sampleManager.isSampleLoaded())
     {
@@ -361,22 +475,99 @@ void PluginProcessor::playNewNote(Params::RateOption selectedRate,
             sampleManager.getNextSampleIndex(useRandomSample, randomizeProbability);
     }
 
-    // Add note-on message
-    midiMessages.addEvent(
-        juce::MidiMessage::noteOn(1, noteToPlay, (juce::uint8) velocity), 0);
+    int bufferSize = getBlockSize();
 
-    // Store the active note data
-    currentActiveNote = noteToPlay;
-    currentActiveVelocity = velocity;
-    currentActiveSample = sampleIndex;
-    noteStartTime = samplePosition;
-    noteDuration = noteLengthSamples;
-    noteIsActive = true;
-
-    // Update keyboard state
-    if (auto* editor = dynamic_cast<PluginEditor*>(getActiveEditor()))
+    if (sampleOffset < bufferSize)
     {
-        editor->updateKeyboardState(true, currentActiveNote, currentActiveVelocity);
+        // Immediate playback - note falls within current buffer
+        midiMessages.addEvent(
+            juce::MidiMessage::noteOn(1, noteToPlay, (juce::uint8) velocity),
+            sampleOffset);
+
+        // Store the active note data
+        currentActiveNote = noteToPlay;
+        currentActiveVelocity = velocity;
+        currentActiveSampleIdx = sampleIndex;
+        noteStartPosition = absoluteNotePosition;
+        noteDurationInSamples = noteLengthSamples;
+        noteIsActive = true;
+
+        // Update keyboard state
+        if (auto* editor = dynamic_cast<PluginEditor*>(getActiveEditor()))
+        {
+            editor->updateKeyboardState(true, currentActiveNote, currentActiveVelocity);
+        }
+    }
+    else
+    {
+        // Schedule for future buffer
+        PendingNote pendingNote;
+        pendingNote.noteNumber = noteToPlay;
+        pendingNote.velocity = velocity;
+        pendingNote.startSamplePosition = absoluteNotePosition;
+        pendingNote.durationInSamples = noteLengthSamples;
+        pendingNote.sampleIndex = sampleIndex;
+
+        // Add to pending notes queue
+        pendingNotes.push_back(pendingNote);
+    }
+
+    // Update lastTriggerTimes to exactly the grid point we just played
+    // This ensures the next note will be spaced exactly one grid interval away
+    lastTriggerTimes[selectedRate] = nextExpectedGridPoint;
+
+    // If we were in a loop, we're now past that state
+    loopJustDetected = false;
+}
+
+void PluginProcessor::processPendingNotes(juce::MidiBuffer& midiMessages, int numSamples)
+{
+    if (pendingNotes.empty())
+        return;
+
+    // Process the pending notes that fall within the current buffer
+    auto it = pendingNotes.begin();
+    while (it != pendingNotes.end())
+    {
+        // Calculate local buffer position
+        juce::int64 localPosition = it->startSamplePosition - samplePosition;
+
+        // If the note start position is in this buffer
+        if (localPosition >= 0 && localPosition < numSamples)
+        {
+            // Add the note at the calculated position
+            midiMessages.addEvent(
+                juce::MidiMessage::noteOn(1, it->noteNumber, (juce::uint8) it->velocity),
+                static_cast<int>(localPosition));
+
+            // Update the active note info
+            currentActiveNote = it->noteNumber;
+            currentActiveVelocity = it->velocity;
+            currentActiveSampleIdx = it->sampleIndex;
+            noteStartPosition = it->startSamplePosition;
+            noteDurationInSamples = it->durationInSamples;
+            noteIsActive = true;
+
+            // Update keyboard state
+            if (auto* editor = dynamic_cast<PluginEditor*>(getActiveEditor()))
+            {
+                editor->updateKeyboardState(
+                    true, currentActiveNote, currentActiveVelocity);
+            }
+
+            // Remove the played note from pending list
+            it = pendingNotes.erase(it);
+        }
+        // If the note start position is before this buffer, it's too late to play it
+        else if (localPosition < 0)
+        {
+            it = pendingNotes.erase(it);
+        }
+        else
+        {
+            // Note is still in the future
+            ++it;
+        }
     }
 }
 
@@ -423,6 +614,9 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
     // Check if active notes need to be turned off
     checkActiveNotes(processedMidi, buffer.getNumSamples());
+
+    // Process any pending notes scheduled from previous buffers
+    processPendingNotes(processedMidi, buffer.getNumSamples());
 
     // Generate new notes if input note is active and no note is currently playing
     if (isInputNoteActive && !noteIsActive)
@@ -575,12 +769,11 @@ bool PluginProcessor::shouldTriggerNote(RateOption rate)
 {
     // Calculate the duration in quarter notes
     double durationInQuarters;
-
     switch (rate)
     {
         case RATE_1_2:
             durationInQuarters = 2.0;
-            break; // Half note
+            break;
         case RATE_1_4:
             durationInQuarters = 1.0;
             break;
@@ -602,36 +795,99 @@ bool PluginProcessor::shouldTriggerNote(RateOption rate)
     switch (settings.rhythmMode)
     {
         case RHYTHM_DOTTED:
-            durationInQuarters *= 1.5; // Dotted note = 1.5x the normal duration
+            durationInQuarters *= 1.5;
             break;
         case RHYTHM_TRIPLET:
-            durationInQuarters *= 2.0 / 3.0; // Triplet = 2/3 the normal duration
+            durationInQuarters *= 2.0 / 3.0;
             break;
-        case RHYTHM_NORMAL:
         default:
-            // No modification for normal rhythm
             break;
     }
 
-    // If PPQ position went backwards (loop point or rewind), reset the last trigger time
-    if (ppqPosition < lastPpqPosition)
+    // If we just detected a loop, check if we need to trigger based on current position
+    if (loopJustDetected || lastTriggerTimes[rate] <= 0.0)
     {
-        lastTriggerTimes[rate] = 0.0;
+        // Find the closest grid point at or before current position
+        double gridStartPpq =
+            std::floor(ppqPosition / durationInQuarters) * durationInQuarters;
+
+        // Calculate a reasonable window for triggering (adaptive to tempo)
+        double triggerWindowInPPQ = 0.05 * std::max(1.0, bpm / 120.0);
+
+        // If we're close to a grid point at the start of the loop, we should trigger
+        double ppqSinceGrid = ppqPosition - gridStartPpq;
+
+        // Trigger if we're very close to a grid point
+        if (ppqSinceGrid < triggerWindowInPPQ)
+        {
+            return true;
+        }
+
+        // Trigger if the next grid point falls within this buffer
+        double nextGridPpq = gridStartPpq + durationInQuarters;
+        double ppqSpanOfCurrentBuffer = (getBlockSize() / sampleRate) * (bpm / 60.0);
+        double ppqUntilNextGrid = nextGridPpq - ppqPosition;
+
+        if (ppqUntilNextGrid >= 0 && ppqUntilNextGrid <= ppqSpanOfCurrentBuffer)
+        {
+            return true;
+        }
+
+        return false;
     }
 
-    // Calculate how many divisions have passed since the last trigger
-    double divisionsSinceLastTrigger =
-        (ppqPosition - lastTriggerTimes[rate]) / durationInQuarters;
+    // Normal case - not at a loop point
+    // Find the next grid point that should trigger a note
+    double nextExpectedGridPoint;
 
-    // If at least one full division has passed, we should trigger again
-    if (divisionsSinceLastTrigger >= 1.0)
+    // If we have a last trigger time, base next grid on that for consistency
+    if (lastTriggerTimes[rate] > 0.0)
     {
-        // Update last trigger time to the closest previous division
-        lastTriggerTimes[rate] = ppqPosition - std::fmod(ppqPosition, durationInQuarters);
-        return true;
+        // Calculate the next grid from the last played grid
+        nextExpectedGridPoint = lastTriggerTimes[rate] + durationInQuarters;
+
+        // If the next grid is way in the future (more than 4 beats ahead),
+        // we might have missed some cycles due to state issues - reset
+        if (nextExpectedGridPoint > ppqPosition + 4.0)
+        {
+            double gridStartPpq =
+                std::floor(ppqPosition / durationInQuarters) * durationInQuarters;
+            nextExpectedGridPoint = gridStartPpq + durationInQuarters;
+        }
+    }
+    else
+    {
+        // No previous trigger - find closest grid point
+        double gridStartPpq =
+            std::floor(ppqPosition / durationInQuarters) * durationInQuarters;
+        nextExpectedGridPoint = gridStartPpq + durationInQuarters;
     }
 
-    return false;
+    // Calculate a narrow window for triggering
+    // Adaptive window size based on BPM for better performance at higher tempos
+    double triggerWindowInPPQ = 0.01 * std::max(1.0, bpm / 120.0);
+
+    // Check if we're within the window to trigger
+    double ppqUntilNextGrid = nextExpectedGridPoint - ppqPosition;
+
+    // Detect if we need to trigger now
+    bool shouldTrigger = false;
+
+    // Check if grid point is within this buffer's time span
+    double ppqSpanOfCurrentBuffer = (getBlockSize() / sampleRate) * (bpm / 60.0);
+
+    // Grid point is coming up in this buffer
+    if (ppqUntilNextGrid >= 0 && ppqUntilNextGrid <= ppqSpanOfCurrentBuffer)
+    {
+        shouldTrigger = true;
+    }
+    // We already passed the next grid point (timing issue)
+    else if (ppqUntilNextGrid < 0 && ppqUntilNextGrid > -triggerWindowInPPQ)
+    {
+        shouldTrigger = true;
+    }
+
+    return shouldTrigger;
 }
 
 int PluginProcessor::calculateNoteLength(RateOption rate)
