@@ -22,13 +22,14 @@ public:
         // Start listening for changes to the thumbnail
         thumbnail->addChangeListener(this);
 
-        // Add back button
-        backButton = std::make_unique<juce::TextButton>("Back to List");
-        backButton->onClick = [this]() {
-            if (onBackButtonClicked)
-                onBackButtonClicked();
-        };
-        addAndMakeVisible(backButton.get());
+        // Create back arrow path
+        backArrowPath.startNewSubPath(10.0f, 10.0f);
+        backArrowPath.lineTo(5.0f, 15.0f);
+        backArrowPath.lineTo(10.0f, 20.0f);
+        backArrowPath.closeSubPath();
+
+        // Define clickable area for back arrow
+        backArrowBounds = juce::Rectangle<int>(0, 0, 30, 20);
     }
 
     ~SampleDetailComponent() override
@@ -82,13 +83,16 @@ public:
         // Fill background
         g.fillAll(juce::Colour(0xff2a2a2a));
 
+        // Draw back arrow
+        g.setColour(juce::Colours::white);
+        g.strokePath(backArrowPath, juce::PathStrokeType(2.0f));
+
         // Draw sample name
         g.setColour(juce::Colours::white);
         g.setFont(juce::Font(juce::FontOptions(16.0f)));
         g.drawText(sampleName, getLocalBounds().removeFromTop(30), juce::Justification::centred, true);
 
         auto bounds = getLocalBounds().reduced(10).withTrimmedTop(30);
-        bounds.removeFromBottom(40); // Space for buttons
 
         // Draw waveform background
         g.setColour(juce::Colour(0xff3a3a3a));
@@ -131,6 +135,14 @@ public:
     
     void mouseDown(const juce::MouseEvent& e) override
     {
+        // Check if back arrow was clicked
+        if (backArrowBounds.contains(e.getPosition()))
+        {
+            if (onBackButtonClicked)
+                onBackButtonClicked();
+            return;
+        }
+
         // Check if we're near a marker
         auto bounds = getLocalBounds().reduced(10).withTrimmedTop(30);
         bounds.removeFromBottom(40); // Space for buttons
@@ -228,11 +240,6 @@ public:
     
     void resized() override
     {
-        auto bounds = getLocalBounds();
-        
-        auto buttonArea = bounds.removeFromBottom(40);
-        backButton->setBounds(buttonArea.withSizeKeepingCentre(150, 30));
-
         repaint();
     }
     
@@ -269,7 +276,8 @@ private:
     bool draggingStartMarker = false;
     bool draggingEndMarker = false;
     
-    std::unique_ptr<juce::TextButton> backButton;
+    juce::Path backArrowPath;
+    juce::Rectangle<int> backArrowBounds;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SampleDetailComponent)
 };

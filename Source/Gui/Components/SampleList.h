@@ -3,29 +3,39 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 #include "../../Audio/PluginProcessor.h"
 
-class SampleList : public juce::Component, public juce::TableListBoxModel
+class SampleList
+    : public juce::Component
+    , public juce::TableListBoxModel
 {
 public:
-    SampleList(PluginProcessor& processor);
-    ~SampleList() override;
+    explicit SampleList(PluginProcessor& processor);
+    ~SampleList() override = default;
 
     // TableListBoxModel overrides
     int getNumRows() override;
-    void paintRowBackground(juce::Graphics& g, int rowNumber, int width, int height, bool rowIsSelected) override;
-    void paintCell(juce::Graphics& g, int rowNumber, int columnId, int width, int height, bool rowIsSelected) override;
+    void paintRowBackground(juce::Graphics& g,
+                            int rowNumber,
+                            int width,
+                            int height,
+                            bool rowIsSelected) override;
+    void paintCell(juce::Graphics& g,
+                   int rowNumber,
+                   int columnId,
+                   int width,
+                   int height,
+                   bool rowIsSelected) override;
     void deleteKeyPressed(int currentSelectedRow) override;
     void cellClicked(int rowNumber, int columnId, const juce::MouseEvent& e) override;
 
     // Component overrides
     void resized() override;
-    void paint(juce::Graphics& g) override;
 
     // Update content when samples change
     void updateContent();
-    
+
     // Callback for when user clicks on edit/detail button
     std::function<void(int)> onSampleDetailRequested;
-    
+
     // Get the table list box for keyboard focus
     juce::TableListBox* getListBox() { return sampleListBox.get(); }
 

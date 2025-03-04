@@ -128,26 +128,16 @@ void PluginEditor::updateKeyboardState(bool isNoteOn, int noteNumber, int veloci
 
 void PluginEditor::timerCallback()
 {
-    // Update groove section for knob randomization visualization
     if (grooveSection)
     {
         grooveSection->repaintRandomizationControls();
         grooveSection->updateRateLabelsForRhythmMode();
     }
 
-    // Update keyboard display if needed
     if (keyboardNeedsUpdate && keyboardComponent != nullptr)
     {
         keyboardComponent->repaint();
         keyboardNeedsUpdate = false;
-    }
-
-    // Handle any stray notes by making sure keyboard state is correct
-    if (isShowing() && keyboardComponent != nullptr && !audioProcessor.isNoteActive()
-        && keyboardState != nullptr)
-    {
-        keyboardState->allNotesOff(1);
-        keyboardComponent->repaint();
     }
 }
 

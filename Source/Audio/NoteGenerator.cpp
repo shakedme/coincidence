@@ -22,9 +22,9 @@ void NoteGenerator::releaseResources()
 {
     // Clear any active notes
     noteIsActive_ = false;
-    isInputNoteActive_ = false;
-    currentInputNote_ = -1;
-    currentActiveNote_ = -1;
+    isInputNoteActive = false;
+    currentInputNote = -1;
+    currentActiveNote = -1;
     currentActiveSampleIdx_ = -1;
     
     // Clear pending notes
@@ -43,17 +43,16 @@ void NoteGenerator::processIncomingMidi(const juce::MidiBuffer& midiMessages,
         // Handle note on
         if (message.isNoteOn())
         {
-            currentInputNote_ = message.getNoteNumber();
-            currentInputVelocity_ = message.getVelocity();
-            isInputNoteActive_ = true;
+            currentInputNote = message.getNoteNumber();
+            isInputNoteActive = true;
         }
         // Handle note off
-        else if (message.isNoteOff() && message.getNoteNumber() == currentInputNote_)
+        else if (message.isNoteOff() && message.getNoteNumber() == currentInputNote)
         {
-            isInputNoteActive_ = false;
+            isInputNoteActive = false;
 
             // Send note off for the active note
-            if (noteIsActive_ && currentActiveNote_ >= 0)
+            if (noteIsActive_ && currentActiveNote >= 0)
             {
                 stopActiveNote(processedMidi, time);
             }
@@ -72,16 +71,16 @@ void NoteGenerator::checkActiveNotes(juce::MidiBuffer& midiMessages, int numSamp
     {
         // Calculate when the note should end (in samples relative to the start of this buffer)
         juce::int64 noteEndPosition =
-            (noteStartPosition_ + noteDurationInSamples_) - timingManager.getSamplePosition();
+            (noteStartPosition + noteDurationInSamples) - timingManager.getSamplePosition();
 
         // If the note should end during this buffer
         if (noteEndPosition >= 0 && noteEndPosition < numSamples)
         {
             // Send note off at the exact sample position it should end
-            midiMessages.addEvent(juce::MidiMessage::noteOff(1, currentActiveNote_),
+            midiMessages.addEvent(juce::MidiMessage::noteOff(1, currentActiveNote),
                                  static_cast<int>(noteEndPosition));
             noteIsActive_ = false;
-            currentActiveNote_ = -1;
+            currentActiveNote = -1;
             currentActiveSampleIdx_ = -1;
         }
     }
@@ -145,6 +144,11 @@ Params::RateOption NoteGenerator::selectRateFromEligible(
 void NoteGenerator::generateNewNotes(juce::MidiBuffer& midiMessages, 
                                      const Params::GeneratorSettings& settings)
 {
+    if (!isInputNoteActive || noteIsActive_)
+    {
+        return;
+    }
+
     float totalWeight = 0.0f;
     auto eligibleRates = collectEligibleRates(settings, totalWeight);
 
@@ -269,7 +273,7 @@ void NoteGenerator::playNewNote(Params::RateOption selectedRate,
 
     // Calculate note properties
     int noteLengthSamples = calculateNoteLength(selectedRate, settings);
-    int noteToPlay = scaleManager.applyScaleAndModifications(currentInputNote_, settings);
+    int noteToPlay = scaleManager.applyScaleAndModifications(currentInputNote, settings);
     int velocity = calculateVelocity(settings);
 
     // Determine which sample to use
@@ -293,18 +297,18 @@ void NoteGenerator::playNewNote(Params::RateOption selectedRate,
             sampleOffset);
 
         // Store the active note data
-        currentActiveNote_ = noteToPlay;
-        currentActiveVelocity_ = velocity;
+        currentActiveNote = noteToPlay;
+        currentActiveVelocity = velocity;
         currentActiveSampleIdx_ = sampleIndex;
-        
-        noteStartPosition_ = absoluteNotePosition;
-        noteDurationInSamples_ = noteLengthSamples;
+
+        noteStartPosition = absoluteNotePosition;
+        noteDurationInSamples = noteLengthSamples;
         noteIsActive_ = true;
 
         // Update keyboard state
         if (auto* editor = dynamic_cast<PluginEditor*>(processor.getActiveEditor()))
         {
-            editor->updateKeyboardState(true, currentActiveNote_, currentActiveVelocity_);
+            editor->updateKeyboardState(true, currentActiveNote, currentActiveVelocity);
         }
     }
     else
@@ -350,18 +354,18 @@ void NoteGenerator::processPendingNotes(juce::MidiBuffer& midiMessages, int numS
                 static_cast<int>(localPosition));
 
             // Update the active note info
-            currentActiveNote_ = it->noteNumber;
-            currentActiveVelocity_ = it->velocity;
+            currentActiveNote = it->noteNumber;
+            currentActiveVelocity = it->velocity;
             currentActiveSampleIdx_ = it->sampleIndex;
-            noteStartPosition_ = it->startSamplePosition;
-            noteDurationInSamples_ = it->durationInSamples;
+            noteStartPosition = it->startSamplePosition;
+            noteDurationInSamples = it->durationInSamples;
             noteIsActive_ = true;
 
             // Update keyboard state
             if (auto* editor = dynamic_cast<PluginEditor*>(processor.getActiveEditor()))
             {
                 editor->updateKeyboardState(
-                    true, currentActiveNote_, currentActiveVelocity_);
+                    true, currentActiveNote, currentActiveVelocity);
             }
 
             // Remove the played note from pending list
@@ -450,19 +454,19 @@ float NoteGenerator::applyRandomization(float value, float randomizeValue, Param
 
 void NoteGenerator::stopActiveNote(juce::MidiBuffer& midiMessages, int currentSamplePosition)
 {
-    if (noteIsActive_ && currentActiveNote_ >= 0)
+    if (noteIsActive_ && currentActiveNote >= 0)
     {
         // Send note off message - channel 1 (fixed)
-        midiMessages.addEvent(juce::MidiMessage::noteOff(1, currentActiveNote_),
+        midiMessages.addEvent(juce::MidiMessage::noteOff(1, currentActiveNote),
                            currentSamplePosition);
 
         // Update keyboard state
         if (auto* editor = dynamic_cast<PluginEditor*>(processor.getActiveEditor()))
         {
-            editor->updateKeyboardState(false, currentActiveNote_, 0);
+            editor->updateKeyboardState(false, currentActiveNote, 0);
         }
 
         noteIsActive_ = false;
-        currentActiveNote_ = -1;
+        currentActiveNote = -1;
     }
 }

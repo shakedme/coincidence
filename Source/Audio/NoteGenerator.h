@@ -75,9 +75,6 @@ public:
     void stopActiveNote(juce::MidiBuffer& midiMessages, int currentSamplePosition);
     
     // Accessors
-    bool isInputNoteActive() const { return isInputNoteActive_; }
-    bool isNoteActive() const { return noteIsActive_; }
-    int getCurrentInputNote() const { return currentInputNote_; }
     float getCurrentRandomizedGate() const { return currentRandomizedGate_; }
     float getCurrentRandomizedVelocity() const { return currentRandomizedVelocity_; }
     int getCurrentActiveSampleIdx() const { return currentActiveSampleIdx_; }
@@ -94,15 +91,14 @@ private:
     
     // MIDI generation state
     // Monophonic note tracking
-    int currentActiveNote_ = -1;
-    int currentActiveVelocity_ = 0;
-    juce::int64 noteStartPosition_ = 0;
-    juce::int64 noteDurationInSamples_ = 0;
+    int currentActiveNote = -1;
+    int currentActiveVelocity = 0;
+    juce::int64 noteStartPosition = 0;
+    juce::int64 noteDurationInSamples = 0;
     bool noteIsActive_ = false;
 
-    int currentInputNote_ = -1;
-    int currentInputVelocity_ = 0;
-    bool isInputNoteActive_ = false;
+    int currentInputNote = -1;
+    bool isInputNoteActive = false;
     int currentActiveSampleIdx_ = -1;
     
     // Pending notes for future processing

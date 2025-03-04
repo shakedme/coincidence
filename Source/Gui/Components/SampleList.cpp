@@ -24,24 +24,17 @@ SampleList::SampleList(PluginProcessor& p)
     sampleListBox->getHeader().setColour(juce::TableHeaderComponent::textColourId,
                                          juce::Colours::white);
 
-    // Add column with a better name that won't overflow
-    sampleListBox->getHeader().addColumn("", 1, 200);
+    sampleListBox->getHeader().addColumn("", 1, getWidth() - 8);
     addAndMakeVisible(sampleListBox.get());
-}
-
-SampleList::~SampleList()
-{
 }
 
 void SampleList::resized()
 {
     // Sample list takes up the entire component
     sampleListBox->setBounds(getLocalBounds());
-}
-
-void SampleList::paint(juce::Graphics& g)
-{
-    // Empty paint method - drag & drop text moved to SampleSection
+    
+    // Update the column width to match the component width
+    sampleListBox->getHeader().setColumnWidth(1, getWidth() - 8);
 }
 
 int SampleList::getNumRows()
@@ -70,11 +63,6 @@ void SampleList::paintRowBackground(
         // Draw a subtle border
         g.setColour(juce::Colour(0xffbf52d9).withAlpha(0.6f));
         g.drawRect(0, 0, width, height, 1);
-
-        // Add a small play indicator at left
-        int indicatorWidth = 4;
-        g.setColour(juce::Colour(0xffbf52d9));
-        g.fillRect(0, 0, indicatorWidth, height);
     }
 }
 
@@ -122,21 +110,11 @@ void SampleList::paintCell(juce::Graphics& g,
     {
         if (columnId == 1) // Sample name
         {
-            // Check if this row is the currently playing sample
-            bool isPlayingSample = (rowNumber == activeSampleIndex);
-
-            // Add some extra padding for playing samples to account for the indicator
-            int leftPadding = isPlayingSample ? 8 : 2;
-
-            // Make the text brighter for the playing sample
-            if (isPlayingSample)
-                g.setColour(juce::Colours::white);
-
             // Reserve space for the two icons on the right
             int textWidth = width - (ICON_SIZE + ICON_PADDING) * 2 - 8;
 
             g.drawText(processor.getSampleManager().getSampleName(rowNumber),
-                       leftPadding,
+                       0,
                        0,
                        textWidth,
                        height,
