@@ -26,6 +26,9 @@ target_sources(${BaseTargetName} PRIVATE
         Gui/Sections/GrooveSection.cpp
         Gui/Sections/PitchSection.cpp
         Gui/Sections/SampleSection.cpp
+        Gui/Components/DirectionButton.h
+        Gui/Components/DirectionSelector.h
+        Gui/Components/SampleDetail.h
         Audio/Params.cpp
         Audio/PluginProcessor.cpp
         Audio/SampleManager.cpp

@@ -98,14 +98,14 @@ void SamplerVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
 
     // Try to get the correct sound for the current index if it's different from the assigned sound
     SamplerSound* soundToUse = assignedSound;
-    
+
     // Only try to switch samples if we have a specific index set and it's different from the assigned sound
     int assignedIndex = assignedSound->getIndex();
     if (currentSampleIndex >= 0 && assignedIndex != currentSampleIndex)
     {
         // Try to find the correct sound by index
         SamplerSound* correctSound = getCorrectSoundForIndex(currentSampleIndex);
-        
+
         if (correctSound != nullptr && correctSound->isActive())
         {
             // Use the correct sound's audio data
@@ -124,8 +124,8 @@ void SamplerVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
         // Position in the sample data with bounds checking
         const int sourcePos = static_cast<int>(sourceSamplePosition);
 
-        // If we've reached the end of the sample data, stop playback
-        if (sourcePos >= numSourceSamples - 1)
+        // If we've reached the end of the sample data or the end marker, stop playback
+        if (sourcePos >= numSourceSamples - 1 || sourcePos >= sourceEndPosition)
         {
             clearCurrentNote();
             playing = false;
@@ -171,32 +171,33 @@ int SamplerVoice::currentGlobalSampleIndex = -1;
 std::map<int, SamplerSound*> SamplerVoice::indexToSoundMap;
 
 void SamplerVoice::startNote(int midiNoteNumber,
-                             float velocity,
-                             juce::SynthesiserSound* sound,
-                             int currentPitchWheelPosition)
+                            float velocity,
+                            juce::SynthesiserSound* sound,
+                            int currentPitchWheelPosition)
 {
     // Reset voice state first
     reset();
-    
+
     // Cast to our custom sound class
     if (auto* samplerSound = dynamic_cast<SamplerSound*>(sound))
     {
         // If we're not actively playing this sound, return
         if (!samplerSound->isActive())
             return;
-            
+
         // Restore sample index selection logic
         // First, prioritize any sample index set through the controller
         if (currentGlobalSampleIndex >= 0) {
             currentSampleIndex = currentGlobalSampleIndex;
-            
+
             // Get the correct sound for this index if it exists
             if (SamplerSound* correctSound = getCorrectSoundForIndex(currentSampleIndex)) {
-                // If the correct sound exists but isn't the assigned sound, 
+                // If the correct sound exists but isn't the assigned sound,
                 // still use the assigned sound's parameters but note the index change
                 if (correctSound != samplerSound) {
                     // We'll continue with the assigned sound but use the requested index
                     // This keeps voice allocation stable while enabling sample switching
+                    samplerSound = correctSound; // Use the correct sound for this index
                 }
             }
         } else {
@@ -208,12 +209,17 @@ void SamplerVoice::startNote(int midiNoteNumber,
         double midiNoteHz = juce::MidiMessage::getMidiNoteInHertz(midiNoteNumber);
         double soundMidiNoteHz = juce::MidiMessage::getMidiNoteInHertz(60); // C4 as reference
         pitchRatio = midiNoteHz / soundMidiNoteHz;
-        
+
         // Account for source sample rate difference
         pitchRatio *= getSampleRate() / samplerSound->getSourceSampleRate();
-        
-        // Reset source sample position to start of audio data
-        sourceSamplePosition = 0.0;
+
+        // Apply start marker position to calculate starting sample position
+        auto& data = *samplerSound->getAudioData();
+        int numSamples = data.getNumSamples();
+        sourceSamplePosition = numSamples * samplerSound->getStartMarkerPosition();
+
+        // Store end marker position as sample index for bounds checking
+        sourceEndPosition = numSamples * samplerSound->getEndMarkerPosition();
             
         // Set the output gains based on velocity (0.0-1.0)
         // MIDI velocity is 0-127, so if velocity is already in that range, don't divide

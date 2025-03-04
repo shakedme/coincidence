@@ -29,6 +29,15 @@ public:
     int getIndex() const { return index; }
     void setIndex(int idx) { index = idx; }
 
+    float getStartMarkerPosition() const { return startMarkerPosition; }
+    float getEndMarkerPosition() const { return endMarkerPosition; }
+
+    void setMarkerPositions(float start, float end)
+    {
+        startMarkerPosition = juce::jlimit(0.0f, 0.99f, start);
+        endMarkerPosition = juce::jlimit(startMarkerPosition + 0.01f, 1.0f, end);
+    }
+
 private:
     juce::String name;
     juce::AudioBuffer<float> audioData;
@@ -36,6 +45,8 @@ private:
     double sourceSampleRate;
     bool isAppropriatelyActive = true; // By default, all sounds are active
     int index = -1; // Sample index
+    float startMarkerPosition = 0.0f;
+    float endMarkerPosition = 1.0f;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SamplerSound)
 };
@@ -80,10 +91,10 @@ public:
 private:
     double pitchRatio = 1.0;
     double sourceSamplePosition = 0.0;
+    double sourceEndPosition = 0.0;
     float lgain = 0.0f, rgain = 0.0f;
     bool playing = false;
     int currentSampleIndex = -1;
-    
     // Static shared sample index and sound map
     static int currentGlobalSampleIndex;
     static std::map<int, SamplerSound*> indexToSoundMap;

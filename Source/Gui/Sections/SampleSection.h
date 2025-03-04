@@ -8,6 +8,10 @@
 #include "../Components/DirectionSelector.h"
 #include "../../Audio/Params.h"
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_audio_utils/juce_audio_utils.h>
+
+// Forward declare SampleDetailComponent
+class SampleDetailComponent;
 
 class SampleSectionComponent : public BaseSectionComponent,
                                public juce::TableListBoxModel,
@@ -23,6 +27,7 @@ public:
     void paintRowBackground(juce::Graphics& g, int rowNumber, int width, int height, bool rowIsSelected) override;
     void paintCell(juce::Graphics& g, int rowNumber, int columnId, int width, int height, bool rowIsSelected) override;
     void deleteKeyPressed(int currentSelectedRow) override;
+    void cellClicked(int rowNumber, int columnId, const juce::MouseEvent& e) override;
 
     // Component overrides
     void resized() override;
@@ -42,6 +47,12 @@ private:
     std::unique_ptr<juce::TableListBox> sampleListBox;
     std::unique_ptr<juce::TextButton> addSampleButton;
     std::unique_ptr<juce::TextButton> removeSampleButton;
+    std::unique_ptr<juce::Label> sampleNameLabel;
+    std::unique_ptr<SampleDetailComponent> sampleDetailView;
+
+    // View state
+    bool showingDetailView = false;
+    int detailViewSampleIndex = -1;
 
     // Selected state
     std::set<int> selectedSamples;
@@ -54,4 +65,11 @@ private:
     std::unique_ptr<DirectionSelector> sampleDirectionSelector;
 
     bool draggedOver = false;
+
+    void showDetailViewForSample(int sampleIndex);
+    void showListView();
+
+    // Constants for icon drawing
+    const int ICON_SIZE = 16;
+    const int ICON_PADDING = 8;
 };

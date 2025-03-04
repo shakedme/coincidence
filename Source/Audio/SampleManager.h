@@ -33,6 +33,7 @@ public:
     int getNumSamples() const { return sampleList.size(); }
     juce::String getSampleName(int index) const;
     bool isSampleLoaded() const { return !sampleList.empty(); }
+    SamplerSound* getSampleSound(int index) const;
 
     // Sampler access
     juce::Synthesiser& getSampler() { return sampler; }

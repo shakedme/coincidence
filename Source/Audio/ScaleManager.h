@@ -20,7 +20,7 @@ public:
     
     // Find the closest note in scale to the given note
     int findClosestNoteInScale(int note, const juce::Array<int>& scale, int root);
-    
+
     // Get the scale array based on scale type
     juce::Array<int> getSelectedScale(Params::ScaleType scaleType);
     

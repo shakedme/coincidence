@@ -252,3 +252,11 @@ juce::String SampleManager::getSampleName(int index) const
         return sampleList[index]->name;
     return "";
 }
+
+
+SamplerSound* SampleManager::getSampleSound(int index) const
+{
+    if (index >= 0 && index < sampleList.size())
+        return sampleList[index]->sound.get();
+    return nullptr;
+}
