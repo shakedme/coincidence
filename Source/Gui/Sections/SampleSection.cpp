@@ -61,14 +61,13 @@ SampleSectionComponent::SampleSectionComponent(PluginEditor& editor,
     };
     addAndMakeVisible(sampleDirectionSelector.get());
 
-    sampleNameLabel =
-        std::unique_ptr<juce::Label>(createLabel("", juce::Justification::centred));
-    sampleNameLabel->setFont(juce::Font(11.0f));
-    addAndMakeVisible(sampleNameLabel.get());
+    // Start timer to update the active sample highlight
+    startTimerHz(30);
 }
 
 SampleSectionComponent::~SampleSectionComponent()
 {
+    stopTimer();
     clearAttachments();
 }
 
@@ -76,28 +75,17 @@ void SampleSectionComponent::resized()
 {
     auto area = getLocalBounds();
 
-    // Sample section layout
     int controlsY = 40; // Reduced from 40
 
-    // Sample list takes up left side
     int sampleListWidth = area.getWidth() * 0.6f;
     sampleListBox->setBounds(
         area.getX() + 10, controlsY, sampleListWidth, area.getHeight() - 70);
 
-    // Sample name display
-    int sampleNameY = controlsY + area.getHeight() - 95;
-    sampleNameLabel->setBounds(area.getX(), sampleNameY, sampleListWidth, 25);
-
-    // Right side controls - now just the direction selector
     int controlsX = area.getX() + sampleListWidth + 15; // Reduced from 20
     int controlsWidth = area.getWidth() - sampleListWidth - 25;
 
-    // Position the sample direction selector in the center of right panel
     sampleDirectionSelector->setBounds(
-        controlsX + (controlsWidth - 80) / 2, // Center it horizontally
-        controlsY + 60, // Place it in the middle vertically
-        80, // Width
-        25); // Height with enough room for label
+        controlsX + (controlsWidth - 80) / 2, controlsY + 60, 80, 25);
 }
 
 void SampleSectionComponent::paint(juce::Graphics& g)
@@ -135,6 +123,19 @@ void SampleSectionComponent::paint(juce::Graphics& g)
     }
 }
 
+void SampleSectionComponent::timerCallback()
+{
+    // Get the currently active sample index from the processor
+    int currentActiveSample = processor.getNoteGenerator().getCurrentActiveSampleIdx();
+
+    // If the active sample has changed, update the table display
+    if (currentActiveSample != lastActiveSampleIndex)
+    {
+        lastActiveSampleIndex = currentActiveSample;
+        sampleListBox->repaint();
+    }
+}
+
 int SampleSectionComponent::getNumRows()
 {
     return processor.getSampleManager().getNumSamples();
@@ -143,12 +144,33 @@ int SampleSectionComponent::getNumRows()
 void SampleSectionComponent::paintRowBackground(
     juce::Graphics& g, int rowNumber, int width, int height, bool rowIsSelected)
 {
+    // Get current playing sample index from the processor
+    int currentPlayingSample = processor.getNoteGenerator().getCurrentActiveSampleIdx();
+
+    // Check if this row is the currently playing sample
+    bool isPlayingSample = (rowNumber == currentPlayingSample);
+
     if (rowIsSelected)
         g.fillAll(juce::Colour(0x80bf52d9)); // Purple highlight
+    else if (isPlayingSample)
+        g.fillAll(juce::Colour(0xff7030a0)); // Brighter purple for playing sample
     else if (rowNumber % 2)
         g.fillAll(juce::Colour(0xff3a3a3a)); // Darker
     else
         g.fillAll(juce::Colour(0xff444444)); // Lighter
+
+    // Add a glow effect to the playing sample
+    if (isPlayingSample)
+    {
+        // Draw a subtle border
+        g.setColour(juce::Colour(0xffbf52d9).withAlpha(0.6f));
+        g.drawRect(0, 0, width, height, 1);
+
+        // Add a small play indicator at left
+        int indicatorWidth = 4;
+        g.setColour(juce::Colour(0xffbf52d9));
+        g.fillRect(0, 0, indicatorWidth, height);
+    }
 }
 
 void SampleSectionComponent::paintCell(juce::Graphics& g,
@@ -165,8 +187,22 @@ void SampleSectionComponent::paintCell(juce::Graphics& g,
     {
         if (columnId == 1) // Sample name
         {
+            // Get current playing sample index from the processor
+            int currentPlayingSample =
+                processor.getNoteGenerator().getCurrentActiveSampleIdx();
+
+            // Check if this row is the currently playing sample
+            bool isPlayingSample = (rowNumber == currentPlayingSample);
+
+            // Add some extra padding for playing samples to account for the indicator
+            int leftPadding = isPlayingSample ? 8 : 2;
+
+            // Make the text brighter for the playing sample
+            if (isPlayingSample)
+                g.setColour(juce::Colours::white);
+
             g.drawText(processor.getSampleManager().getSampleName(rowNumber),
-                       2,
+                       leftPadding,
                        0,
                        width - 4,
                        height,
@@ -183,7 +219,8 @@ void SampleSectionComponent::deleteKeyPressed(int currentSelectedRow)
     // If there are multiple selections, remove them all
     if (selectedRows.size() > 0)
     {
-        processor.getSampleManager().removeSamples(selectedRows[0], selectedRows.size() - 1);
+        processor.getSampleManager().removeSamples(selectedRows[0],
+                                                   selectedRows.size() - 1);
         sampleListBox->updateContent();
     }
 }
@@ -223,16 +260,6 @@ void SampleSectionComponent::filesDropped(const juce::StringArray& files, int x,
     {
         sampleListBox->updateContent();
         repaint();
-    }
-
-    // Update sample name label
-    if (processor.getSampleManager().getNumSamples() == 0)
-    {
-        sampleNameLabel->setText("No samples loaded", juce::dontSendNotification);
-    }
-    else
-    {
-        sampleNameLabel->setText("", juce::dontSendNotification);
     }
 }
 

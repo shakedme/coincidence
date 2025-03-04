@@ -11,7 +11,8 @@
 
 class SampleSectionComponent : public BaseSectionComponent,
                                public juce::TableListBoxModel,
-                               public juce::FileDragAndDropTarget
+                               public juce::FileDragAndDropTarget,
+                               private juce::Timer
 {
 public:
     SampleSectionComponent(PluginEditor& editor, PluginProcessor& processor);
@@ -33,19 +34,24 @@ public:
     void fileDragEnter(const juce::StringArray& files, int x, int y) override;
     void fileDragExit(const juce::StringArray& files) override;
 
+    // Timer callback for updating the active sample highlight
+    void timerCallback() override;
+
 private:
     // UI Components
     std::unique_ptr<juce::TableListBox> sampleListBox;
     std::unique_ptr<juce::TextButton> addSampleButton;
     std::unique_ptr<juce::TextButton> removeSampleButton;
-    std::unique_ptr<juce::Label> sampleNameLabel;
 
     // Selected state
     std::set<int> selectedSamples;
     int lastSelectedSample = -1;
-    
+
+    // Track the currently active sample for highlighting
+    int lastActiveSampleIndex = -1;
+
     // Replace randomize controls with direction selector
     std::unique_ptr<DirectionSelector> sampleDirectionSelector;
-    
+
     bool draggedOver = false;
 };
