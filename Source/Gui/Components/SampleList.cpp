@@ -41,16 +41,7 @@ void SampleList::resized()
 
 void SampleList::paint(juce::Graphics& g)
 {
-    // Check if we have any samples loaded
-    bool noSamplesLoaded = processor.getSampleManager().getNumSamples() == 0;
-
-    // If no samples are loaded, show a message
-    if (noSamplesLoaded)
-    {
-        g.setColour(juce::Colours::white.withAlpha(0.5f));
-        g.setFont(juce::Font(juce::FontOptions(14.0f)));
-        g.drawText("Drag & Drop Samples Here", getLocalBounds(), juce::Justification::centred, true);
-    }
+    // Empty paint method - drag & drop text moved to SampleSection
 }
 
 int SampleList::getNumRows()
@@ -122,7 +113,7 @@ void SampleList::paintCell(juce::Graphics& g,
                            int columnId,
                            int width,
                            int height,
-                           bool rowIsSelected)
+                           bool /*rowIsSelected*/)
 {
     g.setColour(juce::Colours::white);
     g.setFont(juce::Font(juce::FontOptions(14.0f)));
@@ -192,7 +183,7 @@ void SampleList::paintCell(juce::Graphics& g,
     }
 }
 
-void SampleList::deleteKeyPressed(int currentSelectedRow)
+void SampleList::deleteKeyPressed(int/*rowNumber*/)
 {
     // Get all selected rows
     auto selectedRows = sampleListBox->getSelectedRows();

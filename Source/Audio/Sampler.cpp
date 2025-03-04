@@ -173,7 +173,7 @@ std::map<int, SamplerSound*> SamplerVoice::indexToSoundMap;
 void SamplerVoice::startNote(int midiNoteNumber,
                             float velocity,
                             juce::SynthesiserSound* sound,
-                            int currentPitchWheelPosition)
+                            int /*pitchWheelPosition*/)
 {
     // Reset voice state first
     reset();

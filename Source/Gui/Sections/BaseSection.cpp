@@ -72,8 +72,7 @@ void BaseSectionComponent::clearAttachments()
 void BaseSectionComponent::drawMetallicPanel(juce::Graphics& g)
 {
     auto bounds = getLocalBounds();
-    juce::Colour baseColor = juce::Colour(0xff2a2a2a);
-    juce::Colour accentColor = sectionColour;
+    auto baseColor = juce::Colour(0xff2a2a2a);
 
     // Draw the panel background
     g.setGradientFill(juce::ColourGradient(baseColor.brighter(0.1f),

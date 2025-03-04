@@ -4,9 +4,9 @@
 
 #include "GrooveSection.h"
 
-GrooveSectionComponent::GrooveSectionComponent(PluginEditor& editor,
-                                               PluginProcessor& processor)
-    : BaseSectionComponent(editor, processor, "GROOVE", juce::Colour(0xff52bfd9))
+GrooveSectionComponent::GrooveSectionComponent(PluginEditor& e,
+                                               PluginProcessor& p)
+    : BaseSectionComponent(e, p, "GROOVE", juce::Colour(0xff52bfd9))
 {
     setupRateControls();
     setupRhythmModeControls();

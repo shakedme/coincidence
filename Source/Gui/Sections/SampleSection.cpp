@@ -98,11 +98,17 @@ void SampleSectionComponent::paint(juce::Graphics& g)
     // If no samples are loaded and not showing detail view, handle drop zone
     if (noSamplesLoaded && !showingDetailView)
     {
+        // Draw drop zone border when dragging
         if (draggedOver)
         {
             g.setColour(juce::Colours::white.withAlpha(0.2f));
             g.drawRect(contentArea.reduced(10), 2);
         }
+
+        // Draw the drag & drop text centered in the content area
+        g.setColour(juce::Colours::white.withAlpha(0.5f));
+        g.setFont(juce::Font(juce::FontOptions(14.0f)));
+        g.drawText("Drag & Drop Samples Here", contentArea, juce::Justification::centred, true);
 
         // Hide the sample direction selector when no samples are loaded
         sampleDirectionSelector->setVisible(false);
