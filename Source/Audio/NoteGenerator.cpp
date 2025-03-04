@@ -152,7 +152,7 @@ void NoteGenerator::generateNewNotes(juce::MidiBuffer& midiMessages,
     if (totalWeight > 0.0f && !eligibleRates.empty())
     {
         // Determine if any note should play
-        float triggerProbability = std::min(totalWeight / 100.0f, 1.0f);
+        float triggerProbability = settings.probability / 100.0f;
         bool shouldPlayNote =
             juce::Random::getSystemRandom().nextFloat() < triggerProbability
             || settings.probability == 100.0f;
@@ -293,10 +293,6 @@ void NoteGenerator::playNewNote(Params::RateOption selectedRate,
         currentActiveNote_ = noteToPlay;
         currentActiveVelocity_ = velocity;
         currentActiveSampleIdx_ = sampleIndex;
-        
-        // Add debugging for sample index
-        juce::String debugMsg = "NoteGenerator: Setting active sample index to " + juce::String(sampleIndex);
-        juce::Logger::writeToLog(debugMsg);
         
         noteStartPosition_ = absoluteNotePosition;
         noteDurationInSamples_ = noteLengthSamples;

@@ -39,13 +39,8 @@ void JammerAudioProcessor::processAudio(juce::AudioBuffer<float>& buffer,
         // Get the current active sample index from the note generator
         int currentSampleIdx = processor.getNoteGenerator().getCurrentActiveSampleIdx();
         
-        // Log current sample for debugging
-        // Only log when the sample index changes to avoid excessive logging
         static int lastLoggedSampleIdx = -1;
         if (currentSampleIdx != lastLoggedSampleIdx) {
-            juce::String message = "Current sample index: " + juce::String(currentSampleIdx) + 
-                                   " (out of " + juce::String(sampleManager.getNumSamples()) + " samples)";
-            juce::Logger::writeToLog(message);
             lastLoggedSampleIdx = currentSampleIdx;
         }
         
@@ -63,7 +58,6 @@ void JammerAudioProcessor::processAudio(juce::AudioBuffer<float>& buffer,
                 sampleManager.getSampler().allNotesOff(0, false);
                 
                 lastPlayedSampleIdx = currentSampleIdx;
-                juce::Logger::writeToLog("Sample index changed - stopping active notes");
             }
         }
         
@@ -94,8 +88,6 @@ void JammerAudioProcessor::processAudio(juce::AudioBuffer<float>& buffer,
                     // Log whenever we send a controller message for sample selection
                     static int lastLoggedControllerValue = -1;
                     if (currentSampleIdx != lastLoggedControllerValue) {
-                        juce::String debugMsg = "Sending controller for sample: " + juce::String(currentSampleIdx);
-                        juce::Logger::writeToLog(debugMsg);
                         lastLoggedControllerValue = currentSampleIdx;
                     }
                     

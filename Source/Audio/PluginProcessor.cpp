@@ -225,11 +225,6 @@ void PluginProcessor::timerCallback()
 
 //==============================================================================
 
-int PluginProcessor::getNumSamples() const
-{
-    return audioProcessor->getSampleManager().getNumSamples();
-}
-
 SampleManager& PluginProcessor::getSampleManager() const
 {
     return audioProcessor->getSampleManager();

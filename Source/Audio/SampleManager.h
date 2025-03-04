@@ -24,17 +24,16 @@ public:
 
     // Sample management
     void addSample(const juce::File& file);
-    void removeSample(int index);
+    void removeSamples(int startIdx, int endIdx);
     void clearAllSamples();
-    void selectSample(int index);
     int getNextSampleIndex(Params::DirectionType direction);
+    void rebuildSounds();
     
     // Getters
     int getNumSamples() const { return sampleList.size(); }
     juce::String getSampleName(int index) const;
     bool isSampleLoaded() const { return !sampleList.empty(); }
-    int getCurrentSelectedSample() const { return currentSelectedSample; }
-    
+
     // Sampler access
     juce::Synthesiser& getSampler() { return sampler; }
     
@@ -42,11 +41,11 @@ public:
     void prepareToPlay(double sampleRate);
 
 private:
-    // Current sample state
+    // Current sample state (for playback)
     int currentSelectedSample = -1;
     int currentPlayIndex = -1; // Tracks the index for sequential/bidirectional playback
     bool isAscending = true;   // For bidirectional mode
-    
+
     // Loaded samples
     std::vector<std::unique_ptr<SampleInfo>> sampleList;
     

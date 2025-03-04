@@ -11,6 +11,7 @@ SampleSectionComponent::SampleSectionComponent(PluginEditor& editor,
     // Create sample list table
     sampleListBox = std::make_unique<juce::TableListBox>("Sample List", this);
     sampleListBox->setHeaderHeight(20); // Reduced from 22
+    sampleListBox->setMultipleSelectionEnabled(true); // Enable multiple selections
 
     // Make the list box transparent
     sampleListBox->setColour(juce::ListBox::backgroundColourId,
@@ -29,29 +30,30 @@ SampleSectionComponent::SampleSectionComponent(PluginEditor& editor,
                                          juce::Colours::white);
 
     // Add column with a better name that won't overflow
-    sampleListBox->getHeader().addColumn("Samples", 1, 200);
+    sampleListBox->getHeader().addColumn("", 1, 200);
     addAndMakeVisible(sampleListBox.get());
-
-    // Sample management buttons
-    addSampleButton = std::make_unique<juce::TextButton>("Add");
-    addAndMakeVisible(addSampleButton.get());
 
     removeSampleButton = std::make_unique<juce::TextButton>("Remove");
     addAndMakeVisible(removeSampleButton.get());
 
     // Sample direction selector (replacing randomization controls)
-    sampleDirectionSelector = std::make_unique<DirectionSelector>("PLAYBACK MODE", juce::Colour(0xffbf52d9));
-    
+    sampleDirectionSelector =
+        std::make_unique<DirectionSelector>("PLAYBACK MODE", juce::Colour(0xffbf52d9));
+
     // Set initial value from parameter
     auto* sampleDirectionParam = dynamic_cast<juce::AudioParameterChoice*>(
         processor.parameters.getParameter("sample_direction"));
 
     if (sampleDirectionParam)
-        sampleDirectionSelector->setDirection(static_cast<Params::DirectionType>(sampleDirectionParam->getIndex()));
+        sampleDirectionSelector->setDirection(
+            static_cast<Params::DirectionType>(sampleDirectionParam->getIndex()));
 
-    sampleDirectionSelector->onDirectionChanged = [this, &processor](Params::DirectionType direction) {
+    sampleDirectionSelector->onDirectionChanged =
+        [this, &processor](Params::DirectionType direction)
+    {
         auto* param = processor.parameters.getParameter("sample_direction");
-        if (param) {
+        if (param)
+        {
             param->beginChangeGesture();
         }
         param->setValueNotifyingHost(param->convertTo0to1(static_cast<int>(direction)));
@@ -59,8 +61,8 @@ SampleSectionComponent::SampleSectionComponent(PluginEditor& editor,
     };
     addAndMakeVisible(sampleDirectionSelector.get());
 
-    sampleNameLabel = std::unique_ptr<juce::Label>(
-        createLabel("No samples loaded", juce::Justification::centred));
+    sampleNameLabel =
+        std::unique_ptr<juce::Label>(createLabel("", juce::Justification::centred));
     sampleNameLabel->setFont(juce::Font(11.0f));
     addAndMakeVisible(sampleNameLabel.get());
 }
@@ -74,30 +76,21 @@ void SampleSectionComponent::resized()
 {
     auto area = getLocalBounds();
 
-    // Set up header
-//    sectionLabel->setBounds(area.getX(), 57, area.getWidth(), 25); // Reduced from 30
-
     // Sample section layout
-    int controlsY = 30; // Reduced from 40
+    int controlsY = 40; // Reduced from 40
 
     // Sample list takes up left side
     int sampleListWidth = area.getWidth() * 0.6f;
     sampleListBox->setBounds(
-        area.getX(), controlsY, sampleListWidth, area.getHeight() - 70); // Reduced margin
-
-    // Buttons below the sample list
-    int buttonY = controlsY + area.getHeight() - 65; // Moved up
-    int buttonWidth = 75; // Reduced from 80
-    addSampleButton->setBounds(area.getX(), buttonY, buttonWidth, 25);
-    removeSampleButton->setBounds(
-        area.getX() + buttonWidth + 5, buttonY, buttonWidth, 25);
+        area.getX() + 10, controlsY, sampleListWidth, area.getHeight() - 70);
 
     // Sample name display
-    sampleNameLabel->setBounds(area.getX(), buttonY - 30, sampleListWidth, 25);
+    int sampleNameY = controlsY + area.getHeight() - 95;
+    sampleNameLabel->setBounds(area.getX(), sampleNameY, sampleListWidth, 25);
 
     // Right side controls - now just the direction selector
     int controlsX = area.getX() + sampleListWidth + 15; // Reduced from 20
-    int controlsWidth = area.getWidth() - sampleListWidth - 25; // Reduced margin
+    int controlsWidth = area.getWidth() - sampleListWidth - 25;
 
     // Position the sample direction selector in the center of right panel
     sampleDirectionSelector->setBounds(
@@ -123,9 +116,7 @@ void SampleSectionComponent::paint(juce::Graphics& g)
     {
         g.setColour(juce::Colours::white.withAlpha(0.5f));
         g.setFont(juce::Font(14.0f));
-        g.drawText("Drag & Drop Samples Here",
-                   contentArea,
-                   juce::Justification::centred);
+        g.drawText("Drag & Drop Samples Here", contentArea, juce::Justification::centred);
 
         // Show drop zone
         if (draggedOver)
@@ -184,16 +175,16 @@ void SampleSectionComponent::paintCell(juce::Graphics& g,
     }
 }
 
-void SampleSectionComponent::cellClicked(int rowNumber,
-                                         int columnId,
-                                         const juce::MouseEvent&)
+void SampleSectionComponent::deleteKeyPressed(int currentSelectedRow)
 {
-    if (rowNumber < processor.getSampleManager().getNumSamples())
+    // Get all selected rows
+    auto selectedRows = sampleListBox->getSelectedRows();
+
+    // If there are multiple selections, remove them all
+    if (selectedRows.size() > 0)
     {
-        if (columnId == 1) // Sample name - select this sample
-        {
-            processor.getSampleManager().selectSample(rowNumber);
-        }
+        processor.getSampleManager().removeSamples(selectedRows[0], selectedRows.size() - 1);
+        sampleListBox->updateContent();
     }
 }
 
@@ -249,7 +240,7 @@ void SampleSectionComponent::fileDragEnter(const juce::StringArray& files, int x
 {
     // Check if any of the files are valid audio files
     bool hasValidFiles = false;
-    for (const auto& file : files)
+    for (const auto& file: files)
     {
         juce::File f(file);
         if (f.hasFileExtension("wav;aif;aiff;mp3;ogg;flac"))

@@ -21,7 +21,7 @@ public:
     int getNumRows() override;
     void paintRowBackground(juce::Graphics& g, int rowNumber, int width, int height, bool rowIsSelected) override;
     void paintCell(juce::Graphics& g, int rowNumber, int columnId, int width, int height, bool rowIsSelected) override;
-    void cellClicked(int rowNumber, int columnId, const juce::MouseEvent&) override;
+    void deleteKeyPressed(int currentSelectedRow) override;
 
     // Component overrides
     void resized() override;
@@ -39,6 +39,10 @@ private:
     std::unique_ptr<juce::TextButton> addSampleButton;
     std::unique_ptr<juce::TextButton> removeSampleButton;
     std::unique_ptr<juce::Label> sampleNameLabel;
+
+    // Selected state
+    std::set<int> selectedSamples;
+    int lastSelectedSample = -1;
     
     // Replace randomize controls with direction selector
     std::unique_ptr<DirectionSelector> sampleDirectionSelector;

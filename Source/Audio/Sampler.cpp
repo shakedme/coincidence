@@ -268,14 +268,6 @@ void SamplerVoice::controllerMoved(int controllerNumber, int newControllerValue)
             
             // Also update the global sample index
             currentGlobalSampleIndex = newControllerValue;
-            
-            // Log that we received a controller message for sample selection
-            juce::String message = "Controller 32 received with value: " + juce::String(newControllerValue);
-            juce::Logger::writeToLog(message);
-        } else {
-            // Log that we couldn't find a sound for this index
-            juce::String message = "No sound found for index: " + juce::String(newControllerValue);
-            juce::Logger::writeToLog(message);
         }
     }
     
@@ -286,17 +278,7 @@ void SamplerVoice::registerSoundWithIndex(SamplerSound* sound, int index)
 {
     if (sound != nullptr)
     {
-        // Store the sound in our map
         indexToSoundMap[index] = sound;
-        
-        // Log the current state of the map
-        juce::String mapContents = "Sound map after registration - Size: " + 
-                                 juce::String(indexToSoundMap.size()) + ", Indices: ";
-        
-        for (const auto& pair : indexToSoundMap)
-        {
-            mapContents += juce::String(pair.first) + " ";
-        }
     }
 }
 
@@ -316,4 +298,3 @@ SamplerSound* SamplerVoice::getCorrectSoundForIndex(int index)
     
     return nullptr;
 }
-

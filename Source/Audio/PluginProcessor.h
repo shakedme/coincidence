@@ -59,16 +59,8 @@ public:
     
     // Get current settings
     const Params::GeneratorSettings& getSettings() const { return settings; }
-    
-    // Sample management accessors (delegate to audioProcessor)
-    void addSample(const juce::File& file);
-    void removeSample(int index);
-    void clearAllSamples();
-    void selectSample(int index);
-    int getNumSamples() const;
-    juce::String getSampleName(int index) const;
+
     SampleManager& getSampleManager() const;
-    
     // Get sample direction type for sample selection
     Params::DirectionType getSampleDirectionType() const;
     

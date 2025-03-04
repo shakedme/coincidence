@@ -23,9 +23,8 @@ public:
     double getSourceSampleRate() const { return sourceSampleRate; }
     
     // Control sound activation
-    void setAppropriatelyActive(bool isActive) { isAppropriatelyActive = isActive; }
     bool isActive() const { return isAppropriatelyActive; }
-    
+
     // Get the sample index for identification
     int getIndex() const { return index; }
     void setIndex(int idx) { index = idx; }
@@ -67,10 +66,7 @@ public:
     // Helper method to check if voice is active
     bool isVoiceActive() const;
 
-    // Static method to set the current sample index
     static void setCurrentSampleIndex(int sampleIndex) { currentGlobalSampleIndex = sampleIndex; }
-    
-    // Static method to get the current sample index
     static int getCurrentSampleIndex() { return currentGlobalSampleIndex; }
     
     // New method to register a sound with a specific index
