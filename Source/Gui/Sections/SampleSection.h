@@ -1,33 +1,20 @@
-//
-// Created by Shaked Melman on 01/03/2025.
-//
-
 #pragma once
 
 #include "BaseSection.h"
 #include "../Components/DirectionSelector.h"
+#include "../Components/SampleList.h"
+#include "../Components/SampleDetail.h"
 #include "../../Audio/Params.h"
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_audio_utils/juce_audio_utils.h>
 
-// Forward declare SampleDetailComponent
-class SampleDetailComponent;
-
 class SampleSectionComponent : public BaseSectionComponent,
-                               public juce::TableListBoxModel,
                                public juce::FileDragAndDropTarget,
                                private juce::Timer
 {
 public:
     SampleSectionComponent(PluginEditor& editor, PluginProcessor& processor);
     ~SampleSectionComponent() override;
-
-    // TableListBoxModel overrides
-    int getNumRows() override;
-    void paintRowBackground(juce::Graphics& g, int rowNumber, int width, int height, bool rowIsSelected) override;
-    void paintCell(juce::Graphics& g, int rowNumber, int columnId, int width, int height, bool rowIsSelected) override;
-    void deleteKeyPressed(int currentSelectedRow) override;
-    void cellClicked(int rowNumber, int columnId, const juce::MouseEvent& e) override;
 
     // Component overrides
     void resized() override;
@@ -44,32 +31,25 @@ public:
 
 private:
     // UI Components
-    std::unique_ptr<juce::TableListBox> sampleListBox;
-    std::unique_ptr<juce::TextButton> addSampleButton;
+    std::unique_ptr<SampleList> sampleList;
+    std::unique_ptr<SampleDetailComponent> sampleDetailView;
     std::unique_ptr<juce::TextButton> removeSampleButton;
     std::unique_ptr<juce::Label> sampleNameLabel;
-    std::unique_ptr<SampleDetailComponent> sampleDetailView;
+
+    // Direction selector
+    std::unique_ptr<DirectionSelector> sampleDirectionSelector;
 
     // View state
     bool showingDetailView = false;
-    int detailViewSampleIndex = -1;
-
-    // Selected state
-    std::set<int> selectedSamples;
-    int lastSelectedSample = -1;
 
     // Track the currently active sample for highlighting
     int lastActiveSampleIndex = -1;
 
-    // Replace randomize controls with direction selector
-    std::unique_ptr<DirectionSelector> sampleDirectionSelector;
-
     bool draggedOver = false;
+
+    void initComponents(PluginProcessor& processor);
 
     void showDetailViewForSample(int sampleIndex);
     void showListView();
 
-    // Constants for icon drawing
-    const int ICON_SIZE = 16;
-    const int ICON_PADDING = 8;
 };
