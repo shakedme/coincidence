@@ -75,7 +75,7 @@ public:
     void reset();
     
     // Helper method to check if voice is active
-    bool isVoiceActive() const;
+    bool isVoiceActive() const override;
 
     static void setCurrentSampleIndex(int sampleIndex) { currentGlobalSampleIndex = sampleIndex; }
     static int getCurrentSampleIndex() { return currentGlobalSampleIndex; }

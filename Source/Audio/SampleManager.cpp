@@ -44,7 +44,7 @@ void SampleManager::addSample(const juce::File& file)
         allNotes.setRange(0, 128, true);
 
         // Create a new sample info and add to our list
-        auto sampleIndex = sampleList.size();
+        int sampleIndex = sampleList.size();
 
         auto newSample = std::make_unique<SampleInfo>(
             file.getFileNameWithoutExtension(), file, sampleIndex);

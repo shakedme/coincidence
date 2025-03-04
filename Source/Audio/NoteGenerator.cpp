@@ -2,14 +2,14 @@
 #include "PluginProcessor.h"
 #include "../Gui/PluginEditor.h"
 
-NoteGenerator::NoteGenerator(PluginProcessor& processor)
-    : processor(processor)
+NoteGenerator::NoteGenerator(PluginProcessor& processorRef)
+    : processor(processorRef)
 {
     // Initialize state
     releaseResources();
 }
 
-void NoteGenerator::prepareToPlay(double sampleRate, int samplesPerBlock)
+void NoteGenerator::prepareToPlay(double sampleRate, int)
 {
     // Initialize timing manager
     timingManager.prepareToPlay(sampleRate);
@@ -33,7 +33,7 @@ void NoteGenerator::releaseResources()
 
 void NoteGenerator::processIncomingMidi(const juce::MidiBuffer& midiMessages, 
                                         juce::MidiBuffer& processedMidi, 
-                                        int numSamples)
+                                        int)
 {
     for (const auto metadata : midiMessages)
     {
@@ -192,7 +192,8 @@ void NoteGenerator::playNewNote(Params::RateOption selectedRate,
         case Params::RATE_1_32:
             durationInQuarters = 0.125;
             break;
-        default:
+        case Params::NUM_RATE_OPTIONS:
+            // This should never happen in practice, but we need to handle it
             durationInQuarters = 1.0;
             break;
     }
@@ -200,13 +201,17 @@ void NoteGenerator::playNewNote(Params::RateOption selectedRate,
     // Apply rhythm mode modifications
     switch (settings.rhythmMode)
     {
+        case Params::RHYTHM_NORMAL:
+            // No modification needed
+            break;
         case Params::RHYTHM_DOTTED:
             durationInQuarters *= 1.5;
             break;
         case Params::RHYTHM_TRIPLET:
             durationInQuarters *= 2.0 / 3.0;
             break;
-        default:
+        case Params::NUM_RHYTHM_MODES:
+            // This should never happen in practice, but we need to handle it
             break;
     }
 

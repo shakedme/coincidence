@@ -7,8 +7,8 @@ class SampleDetailComponent : public juce::Component,
                               private juce::ChangeListener
 {
 public:
-    SampleDetailComponent(SampleManager& sampleManager)
-        : sampleManager(sampleManager)
+    SampleDetailComponent(SampleManager& manager)
+        : sampleManager(manager)
     {
         // Initialize the thumbnail cache and source
         thumbnailCache = std::make_unique<juce::AudioThumbnailCache>(5);
@@ -46,7 +46,7 @@ public:
         {
             currentSampleIndex = index;
 
-            if (currentSampleIndex >= 0 && currentSampleIndex < sampleManager.getNumSamples())
+            if (currentSampleIndex >= 0 && currentSampleIndex <  sampleManager.getNumSamples())
             {
                 // Get the file for this sample
                 juce::String name = sampleManager.getSampleName(currentSampleIndex);
@@ -84,7 +84,7 @@ public:
 
         // Draw sample name
         g.setColour(juce::Colours::white);
-        g.setFont(16.0f);
+        g.setFont(juce::Font(juce::FontOptions(16.0f)));
         g.drawText(sampleName, getLocalBounds().removeFromTop(30), juce::Justification::centred, true);
 
         auto bounds = getLocalBounds().reduced(10).withTrimmedTop(30);
@@ -116,15 +116,15 @@ public:
             
             // Draw marker labels
             g.setColour(juce::Colours::white);
-            g.setFont(12.0f);
-            g.drawText("Start", startPixel - 20, bounds.getY() - 15, 40, 15, juce::Justification::centred);
-            g.drawText("End", endPixel - 20, bounds.getY() - 15, 40, 15, juce::Justification::centred);
+            g.setFont(juce::Font(juce::FontOptions(12.0f)));
+            g.drawText("Start", static_cast<int>(startPixel - 20), bounds.getY() - 15, 40, 15, juce::Justification::centred);
+            g.drawText("End", static_cast<int>(endPixel - 20), bounds.getY() - 15, 40, 15, juce::Justification::centred);
         }
         else
         {
             // No waveform available
             g.setColour(juce::Colours::white.withAlpha(0.5f));
-            g.setFont(14.0f);
+            g.setFont(juce::Font(juce::FontOptions(14.0f)));
             g.drawText("Waveform not available", bounds, juce::Justification::centred);
         }
     }

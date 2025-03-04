@@ -39,7 +39,7 @@ void GrooveSectionComponent::resized()
         (area.getWidth() - (Params::NUM_RATE_OPTIONS * knobSize))
         / (Params::NUM_RATE_OPTIONS + 1);
 
-    for (int i = 0; i < Params::NUM_RATE_OPTIONS; ++i)
+    for (size_t i = 0; i < Params::NUM_RATE_OPTIONS; ++i)
     {
         int xPos = area.getX() + knobPadding + i * (knobSize + knobPadding);
         rateKnobs[i]->setBounds(xPos, rateKnobY, knobSize, knobSize);
@@ -97,7 +97,7 @@ void GrooveSectionComponent::setupRateControls()
     const char* rateBaseNames[Params::NUM_RATE_OPTIONS] = {
         "1/2", "1/4", "1/8", "1/16", "1/32"};
 
-    for (int i = 0; i < Params::NUM_RATE_OPTIONS; ++i)
+    for (size_t i = 0; i < Params::NUM_RATE_OPTIONS; ++i)
     {
         // Create rate knob
         rateKnobs[i] = std::unique_ptr<juce::Slider>(
@@ -110,7 +110,7 @@ void GrooveSectionComponent::setupRateControls()
         // Create rate label
         rateLabels[i] = std::unique_ptr<juce::Label>(
             createLabel(rateBaseNames[i], juce::Justification::centred));
-        rateLabels[i]->setFont(juce::Font(11.0f, juce::Font::bold));
+        rateLabels[i]->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
         addAndMakeVisible(rateLabels[i].get());
 
         // Create parameter attachment
@@ -139,7 +139,7 @@ void GrooveSectionComponent::setupRhythmModeControls()
     // Create rhythm mode label
     rhythmModeLabel =
         std::unique_ptr<juce::Label>(createLabel("MODE", juce::Justification::centred));
-    rhythmModeLabel->setFont(juce::Font(11.0f, juce::Font::bold));
+    rhythmModeLabel->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
     addAndMakeVisible(rhythmModeLabel.get());
 
     // Create parameter attachment
@@ -161,7 +161,7 @@ void GrooveSectionComponent::setupDensityControls()
     // Create density label
     densityLabel = std::unique_ptr<juce::Label>(
         createLabel("DENSITY", juce::Justification::centred));
-    densityLabel->setFont(juce::Font(11.0f, juce::Font::bold));
+    densityLabel->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
     addAndMakeVisible(densityLabel.get());
 
     // Create parameter attachment
@@ -182,7 +182,7 @@ void GrooveSectionComponent::setupGateControls()
     // Create gate label
     gateLabel =
         std::unique_ptr<juce::Label>(createLabel("GATE", juce::Justification::centred));
-    gateLabel->setFont(juce::Font(11.0f, juce::Font::bold));
+    gateLabel->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
     addAndMakeVisible(gateLabel.get());
 
     // Create gate random knob
@@ -196,7 +196,7 @@ void GrooveSectionComponent::setupGateControls()
     // Create gate random label
     gateRandomLabel =
         std::unique_ptr<juce::Label>(createLabel("RNDM", juce::Justification::centred));
-    gateRandomLabel->setFont(juce::Font(11.0f, juce::Font::bold));
+    gateRandomLabel->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
     addAndMakeVisible(gateRandomLabel.get());
 
     // Create parameter attachments
@@ -220,7 +220,7 @@ void GrooveSectionComponent::setupVelocityControls()
     // Create velocity label
     velocityLabel =
         std::unique_ptr<juce::Label>(createLabel("VELO", juce::Justification::centred));
-    velocityLabel->setFont(juce::Font(11.0f, juce::Font::bold));
+    velocityLabel->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
     addAndMakeVisible(velocityLabel.get());
 
     // Create velocity random knob
@@ -234,7 +234,7 @@ void GrooveSectionComponent::setupVelocityControls()
     // Create velocity random label
     velocityRandomLabel =
         std::unique_ptr<juce::Label>(createLabel("RNDM", juce::Justification::centred));
-    velocityRandomLabel->setFont(juce::Font(11.0f, juce::Font::bold));
+    velocityRandomLabel->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
     addAndMakeVisible(velocityRandomLabel.get());
 
     // Create parameter attachments

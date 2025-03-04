@@ -17,7 +17,7 @@ BaseSectionComponent::BaseSectionComponent(PluginEditor& e,
     sectionLabel = std::make_unique<juce::Label>();
     sectionLabel->setText(title, juce::dontSendNotification);
     sectionLabel->setJustificationType(juce::Justification::centred);
-    sectionLabel->setFont(juce::Font(TITLE_FONT_SIZE, juce::Font::bold));
+    sectionLabel->setFont(juce::Font(juce::FontOptions(TITLE_FONT_SIZE, juce::Font::bold)));
     sectionLabel->setColour(juce::Label::textColourId, colour);
     addAndMakeVisible(sectionLabel.get());
 }
@@ -43,7 +43,7 @@ juce::Label* BaseSectionComponent::createLabel(const juce::String& text,
     auto* label = new juce::Label();
     label->setText(text, juce::dontSendNotification);
     label->setJustificationType(justification);
-    label->setFont(juce::Font(11.0f));
+    label->setFont(juce::Font(juce::FontOptions(11.0f)));
     return label;
 }
 

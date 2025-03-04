@@ -4,15 +4,15 @@
 
 #include "GlitchSection.h"
 
-GlitchSectionComponent::GlitchSectionComponent(PluginEditor& editor,
-                                               PluginProcessor& processor)
-    : BaseSectionComponent(editor, processor, "GLITCH", juce::Colour(0xffd9a652))
+GlitchSectionComponent::GlitchSectionComponent(PluginEditor& e,
+                                               PluginProcessor& p)
+    : BaseSectionComponent(e, p, "GLITCH", juce::Colour(0xffd9a652))
 {
     // Create dummy knobs for the Glitch section
     const char* glitchNames[6] = {
         "CRUSH", "STUTTER", "CHAOS", "REVERSE", "JUMP", "GLIDE"};
 
-    for (int i = 0; i < 6; ++i)
+    for (unsigned long i = 0; i < 6; ++i)
     {
         // Create glitch knob
         glitchKnobs[i] = std::unique_ptr<juce::Slider>(
@@ -25,7 +25,7 @@ GlitchSectionComponent::GlitchSectionComponent(PluginEditor& editor,
         // Create glitch label
         glitchLabels[i] = std::unique_ptr<juce::Label>(
             createLabel(glitchNames[i], juce::Justification::centred));
-        glitchLabels[i]->setFont(juce::Font(11.0f, juce::Font::bold));
+        glitchLabels[i]->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
         addAndMakeVisible(glitchLabels[i].get());
 
         // These parameters don't exist yet, so we won't create attachments
@@ -52,7 +52,7 @@ void GlitchSectionComponent::resized()
         (area.getWidth() - (numGlitchKnobs * knobSize)) / (numGlitchKnobs + 1);
     const int glitchKnobY = firstRowY;
 
-    for (int i = 0; i < numGlitchKnobs; ++i)
+    for (unsigned long i = 0; i < numGlitchKnobs; ++i)
     {
         int xPos = area.getX() + glitchKnobPadding + i * (knobSize + glitchKnobPadding);
         glitchKnobs[i]->setBounds(xPos, glitchKnobY, knobSize, knobSize);

@@ -58,7 +58,7 @@ public:
         }
     }
 
-    void mouseDown(const juce::MouseEvent& e) override
+    void mouseDown(const juce::MouseEvent&) override
     {
         setSelected(true);
         if (onSelectionChanged)
@@ -67,9 +67,9 @@ public:
         repaint();
     }
 
-    void mouseEnter(const juce::MouseEvent& e) override { repaint(); }
+    void mouseEnter(const juce::MouseEvent&) override { repaint(); }
 
-    void mouseExit(const juce::MouseEvent& e) override { repaint(); }
+    void mouseExit(const juce::MouseEvent&) override { repaint(); }
 
     void setType(Params::DirectionType newType)
     {
@@ -108,6 +108,7 @@ private:
         arrow.lineTo(bounds.getX() + 4, centerY);
         arrow.lineTo(bounds.getRight() - 4, centerY + arrowSize / 2);
 
+        g.setColour(color);
         g.strokePath(arrow, juce::PathStrokeType(2.0f));
     }
 
@@ -123,6 +124,7 @@ private:
         arrow.lineTo(bounds.getRight() - 4, centerY);
         arrow.lineTo(bounds.getX() + 4, centerY + arrowSize / 2);
 
+        g.setColour(color);
         g.strokePath(arrow, juce::PathStrokeType(2.0f));
     }
 
@@ -160,7 +162,7 @@ private:
 
     void drawBidirectionalArrows(juce::Graphics& g,
                                  juce::Rectangle<float> bounds,
-                                 juce::Colour color)
+                                 juce::Colour)
     {
         float arrowSize = bounds.getHeight() * 0.4f;
         float centerY = bounds.getCentreY();

@@ -48,7 +48,7 @@ void SampleList::paint(juce::Graphics& g)
     if (noSamplesLoaded)
     {
         g.setColour(juce::Colours::white.withAlpha(0.5f));
-        g.setFont(juce::Font(14.0f));
+        g.setFont(juce::Font(juce::FontOptions(14.0f)));
         g.drawText("Drag & Drop Samples Here", getLocalBounds(), juce::Justification::centred, true);
     }
 }
@@ -125,7 +125,7 @@ void SampleList::paintCell(juce::Graphics& g,
                            bool rowIsSelected)
 {
     g.setColour(juce::Colours::white);
-    g.setFont(14.0f);
+    g.setFont(juce::Font(juce::FontOptions(14.0f)));
 
     if (rowNumber < processor.getSampleManager().getNumSamples())
     {

@@ -30,7 +30,7 @@ public:
     void fileDragExit(const juce::StringArray& files) override;
 
 private:
-    PluginProcessor& processor;
+    PluginProcessor& audioProcessor;
     LookAndFeel customLookAndFeel;
 //    melatonin::Inspector inspector { *this };
 

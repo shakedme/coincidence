@@ -3,22 +3,22 @@
 //==============================================================================
 PluginEditor::PluginEditor(PluginProcessor& p)
     : AudioProcessorEditor(&p)
-    , processor(p)
+    , audioProcessor(p)
 {
     // Set custom look and feel
     setLookAndFeel(&customLookAndFeel);
 
     // Set up main sections
-    grooveSection = std::make_unique<GrooveSectionComponent>(*this, processor);
+    grooveSection = std::make_unique<GrooveSectionComponent>(*this, audioProcessor);
     addAndMakeVisible(grooveSection.get());
 
-    pitchSection = std::make_unique<PitchSectionComponent>(*this, processor);
+    pitchSection = std::make_unique<PitchSectionComponent>(*this, audioProcessor);
     addAndMakeVisible(pitchSection.get());
 
-    glitchSection = std::make_unique<GlitchSectionComponent>(*this, processor);
+    glitchSection = std::make_unique<GlitchSectionComponent>(*this, audioProcessor);
     addAndMakeVisible(glitchSection.get());
 
-    sampleSection = std::make_unique<SampleSectionComponent>(*this, processor);
+    sampleSection = std::make_unique<SampleSectionComponent>(*this, audioProcessor);
     addAndMakeVisible(sampleSection.get());
 
     // Set up keyboard
@@ -69,8 +69,8 @@ void PluginEditor::resized()
     int sectionPadding = 5;
     int xPadding = 10;
     int topSectionHeight = static_cast<int>(area.getHeight() * 0.40);
-    int glitchHeight = area.getHeight() * 0.20;
-    int sampleHeight = area.getHeight() * 0.30;
+    int glitchHeight = static_cast<int>(area.getHeight() * 0.20);
+    int sampleHeight = static_cast<int>(area.getHeight() * 0.30);
     int grooveWidth = static_cast<int>(getWidth() * 0.7f) - 15;
     int pitchWidth = getWidth() - grooveWidth - 25;
     int pitchX = xPadding + grooveWidth + sectionPadding;
@@ -143,7 +143,7 @@ void PluginEditor::timerCallback()
     }
 
     // Handle any stray notes by making sure keyboard state is correct
-    if (isShowing() && keyboardComponent != nullptr && !processor.isNoteActive()
+    if (isShowing() && keyboardComponent != nullptr && !audioProcessor.isNoteActive()
         && keyboardState != nullptr)
     {
         keyboardState->allNotesOff(1);

@@ -20,7 +20,6 @@ int ScaleManager::applyScaleAndModifications(int noteNumber,
 
     // Extract the root note (0-11) and octave
     int noteRoot = noteNumber % 12;
-    int octave = noteNumber / 12;
 
     // Get the selected scale
     juce::Array<int> scale = getSelectedScale(settings.scaleType);
@@ -84,13 +83,13 @@ int ScaleManager::applyScaleAndModifications(int noteNumber,
             // Map to the closest note in scale
             finalNote = findClosestNoteInScale(finalNote, scale, noteRoot);
         }
-        else if (!isNoteInScale(finalNote, scale, noteRoot))
+        else if (!isNoteInScale(finalNote, scale))
         {
             // Even if we don't add semitones, still ensure the note is in scale
             finalNote = findClosestNoteInScale(finalNote, scale, noteRoot);
         }
     }
-    else if (!isNoteInScale(finalNote, scale, noteRoot))
+    else if (!isNoteInScale(finalNote, scale))
     {
         // Make sure the note is in the scale even if semitones are off
         finalNote = findClosestNoteInScale(finalNote, scale, noteRoot);
@@ -123,7 +122,7 @@ int ScaleManager::applyScaleAndModifications(int noteNumber,
     return juce::jlimit(0, 127, finalNote);
 }
 
-bool ScaleManager::isNoteInScale(int note, const juce::Array<int>& scale, int root)
+bool ScaleManager::isNoteInScale(int note, const juce::Array<int>& scale)
 {
     // Convert note to scale degree (0-11)
     int scaleDegree = (note % 12);
@@ -137,12 +136,11 @@ int ScaleManager::findClosestNoteInScale(int note,
                                          int root)
 {
     // If the note is already in the scale, return it
-    if (isNoteInScale(note, scale, root))
+    if (isNoteInScale(note, scale))
         return note;
 
     // Extract the note's current octave and degree
     int octave = note / 12;
-    int noteDegree = note % 12;
 
     // Find the closest note in the scale
     int closestDistance = 12;

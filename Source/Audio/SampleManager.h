@@ -30,7 +30,7 @@ public:
     void rebuildSounds();
     
     // Getters
-    int getNumSamples() const { return sampleList.size(); }
+    size_t getNumSamples() const { return sampleList.size(); }
     juce::String getSampleName(int index) const;
     bool isSampleLoaded() const { return !sampleList.empty(); }
     SamplerSound* getSampleSound(int index) const;

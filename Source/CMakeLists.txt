@@ -54,3 +54,8 @@ target_link_libraries(${BaseTargetName} PRIVATE
         juce_recommended_warning_flags
         melatonin_inspector
         )
+
+add_custom_target(Clean
+        COMMAND ${CMAKE_COMMAND} --build . --target clean
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        )

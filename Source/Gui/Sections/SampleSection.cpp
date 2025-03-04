@@ -1,10 +1,10 @@
 #include "SampleSection.h"
 
-SampleSectionComponent::SampleSectionComponent(PluginEditor& editor,
-                                               PluginProcessor& processor)
-    : BaseSectionComponent(editor, processor, "SAMPLE", juce::Colour(0xffbf52d9))
+SampleSectionComponent::SampleSectionComponent(PluginEditor& editorRef,
+                                               PluginProcessor& processorRef)
+    : BaseSectionComponent(editorRef, processorRef, "SAMPLE", juce::Colour(0xffbf52d9))
 {
-    initComponents(processor);
+    initComponents(processorRef);
     startTimerHz(30);
 }
 
@@ -22,7 +22,7 @@ void SampleSectionComponent::resized()
     int controlsY = 40;
 
     // Sample list area - takes up left side
-    int sampleListWidth = area.getWidth() * 0.6f;
+    int sampleListWidth = static_cast<int>(area.getWidth() * 0.6f);
     int sampleListHeight = area.getHeight() - 70;
     juce::Rectangle<int> listArea(area.getX() + 10, controlsY, sampleListWidth, sampleListHeight);
 
@@ -42,17 +42,17 @@ void SampleSectionComponent::resized()
         25); // Height
 }
 
-void SampleSectionComponent::initComponents(PluginProcessor& processor)
+void SampleSectionComponent::initComponents(PluginProcessor& processorRef)
 {
     // Create the sample list component
-    sampleList = std::make_unique<SampleList>(processor);
+    sampleList = std::make_unique<SampleList>(processorRef);
     sampleList->onSampleDetailRequested = [this](int sampleIndex) {
         showDetailViewForSample(sampleIndex);
     };
     addAndMakeVisible(sampleList.get());
 
     // Create the detail view component but don't make it visible yet
-    sampleDetailView = std::make_unique<SampleDetailComponent>(processor.getSampleManager());
+    sampleDetailView = std::make_unique<SampleDetailComponent>(processorRef.getSampleManager());
     sampleDetailView->onBackButtonClicked = [this]() { showListView(); };
     addChildComponent(sampleDetailView.get()); // Add as child but not visible
 
@@ -64,16 +64,16 @@ void SampleSectionComponent::initComponents(PluginProcessor& processor)
 
     // Set initial value from parameter
     auto* sampleDirectionParam = dynamic_cast<juce::AudioParameterChoice*>(
-        processor.parameters.getParameter("sample_direction"));
+        processorRef.parameters.getParameter("sample_direction"));
 
     if (sampleDirectionParam)
         sampleDirectionSelector->setDirection(
             static_cast<Params::DirectionType>(sampleDirectionParam->getIndex()));
 
     sampleDirectionSelector->onDirectionChanged =
-        [this, &processor](Params::DirectionType direction)
+        [&processorRef](Params::DirectionType direction)
     {
-        auto* param = processor.parameters.getParameter("sample_direction");
+        auto* param = processorRef.parameters.getParameter("sample_direction");
         if (param)
         {
             param->beginChangeGesture();
@@ -148,7 +148,7 @@ bool SampleSectionComponent::isInterestedInFileDrag(const juce::StringArray& fil
     return false;
 }
 
-void SampleSectionComponent::filesDropped(const juce::StringArray& files, int x, int y)
+void SampleSectionComponent::filesDropped(const juce::StringArray& files, int, int)
 {
     // Reset the drag state
     draggedOver = false;
@@ -173,28 +173,13 @@ void SampleSectionComponent::filesDropped(const juce::StringArray& files, int x,
     }
 }
 
-void SampleSectionComponent::fileDragEnter(const juce::StringArray& files, int x, int y)
+void SampleSectionComponent::fileDragEnter(const juce::StringArray&, int, int)
 {
-    // Check if any of the files are valid audio files
-    bool hasValidFiles = false;
-    for (const auto& file: files)
-    {
-        juce::File f(file);
-        if (f.hasFileExtension("wav;aif;aiff;mp3;ogg;flac"))
-        {
-            hasValidFiles = true;
-            break;
-        }
-    }
-
-    if (hasValidFiles)
-    {
-        draggedOver = true;
-        repaint();
-    }
+    draggedOver = true;
+    repaint();
 }
 
-void SampleSectionComponent::fileDragExit(const juce::StringArray& files)
+void SampleSectionComponent::fileDragExit(const juce::StringArray&)
 {
     draggedOver = false;
     repaint();

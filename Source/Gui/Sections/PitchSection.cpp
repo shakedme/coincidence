@@ -5,9 +5,9 @@
 #include "PitchSection.h"
 #include "../../Audio/Params.h"
 
-PitchSectionComponent::PitchSectionComponent(PluginEditor& editor,
-                                             PluginProcessor& processor)
-    : BaseSectionComponent(editor, processor, "PITCH", juce::Colour(0xff52d97d))
+PitchSectionComponent::PitchSectionComponent(PluginEditor& e,
+                                             PluginProcessor& p)
+    : BaseSectionComponent(e, p, "PITCH", juce::Colour(0xff52d97d))
 {
     setupScaleTypeControls();
     setupSemitoneControls();
@@ -86,7 +86,7 @@ void PitchSectionComponent::setupScaleTypeControls()
 
     // Create scale label
     scaleLabel = std::unique_ptr<juce::Label>(createLabel("SCALE", juce::Justification::centred));
-    scaleLabel->setFont(juce::Font(11.0f, juce::Font::bold));
+    scaleLabel->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
     addAndMakeVisible(scaleLabel.get());
 
     // Create parameter attachment
@@ -105,7 +105,7 @@ void PitchSectionComponent::setupSemitoneControls()
 
     // Create semitones label
     semitonesLabel = std::unique_ptr<juce::Label>(createLabel("STEPS", juce::Justification::centred));
-    semitonesLabel->setFont(juce::Font(11.0f, juce::Font::bold));
+    semitonesLabel->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
     addAndMakeVisible(semitonesLabel.get());
 
     // Create semitones probability knob
@@ -117,7 +117,7 @@ void PitchSectionComponent::setupSemitoneControls()
 
     // Create semitones probability label
     semitonesProbabilityLabel = std::unique_ptr<juce::Label>(createLabel("CHANCE", juce::Justification::centred));
-    semitonesProbabilityLabel->setFont(juce::Font(11.0f, juce::Font::bold));
+    semitonesProbabilityLabel->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
     addAndMakeVisible(semitonesProbabilityLabel.get());
 
     semitonesDirectionSelector = std::make_unique<DirectionSelector>(juce::Colour(0xff52d97d));
@@ -157,7 +157,7 @@ void PitchSectionComponent::setupOctaveControls()
 
     // Create octaves label
     octavesLabel = std::unique_ptr<juce::Label>(createLabel("OCTAVE", juce::Justification::centred));
-    octavesLabel->setFont(juce::Font(11.0f, juce::Font::bold));
+    octavesLabel->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
     addAndMakeVisible(octavesLabel.get());
 
     // Create octaves probability knob
@@ -169,7 +169,7 @@ void PitchSectionComponent::setupOctaveControls()
 
     // Create octaves probability label
     octavesProbabilityLabel = std::unique_ptr<juce::Label>(createLabel("CHANCE", juce::Justification::centred));
-    octavesProbabilityLabel->setFont(juce::Font(11.0f, juce::Font::bold));
+    octavesProbabilityLabel->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
     addAndMakeVisible(octavesProbabilityLabel.get());
 
     // Create parameter attachments

@@ -9,9 +9,9 @@ TimingManager::TimingManager()
     }
 }
 
-void TimingManager::prepareToPlay(double sampleRate)
+void TimingManager::prepareToPlay(double liveSampleRate)
 {
-    this->sampleRate = sampleRate;
+    this->sampleRate = liveSampleRate;
     samplePosition = 0;
 
     // Reset timing variables

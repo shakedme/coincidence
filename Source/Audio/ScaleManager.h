@@ -16,7 +16,7 @@ public:
     int applyScaleAndModifications(int noteNumber, const Params::GeneratorSettings& settings);
     
     // Check if a note is in the specified scale
-    bool isNoteInScale(int note, const juce::Array<int>& scale, int root);
+    bool isNoteInScale(int note, const juce::Array<int>& scale);
     
     // Find the closest note in scale to the given note
     int findClosestNoteInScale(int note, const juce::Array<int>& scale, int root);

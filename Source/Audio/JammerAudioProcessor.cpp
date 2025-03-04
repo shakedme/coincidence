@@ -2,12 +2,12 @@
 #include "PluginProcessor.h"
 #include "Sampler.h"
 
-JammerAudioProcessor::JammerAudioProcessor(PluginProcessor& processor)
-    : processor(processor)
+JammerAudioProcessor::JammerAudioProcessor(PluginProcessor& p)
+    : processor(p)
 {
 }
 
-void JammerAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
+void JammerAudioProcessor::prepareToPlay(double sampleRate, int)
 {
     sampleManager.prepareToPlay(sampleRate);
     
