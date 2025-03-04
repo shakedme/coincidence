@@ -68,7 +68,7 @@ void NoteGenerator::processIncomingMidi(const juce::MidiBuffer& midiMessages,
 
 void NoteGenerator::checkActiveNotes(juce::MidiBuffer& midiMessages, int numSamples)
 {
-    if (noteIsActive_ && isInputNoteActive_)
+    if (noteIsActive_)  // Only check if we have an active note
     {
         // Calculate when the note should end (in samples relative to the start of this buffer)
         juce::int64 noteEndPosition =
@@ -264,8 +264,6 @@ void NoteGenerator::playNewNote(Params::RateOption selectedRate,
 
     // Calculate note properties
     int noteLengthSamples = calculateNoteLength(selectedRate, settings);
-    const int minimumNoteDuration = static_cast<int>(timingManager.getSampleRate() * 0.01);
-    noteLengthSamples = std::max(noteLengthSamples, minimumNoteDuration);
     int noteToPlay = scaleManager.applyScaleAndModifications(currentInputNote_, settings);
     int velocity = calculateVelocity(settings);
 
@@ -393,7 +391,7 @@ int NoteGenerator::calculateNoteLength(Params::RateOption rate, const Params::Ge
         currentRandomizedGate_ = static_cast<float>(gateValue) * 100;
     }
 
-    gateValue = juce::jlimit(0.01, 0.98, gateValue);
+    gateValue = juce::jlimit(0.1, 0.98, gateValue);
 
     // Calculate final note length in samples - use a precise calculation
     int lengthInSamples = static_cast<int>(baseDuration * gateValue);

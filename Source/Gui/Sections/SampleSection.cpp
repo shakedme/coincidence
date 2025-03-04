@@ -10,7 +10,7 @@ SampleSectionComponent::SampleSectionComponent(PluginEditor& editor,
 {
     // Create sample list table
     sampleListBox = std::make_unique<juce::TableListBox>("Sample List", this);
-    sampleListBox->setHeaderHeight(20); // Reduced from 22
+    sampleListBox->setHeaderHeight(0); // Reduced from 22
     sampleListBox->setMultipleSelectionEnabled(true); // Enable multiple selections
 
     // Make the list box transparent
@@ -38,7 +38,7 @@ SampleSectionComponent::SampleSectionComponent(PluginEditor& editor,
 
     // Sample direction selector (replacing randomization controls)
     sampleDirectionSelector =
-        std::make_unique<DirectionSelector>("PLAYBACK MODE", juce::Colour(0xffbf52d9));
+        std::make_unique<DirectionSelector>(juce::Colour(0xffbf52d9));
 
     // Set initial value from parameter
     auto* sampleDirectionParam = dynamic_cast<juce::AudioParameterChoice*>(
@@ -97,7 +97,7 @@ void SampleSectionComponent::resized()
         controlsX + (controlsWidth - 80) / 2, // Center it horizontally
         controlsY + 60, // Place it in the middle vertically
         80, // Width
-        60); // Height with enough room for label
+        25); // Height with enough room for label
 }
 
 void SampleSectionComponent::paint(juce::Graphics& g)

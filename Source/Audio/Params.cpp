@@ -65,33 +65,30 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
     layout.add(std::make_unique<juce::AudioParameterInt>(
         "octaves_prob", "Octaves Probability", 0.0f, 100.0f, 0.0f));
 
-    // Sample direction parameter (replacing randomize_samples and randomize_probability)
+    // Sample direction parameter
     layout.add(std::make_unique<juce::AudioParameterChoice>(
         "sample_direction",
         "Sample Direction",
-        juce::StringArray("Sequential", "Bidirectional", "Random"),
-        RIGHT)); // Default to right/random (index 2)
+        juce::StringArray("Left", "Bidirectional", "Right", "Random"),
+        BIDIRECTIONAL)); // Default to bidirectional
 
     layout.add(std::make_unique<juce::AudioParameterChoice>(
         "gate_direction",
         "Gate Direction",
-        juce::StringArray("Left", "Bidirectional", "Right"),
-        BIDIRECTIONAL)); // Default to bidirectional (index 1)
+        juce::StringArray("Left", "Bidirectional", "Right", "Random"),
+        BIDIRECTIONAL)); // Default to bidirectional
 
     layout.add(std::make_unique<juce::AudioParameterChoice>(
         "velocity_direction",
         "Velocity Direction",
-        juce::StringArray("Left", "Bidirectional", "Right"),
-        BIDIRECTIONAL)); // Default to bidirectional (index 1)
+        juce::StringArray("Left", "Bidirectional", "Right", "Random"),
+        BIDIRECTIONAL)); // Default to bidirectional
 
     layout.add(std::make_unique<juce::AudioParameterChoice>(
         "semitones_direction",
         "Semitones Direction",
-        juce::StringArray("Left", "Bidirectional", "Right"),
-        BIDIRECTIONAL)); // Default to bidirectional (index 1)
-
-    layout.add(std::make_unique<juce::AudioParameterBool>(
-        "arpeggiator_mode", "Arpeggiator Mode", false));
+        juce::StringArray("Left", "Bidirectional", "Right", "Random"),
+        BIDIRECTIONAL)); // Default to bidirectional
 
     return layout;
 }

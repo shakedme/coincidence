@@ -199,7 +199,21 @@ int SampleManager::getNextSampleIndex(Params::DirectionType direction)
             break;
         }
 
-        case Params::RIGHT: // Random selection
+        case Params::RIGHT: // Sequential forward
+        {
+            if (currentPlayIndex < 0)
+                currentPlayIndex = currentSelectedSample >= 0 ? currentSelectedSample : 0;
+
+            // Move forward (right)
+            currentPlayIndex++;
+            if (currentPlayIndex >= sampleList.size())
+                currentPlayIndex = 0;
+
+            nextIndex = currentPlayIndex;
+            break;
+        }
+
+        case Params::RANDOM: // Random selection
         default:
         {
             // Choose a random sample from all samples
@@ -221,6 +235,9 @@ int SampleManager::getNextSampleIndex(Params::DirectionType direction)
             break;
         case Params::BIDIRECTIONAL:
             directionText = "BIDIRECTIONAL";
+            break;
+        case Params::RANDOM:
+            directionText = "RANDOM";
             break;
         default:
             directionText = "UNKNOWN";

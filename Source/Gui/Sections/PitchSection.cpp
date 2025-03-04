@@ -24,7 +24,10 @@ void PitchSectionComponent::paint(juce::Graphics& g)
     BaseSectionComponent::paint(g);
 
     auto bounds = getLocalBounds();
-    g.drawLine(getWidth() / 2, 100, getWidth() / 2, bounds.getHeight() - 10, 1.0f);
+    // Draw vertical line from top to just above the horizontal line
+    g.drawLine(getWidth() / 2, 100, getWidth() / 2, bounds.getHeight() - 50, 1.0f);
+    // Draw horizontal line near the bottom
+    g.drawLine(20, bounds.getHeight() - 43, bounds.getWidth() - 20, bounds.getHeight() - 43, 1.0f);
 }
 
 void PitchSectionComponent::resized()
@@ -59,8 +62,14 @@ void PitchSectionComponent::resized()
     octavesProbabilityKnob->setBounds(rightColumnX, secondRowY, knobSize, knobSize);
     octavesProbabilityLabel->setBounds(rightColumnX, secondRowY + knobSize, knobSize, labelHeight);
 
-    arpeggiatorModeToggle->setBounds(leftColumnX - 10, secondRowY + knobSize + labelHeight + 10, 80, 25);
-    semitonesDirectionSelector->setBounds(leftColumnX, secondRowY + knobSize + labelHeight + 40, knobSize + 20, 25);
+    // Position Arp Mode controls horizontally below the horizontal line
+    const int arpControlsY = area.getHeight() - 35; // 10 pixels below the horizontal line
+    const int toggleWidth = 80;
+    const int directionWidth = knobSize + 20;
+    const int totalWidth = toggleWidth + directionWidth + 10; // 10 pixels spacing between controls
+    const int startX = area.getCentreX() - totalWidth / 2;
+    
+    semitonesDirectionSelector->setBounds(startX + toggleWidth + 10, arpControlsY, directionWidth, 25);
 }
 
 void PitchSectionComponent::setupScaleTypeControls()
@@ -111,11 +120,7 @@ void PitchSectionComponent::setupSemitoneControls()
     semitonesProbabilityLabel->setFont(juce::Font(11.0f, juce::Font::bold));
     addAndMakeVisible(semitonesProbabilityLabel.get());
 
-    arpeggiatorModeToggle = std::make_unique<juce::ToggleButton>("Arp Mode");
-    arpeggiatorModeToggle->setToggleState(false, juce::dontSendNotification);
-    addAndMakeVisible(arpeggiatorModeToggle.get());
-
-    semitonesDirectionSelector = std::make_unique<DirectionSelector>("DIR", juce::Colour(0xff52d97d));
+    semitonesDirectionSelector = std::make_unique<DirectionSelector>(juce::Colour(0xff52d97d));
 
     // Set initial value from parameter
     auto* semitonesDirectionParam = dynamic_cast<juce::AudioParameterChoice*>(
@@ -134,10 +139,6 @@ void PitchSectionComponent::setupSemitoneControls()
     };
     addAndMakeVisible(semitonesDirectionSelector.get());
 
-    // Create parameter attachments
-    buttonAttachments.push_back(
-        std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
-            processor.parameters, "arpeggiator_mode", *arpeggiatorModeToggle));
     sliderAttachments.push_back(
         std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
             processor.parameters, "semitones", *semitonesKnob));

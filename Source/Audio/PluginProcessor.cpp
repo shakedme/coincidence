@@ -63,8 +63,6 @@ void PluginProcessor::updateSettingsFromParameters()
     settings.semitones.probability = *parameters.getRawParameterValue("semitones_prob");
     settings.semitones.direction = static_cast<DirectionType>(
         static_cast<int>(*parameters.getRawParameterValue("semitones_direction")));
-    settings.semitones.arpeggiatorMode =
-        *parameters.getRawParameterValue("arpeggiator_mode") > 0.5f;
 
     // Update octave settings
     settings.octaves.value =

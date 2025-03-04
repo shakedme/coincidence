@@ -12,7 +12,8 @@ void ScaleManager::resetArpeggiator()
     arpDirectionUp = true;
 }
 
-int ScaleManager::applyScaleAndModifications(int noteNumber, const Params::GeneratorSettings& settings)
+int ScaleManager::applyScaleAndModifications(int noteNumber,
+                                             const Params::GeneratorSettings& settings)
 {
     // Start with the input note
     int finalNote = noteNumber;
@@ -31,75 +32,57 @@ int ScaleManager::applyScaleAndModifications(int noteNumber, const Params::Gener
         if (juce::Random::getSystemRandom().nextFloat() * 100.0f
             < settings.semitones.probability)
         {
-            if (settings.semitones.arpeggiatorMode)
+            // Arpeggiator mode - sequential stepping
+            switch (settings.semitones.direction)
             {
-                // Arpeggiator mode - sequential stepping
-                switch (settings.semitones.direction)
-                {
-                    case Params::DirectionType::LEFT:
-                        // Down
-                        currentArpStep--;
-                        if (currentArpStep < 0)
-                            currentArpStep = settings.semitones.value;
-                        break;
+                case Params::DirectionType::LEFT:
+                    // Down
+                    currentArpStep--;
+                    if (currentArpStep < 0)
+                        currentArpStep = settings.semitones.value;
+                    break;
 
-                    case Params::DirectionType::BIDIRECTIONAL:
-                        // Bidirectional (up then down)
-                        if (arpDirectionUp)
-                        {
-                            currentArpStep++;
-                            if (currentArpStep >= settings.semitones.value)
-                            {
-                                currentArpStep = settings.semitones.value;
-                                arpDirectionUp = false;
-                            }
-                        }
-                        else
-                        {
-                            currentArpStep--;
-                            if (currentArpStep <= 0)
-                            {
-                                currentArpStep = 0;
-                                arpDirectionUp = true;
-                            }
-                        }
-                        break;
-
-                    case Params::DirectionType::RIGHT:
-                    default:
-                        // Up
+                case Params::DirectionType::BIDIRECTIONAL:
+                    // Bidirectional (up then down)
+                    if (arpDirectionUp)
+                    {
                         currentArpStep++;
-                        if (currentArpStep > settings.semitones.value)
+                        if (currentArpStep >= settings.semitones.value)
+                        {
+                            currentArpStep = settings.semitones.value;
+                            arpDirectionUp = false;
+                        }
+                    }
+                    else
+                    {
+                        currentArpStep--;
+                        if (currentArpStep <= 0)
+                        {
                             currentArpStep = 0;
-                        break;
-                }
+                            arpDirectionUp = true;
+                        }
+                    }
+                    break;
 
-                // Apply step to create the arpeggiator pattern
-                finalNote += currentArpStep;
+                case Params::DirectionType::RIGHT:
+                    // Up
+                    currentArpStep++;
+                    if (currentArpStep > settings.semitones.value)
+                        currentArpStep = 0;
+                    break;
 
-                // Map to the closest note in scale
-                finalNote = findClosestNoteInScale(finalNote, scale, noteRoot);
+                case Params::DirectionType::RANDOM:
+                    // Random
+                    currentArpStep = juce::Random::getSystemRandom().nextInt(
+                        settings.semitones.value + 1);
+                    break;
             }
-            else
-            {
-                // Original random mode (unchanged)
-                // Calculate the semitone variation (1 to max)
-                int semitoneAmount =
-                    1 + juce::Random::getSystemRandom().nextInt(settings.semitones.value);
 
-                // If bidirectional, randomly choose up or down
-                if (settings.semitones.bidirectional
-                    && juce::Random::getSystemRandom().nextBool())
-                {
-                    semitoneAmount = -semitoneAmount;
-                }
+            // Apply step to create the arpeggiator pattern
+            finalNote += currentArpStep;
 
-                // Apply semitone shift to the note
-                finalNote += semitoneAmount;
-
-                // Map to the closest note in scale
-                finalNote = findClosestNoteInScale(finalNote, scale, noteRoot);
-            }
+            // Map to the closest note in scale
+            finalNote = findClosestNoteInScale(finalNote, scale, noteRoot);
         }
         else if (!isNoteInScale(finalNote, scale, noteRoot))
         {
@@ -149,7 +132,9 @@ bool ScaleManager::isNoteInScale(int note, const juce::Array<int>& scale, int ro
     return scale.contains(scaleDegree);
 }
 
-int ScaleManager::findClosestNoteInScale(int note, const juce::Array<int>& scale, int root)
+int ScaleManager::findClosestNoteInScale(int note,
+                                         const juce::Array<int>& scale,
+                                         int root)
 {
     // If the note is already in the scale, return it
     if (isNoteInScale(note, scale, root))
@@ -163,7 +148,7 @@ int ScaleManager::findClosestNoteInScale(int note, const juce::Array<int>& scale
     int closestDistance = 12;
     int closestNote = note;
 
-    for (int scaleDegree : scale)
+    for (int scaleDegree: scale)
     {
         // Calculate the actual MIDI note number
         int scaleNote = (octave * 12) + scaleDegree;
@@ -194,4 +179,4 @@ juce::Array<int> ScaleManager::getSelectedScale(Params::ScaleType scaleType)
         default:
             return Params::majorScale;
     }
-} 
+}

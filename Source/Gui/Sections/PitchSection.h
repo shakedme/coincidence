@@ -32,7 +32,6 @@ private:
     std::unique_ptr<juce::Label> octavesLabel;
     std::unique_ptr<juce::Label> octavesProbabilityLabel;
 
-    std::unique_ptr<juce::ToggleButton> arpeggiatorModeToggle;
     std::unique_ptr<DirectionSelector> semitonesDirectionSelector;
 
     // Setup methods

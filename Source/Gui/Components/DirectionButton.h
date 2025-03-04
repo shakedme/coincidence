@@ -13,10 +13,7 @@
 class DirectionButton : public juce::Component
 {
 public:
-    DirectionButton()
-    {
-        setSize(20, 20);
-    }
+    DirectionButton() { setSize(40, 20); }
 
     void paint(juce::Graphics& g) override
     {
@@ -54,6 +51,10 @@ public:
             case Params::DirectionType::RIGHT:
                 drawRightArrow(g, bounds, arrowColor);
                 break;
+
+            case Params::DirectionType::RANDOM:
+                drawQuestionMark(g, bounds, arrowColor);
+                break;
         }
     }
 
@@ -66,15 +67,9 @@ public:
         repaint();
     }
 
-    void mouseEnter(const juce::MouseEvent& e) override
-    {
-        repaint();
-    }
+    void mouseEnter(const juce::MouseEvent& e) override { repaint(); }
 
-    void mouseExit(const juce::MouseEvent& e) override
-    {
-        repaint();
-    }
+    void mouseExit(const juce::MouseEvent& e) override { repaint(); }
 
     void setType(Params::DirectionType newType)
     {
@@ -82,10 +77,7 @@ public:
         repaint();
     }
 
-    Params::DirectionType getType() const
-    {
-        return type;
-    }
+    Params::DirectionType getType() const { return type; }
 
     void setSelected(bool shouldBeSelected)
     {
@@ -93,10 +85,7 @@ public:
         repaint();
     }
 
-    bool getSelected() const
-    {
-        return isSelected;
-    }
+    bool getSelected() const { return isSelected; }
 
     void setHighlightColor(juce::Colour color)
     {
@@ -107,7 +96,9 @@ public:
     std::function<void(Params::DirectionType)> onSelectionChanged;
 
 private:
-    void drawLeftArrow(juce::Graphics& g, juce::Rectangle<float> bounds, juce::Colour color)
+    void drawLeftArrow(juce::Graphics& g,
+                       juce::Rectangle<float> bounds,
+                       juce::Colour color)
     {
         float arrowSize = bounds.getHeight() * 0.5f;
         float centerY = bounds.getCentreY();
@@ -120,7 +111,9 @@ private:
         g.strokePath(arrow, juce::PathStrokeType(2.0f));
     }
 
-    void drawRightArrow(juce::Graphics& g, juce::Rectangle<float> bounds, juce::Colour color)
+    void drawRightArrow(juce::Graphics& g,
+                        juce::Rectangle<float> bounds,
+                        juce::Colour color)
     {
         float arrowSize = bounds.getHeight() * 0.5f;
         float centerY = bounds.getCentreY();
@@ -133,7 +126,41 @@ private:
         g.strokePath(arrow, juce::PathStrokeType(2.0f));
     }
 
-    void drawBidirectionalArrows(juce::Graphics& g, juce::Rectangle<float> bounds, juce::Colour color)
+    void drawQuestionMark(juce::Graphics& g, juce::Rectangle<float> bounds, juce::Colour color)
+    {
+        float width = bounds.getWidth();
+        float height = bounds.getHeight();
+        float centerX = bounds.getCentreX();
+        float centerY = bounds.getCentreY();
+        float size = juce::jmin(width, height) * 0.7f;
+
+        g.setColour(color);
+
+        juce::Path questionMark;
+
+        // Main curve of question mark
+        questionMark.startNewSubPath(centerX, centerY - size * 0.1f);
+        questionMark.lineTo(centerX, centerY - size * 0.15f);
+        questionMark.quadraticTo(centerX, centerY - size * 0.35f,
+                                 centerX + size * 0.2f, centerY - size * 0.35f);
+        questionMark.quadraticTo(centerX + size * 0.4f, centerY - size * 0.35f,
+                                 centerX + size * 0.4f, centerY - size * 0.15f);
+        questionMark.quadraticTo(centerX + size * 0.4f, centerY + 0.05f * size,
+                                 centerX + size * 0.2f, centerY + 0.05f * size);
+        questionMark.lineTo(centerX, centerY + 0.05f * size);
+
+        // Question mark dot - positioned further down
+        float dotSize = size * 0.1f;
+        questionMark.addEllipse(centerX - dotSize/2,
+                                centerY + size * 0.35f,
+                                dotSize, dotSize);
+
+        g.strokePath(questionMark, juce::PathStrokeType(2.0f));
+    }
+
+    void drawBidirectionalArrows(juce::Graphics& g,
+                                 juce::Rectangle<float> bounds,
+                                 juce::Colour color)
     {
         float arrowSize = bounds.getHeight() * 0.4f;
         float centerY = bounds.getCentreY();

@@ -303,7 +303,7 @@ void GrooveSectionComponent::repaintRandomizationControls()
 void GrooveSectionComponent::setupDirectionControls()
 {
     // Create gate direction selector
-    gateDirectionSelector = std::make_unique<DirectionSelector>("DIR", juce::Colour(0xffd952bf));
+    gateDirectionSelector = std::make_unique<DirectionSelector>(juce::Colour(0xffd952bf));
 
     // Set initial value from parameter
     auto* gateDirectionParam = dynamic_cast<juce::AudioParameterChoice*>(
@@ -324,7 +324,7 @@ void GrooveSectionComponent::setupDirectionControls()
 
     // Create velocity direction selector
     velocityDirectionSelector =
-        std::make_unique<DirectionSelector>("DIR", juce::Colour(0xffd9a652));
+        std::make_unique<DirectionSelector>(juce::Colour(0xffd9a652));
 
     auto* velocityDirectionParam = dynamic_cast<juce::AudioParameterChoice*>(
         processor.parameters.getParameter("velocity_direction"));

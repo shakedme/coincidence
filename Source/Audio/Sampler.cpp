@@ -133,7 +133,7 @@ void SamplerVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
         }
 
         // Calculate the fractional part for interpolation
-        float alpha = static_cast<float>(sourceSamplePosition - sourcePos);
+        auto alpha = static_cast<float>(sourceSamplePosition - sourcePos);
 
         // For each channel
         for (int channel = 0;
