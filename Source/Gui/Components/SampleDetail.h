@@ -230,10 +230,9 @@ public:
     {
         auto bounds = getLocalBounds();
         
-        // Position back button at the bottom
         auto buttonArea = bounds.removeFromBottom(40);
-        backButton->setBounds(buttonArea.withSizeKeepingCentre(120, 30));
-        
+        backButton->setBounds(buttonArea.withSizeKeepingCentre(150, 30));
+
         repaint();
     }
     

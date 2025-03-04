@@ -1,9 +1,3 @@
-//
-// Created by Shaked Melman on 04/03/2025.
-//
-
-#ifndef JAMMER_SAMPLELIST_H
-#define JAMMER_SAMPLELIST_H
 #pragma once
 
 #include <juce_audio_utils/juce_audio_utils.h>
@@ -28,9 +22,12 @@ public:
 
     // Update content when samples change
     void updateContent();
-
+    
     // Callback for when user clicks on edit/detail button
     std::function<void(int)> onSampleDetailRequested;
+    
+    // Get the table list box for keyboard focus
+    juce::TableListBox* getListBox() { return sampleListBox.get(); }
 
     // Update the active sample highlight
     void setActiveSampleIndex(int index);
@@ -46,5 +43,3 @@ private:
     const int ICON_SIZE = 16;
     const int ICON_PADDING = 8;
 };
-
-#endif //JAMMER_SAMPLELIST_H

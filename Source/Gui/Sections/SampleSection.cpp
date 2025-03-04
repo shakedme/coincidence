@@ -30,10 +30,6 @@ void SampleSectionComponent::resized()
     sampleList->setBounds(listArea);
     sampleDetailView->setBounds(listArea);
 
-    // Sample name display
-    int sampleNameY = controlsY + area.getHeight() - 95;
-    sampleNameLabel->setBounds(area.getX(), sampleNameY, sampleListWidth, 25);
-
     // Right side controls - direction selector
     int controlsX = area.getX() + sampleListWidth + 15;
     int controlsWidth = area.getWidth() - sampleListWidth - 25;
@@ -86,10 +82,6 @@ void SampleSectionComponent::initComponents(PluginProcessor& processor)
         }
     };
     addAndMakeVisible(sampleDirectionSelector.get());
-
-    sampleNameLabel = std::unique_ptr<juce::Label>(createLabel("", juce::Justification::centred));
-    sampleNameLabel->setFont(juce::Font(11.0f));
-    addAndMakeVisible(sampleNameLabel.get());
 }
 
 void SampleSectionComponent::paint(juce::Graphics& g)
@@ -136,17 +128,6 @@ void SampleSectionComponent::timerCallback()
         {
             // Update the sample list's active index
             sampleList->setActiveSampleIndex(currentActiveSample);
-
-            // Update the sample name label if a valid sample is playing
-            if (currentActiveSample >= 0 && currentActiveSample < processor.getSampleManager().getNumSamples())
-            {
-                sampleNameLabel->setText("Playing: " + processor.getSampleManager().getSampleName(currentActiveSample),
-                                         juce::dontSendNotification);
-            }
-            else
-            {
-                sampleNameLabel->setText("", juce::dontSendNotification);
-            }
         }
     }
 }
@@ -189,16 +170,6 @@ void SampleSectionComponent::filesDropped(const juce::StringArray& files, int x,
     {
         sampleList->updateContent();
         repaint();
-    }
-
-    // Update sample name label
-    if (processor.getSampleManager().getNumSamples() == 0)
-    {
-        sampleNameLabel->setText("No samples loaded", juce::dontSendNotification);
-    }
-    else
-    {
-        sampleNameLabel->setText("", juce::dontSendNotification);
     }
 }
 

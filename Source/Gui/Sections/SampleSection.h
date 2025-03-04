@@ -34,7 +34,6 @@ private:
     std::unique_ptr<SampleList> sampleList;
     std::unique_ptr<SampleDetailComponent> sampleDetailView;
     std::unique_ptr<juce::TextButton> removeSampleButton;
-    std::unique_ptr<juce::Label> sampleNameLabel;
 
     // Direction selector
     std::unique_ptr<DirectionSelector> sampleDirectionSelector;

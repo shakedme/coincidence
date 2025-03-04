@@ -403,3 +403,105 @@ void LookAndFeel::drawLabel(juce::Graphics& g, juce::Label& label)
         g.drawRect(label.getLocalBounds());
     }
 }
+
+void LookAndFeel::drawButtonBackground(juce::Graphics& g,
+                                       juce::Button& button,
+                                       const juce::Colour& backgroundColour,
+                                       bool shouldDrawButtonAsHighlighted,
+                                       bool shouldDrawButtonAsDown)
+{
+    auto buttonArea = button.getLocalBounds().toFloat().reduced(0.5f, 0.5f);
+    float cornerSize = 3.0f;
+
+    // Base colors
+    juce::Colour baseColor = backgroundColour;
+
+    // Use the component's color if specified, otherwise use a default metal color
+    if (baseColor == juce::Colours::white || baseColor == juce::Colour(0x00000000))
+        baseColor = juce::Colour(0xff505050);
+
+    // Adjust colors based on state
+    juce::Colour topColor, bottomColor, edgeHighlight, edgeShadow;
+
+    if (shouldDrawButtonAsDown)
+    {
+        // Pressed state - looks pushed in
+        topColor = baseColor.darker(0.2f);
+        bottomColor = baseColor.darker(0.1f);
+        edgeHighlight = juce::Colours::transparentBlack;
+        edgeShadow = juce::Colours::white.withAlpha(0.08f);
+    }
+    else
+    {
+        // Normal or highlighted state - looks raised
+        topColor = shouldDrawButtonAsHighlighted ? baseColor.brighter(0.1f) : baseColor;
+        bottomColor = baseColor.darker(0.2f);
+        edgeHighlight = juce::Colours::white.withAlpha(0.15f);
+        edgeShadow = juce::Colours::black.withAlpha(0.2f);
+    }
+
+    // Draw the main button gradient
+    g.setGradientFill(juce::ColourGradient(
+        topColor, 0.0f, buttonArea.getY(),
+        bottomColor, 0.0f, buttonArea.getBottom(),
+        false));
+    g.fillRoundedRectangle(buttonArea, cornerSize);
+
+    // Draw edge highlight (top and left)
+    juce::Path edgeHighlightPath;
+    edgeHighlightPath.startNewSubPath(buttonArea.getX() + cornerSize, buttonArea.getY());
+    edgeHighlightPath.lineTo(buttonArea.getRight() - cornerSize, buttonArea.getY());
+    edgeHighlightPath.addArc(buttonArea.getRight() - cornerSize*2, buttonArea.getY(), cornerSize*2, cornerSize*2, 0.0f, juce::MathConstants<float>::halfPi);
+    edgeHighlightPath.lineTo(buttonArea.getRight(), buttonArea.getBottom() - cornerSize);
+
+    if (shouldDrawButtonAsDown)
+    {
+        // For pressed state, swap the highlight/shadow
+        g.setColour(edgeShadow);
+    }
+    else
+    {
+        g.setColour(edgeHighlight);
+    }
+    g.strokePath(edgeHighlightPath, juce::PathStrokeType(1.0f));
+
+    // Draw edge shadow (bottom and right)
+    juce::Path edgeShadowPath;
+    edgeShadowPath.startNewSubPath(buttonArea.getX() + cornerSize, buttonArea.getBottom());
+    edgeShadowPath.lineTo(buttonArea.getRight() - cornerSize, buttonArea.getBottom());
+    edgeShadowPath.addArc(buttonArea.getRight() - cornerSize*2, buttonArea.getBottom() - cornerSize*2, cornerSize*2, cornerSize*2, juce::MathConstants<float>::pi, juce::MathConstants<float>::pi + juce::MathConstants<float>::halfPi);
+    edgeShadowPath.lineTo(buttonArea.getX() + cornerSize, buttonArea.getY());
+    edgeShadowPath.addArc(buttonArea.getX(), buttonArea.getY(), cornerSize*2, cornerSize*2, juce::MathConstants<float>::pi, juce::MathConstants<float>::pi + juce::MathConstants<float>::halfPi);
+
+    if (shouldDrawButtonAsDown)
+    {
+        // For pressed state, swap the highlight/shadow
+        g.setColour(edgeHighlight);
+    }
+    else
+    {
+        g.setColour(edgeShadow);
+    }
+    g.strokePath(edgeShadowPath, juce::PathStrokeType(1.0f));
+
+    // Add a subtle inner metallic shine
+    if (!shouldDrawButtonAsDown)
+    {
+        auto shineArea = buttonArea.reduced(2.0f);
+        g.setGradientFill(juce::ColourGradient(
+            juce::Colours::white.withAlpha(0.07f), shineArea.getX(), shineArea.getY(),
+            juce::Colours::transparentWhite, shineArea.getX(), shineArea.getCentreY(),
+            false));
+        g.fillRoundedRectangle(shineArea, cornerSize - 1.0f);
+    }
+    else
+    {
+        // Add subtle inner shadow for pressed state
+        auto shadowArea = buttonArea.reduced(2.0f);
+        g.setGradientFill(juce::ColourGradient(
+            juce::Colours::black.withAlpha(0.07f), shadowArea.getX(), shadowArea.getY(),
+            juce::Colours::transparentBlack, shadowArea.getX(), shadowArea.getCentreY(),
+            false));
+        g.fillRoundedRectangle(shadowArea, cornerSize - 1.0f);
+    }
+}
