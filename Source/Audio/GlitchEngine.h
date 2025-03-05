@@ -37,25 +37,31 @@ public:
 private:
     std::shared_ptr<TimingManager> timingManager;
 
-    // Determines if we should trigger a stutter based on probability
-    bool shouldTriggerStutter();
+    // Main processing methods
+    void updateTimingInfo(juce::AudioPlayHead* playHead);
+    void handleTransportLoopDetection();
+    void processActiveStutter(juce::AudioBuffer<float>& buffer, int numSamples, int numChannels);
+    void checkAndStartNewStutter(juce::AudioBuffer<float>& buffer, const juce::MidiBuffer& midiMessages, int numSamples, int numChannels);
 
-    // Calculates the musically-relevant stutter length in samples
-    int calculateStutterLength(
-        const juce::Optional<juce::AudioPlayHead::PositionInfo>& posInfo);
+    // Stutter effect helpers
+    void copyStutterDataToBuffer(juce::AudioBuffer<float>& tempBuffer, int numSamples, int numChannels);
+    void applyStutterCrossfade(juce::AudioBuffer<float>& buffer, const juce::AudioBuffer<float>& tempBuffer, int numSamples, int numChannels);
+    void updateStutterPosition(int numSamples);
+    void endStutterEffect();
+    void resetStutterState();
 
-    // Finds the nearest grid position for timing
-    double findNearestGridPosition(
-        const juce::Optional<juce::AudioPlayHead::PositionInfo>& posInfo);
+    // MIDI and triggering
+    void checkForMidiTriggers(juce::AudioBuffer<float>& buffer, const juce::MidiBuffer& midiMessages, int numSamples, int numChannels);
+    void startStutterAtPosition(juce::AudioBuffer<float>& buffer, int samplePosition, int numSamples, int numChannels);
+    void applyImmediateStutterEffect(juce::AudioBuffer<float>& buffer, int samplePosition, int numSamples, int numChannels);
+
+    // Buffer management
+    void addToHistory(const juce::AudioBuffer<float>& buffer);
+    void captureFromHistory(int triggerSamplePosition, int lengthToCapture);
+    void captureHistorySegment(int historyTriggerPos, int lengthToCapture);
 
     // Selects a random musical rate for repeat duration
     Params::RateOption selectRandomRate();
-
-    // Adds audio to the history buffer
-    void addToHistory(const juce::AudioBuffer<float>& buffer);
-
-    // Captures a segment from history buffer starting at a specific position
-    void captureFromHistory(int triggerSamplePosition, int lengthToCapture);
 
     // Parameter for stutter probability (0-100%)
     std::atomic<float> stutterProbability {0.0f};
