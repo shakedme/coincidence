@@ -215,8 +215,38 @@ juce::AudioProcessorEditor* PluginProcessor::createEditor()
 //==============================================================================
 void PluginProcessor::getStateInformation(juce::MemoryBlock& destData)
 {
+    // Get the parameter state
     auto state = parameters.copyState();
     std::unique_ptr<juce::XmlElement> xml(state.createXml());
+
+    // Add sample information to the XML
+    juce::XmlElement* samplesXml = new juce::XmlElement("Samples");
+
+    // Get sample manager reference
+    SampleManager& sampleManager = getSampleManager();
+
+    // Add each loaded sample to the XML
+    for (int i = 0; i < sampleManager.getNumSamples(); ++i)
+    {
+        juce::XmlElement* sampleXml = new juce::XmlElement("Sample");
+
+        // Add sample path
+        sampleXml->setAttribute("path", sampleManager.getSampleFilePath(i).getFullPathName());
+
+        // Add sample markers if available
+        if (auto* sound = sampleManager.getSampleSound(i))
+        {
+            sampleXml->setAttribute("startMarker", sound->getStartMarkerPosition());
+            sampleXml->setAttribute("endMarker", sound->getEndMarkerPosition());
+        }
+
+        samplesXml->addChildElement(sampleXml);
+    }
+
+    // Add samples element to the main XML
+    xml->addChildElement(samplesXml);
+
+    // Copy XML to binary data
     copyXmlToBinary(*xml, destData);
 }
 
@@ -225,8 +255,63 @@ void PluginProcessor::setStateInformation(const void* data, int sizeInBytes)
     std::unique_ptr<juce::XmlElement> xmlState(getXmlFromBinary(data, sizeInBytes));
 
     if (xmlState != nullptr)
+    {
+        // First restore parameters
         if (xmlState->hasTagName(parameters.state.getType()))
             parameters.replaceState(juce::ValueTree::fromXml(*xmlState));
+
+        // Now look for samples
+        if (juce::XmlElement* samplesXml = xmlState->getChildByName("Samples"))
+        {
+            // Get sample manager reference
+            SampleManager& sampleManager = getSampleManager();
+
+            // Clear existing samples
+            sampleManager.clearAllSamples();
+
+            // Load each sample
+            for (int i = 0; i < samplesXml->getNumChildElements(); ++i)
+            {
+                if (auto* sampleXml = samplesXml->getChildElement(i))
+                {
+                    if (sampleXml->hasTagName("Sample"))
+                    {
+                        juce::String path = sampleXml->getStringAttribute("path", "");
+                        if (path.isNotEmpty())
+                        {
+                            juce::File sampleFile(path);
+                            if (sampleFile.existsAsFile())
+                            {
+                                // Load the sample
+                                sampleManager.addSample(sampleFile);
+
+                                // Get the index of the just-added sample
+                                int newSampleIndex = sampleManager.getNumSamples() - 1;
+
+                                // Set marker positions if they exist
+                                if (sampleXml->hasAttribute("startMarker") &&
+                                    sampleXml->hasAttribute("endMarker"))
+                                {
+                                    float startMarker = (float)sampleXml->getDoubleAttribute("startMarker", 0.0);
+                                    float endMarker = (float)sampleXml->getDoubleAttribute("endMarker", 1.0);
+
+                                    if (auto* sound = sampleManager.getSampleSound(newSampleIndex))
+                                    {
+                                        sound->setMarkerPositions(startMarker, endMarker);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                // File not found, log error
+                                juce::Logger::writeToLog("Failed to load sample: " + path + " (file not found)");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 //==============================================================================

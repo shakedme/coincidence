@@ -26,6 +26,7 @@ public:
     void addSample(const juce::File& file);
     void removeSamples(int startIdx, int endIdx);
     void clearAllSamples();
+    juce::File getSampleFilePath(int index) const;
     int getNextSampleIndex(Params::DirectionType direction);
     void rebuildSounds();
     

@@ -260,3 +260,10 @@ SamplerSound* SampleManager::getSampleSound(int index) const
         return sampleList[index]->sound.get();
     return nullptr;
 }
+
+juce::File SampleManager::getSampleFilePath(int index) const
+{
+    if (index >= 0 && index < sampleList.size())
+        return sampleList[index]->file;
+    return juce::File();
+}
