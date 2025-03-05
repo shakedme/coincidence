@@ -4,9 +4,6 @@
 #include <atomic>
 #include "TimingManager.h"
 
-/**
- * Simplified GlitchEngine that provides grid-based stutter effects
- */
 class GlitchEngine
 {
 public:
@@ -24,10 +21,12 @@ public:
     void releaseResources();
 
     /**
-     * Processes an audio buffer, applying stutter effect when triggered.
+     * Processes an audio buffer, applying beat-repeat effect when triggered.
+     * Now accepts MIDI messages to allow precise alignment with note events.
      */
     void processAudio(juce::AudioBuffer<float>& buffer,
-                      juce::AudioPlayHead* playHead);
+                      juce::AudioPlayHead* playHead,
+                      const juce::MidiBuffer& midiMessages);
 
     /**
      * Sets the stutter probability (0.0-100.0)
@@ -42,27 +41,46 @@ private:
     bool shouldTriggerStutter();
 
     // Calculates the musically-relevant stutter length in samples
-    int calculateStutterLength(const juce::Optional<juce::AudioPlayHead::PositionInfo>& posInfo);
+    int calculateStutterLength(
+        const juce::Optional<juce::AudioPlayHead::PositionInfo>& posInfo);
 
     // Finds the nearest grid position for timing
-    double findNearestGridPosition(const juce::Optional<juce::AudioPlayHead::PositionInfo>& posInfo);
+    double findNearestGridPosition(
+        const juce::Optional<juce::AudioPlayHead::PositionInfo>& posInfo);
+
+    // Selects a random musical rate for repeat duration
+    Params::RateOption selectRandomRate();
+
+    // Adds audio to the history buffer
+    void addToHistory(const juce::AudioBuffer<float>& buffer);
+
+    // Captures a segment from history buffer starting at a specific position
+    void captureFromHistory(int triggerSamplePosition, int lengthToCapture);
 
     // Parameter for stutter probability (0-100%)
-    std::atomic<float> stutterProbability{0.0f};
+    std::atomic<float> stutterProbability {0.0f};
 
     // Audio processing state
-    double sampleRate{44100.0};
-    int bufferSize{512};
+    double sampleRate {44100.0};
+    int bufferSize {512};
 
-    // Stutter effect state
-    bool isStuttering{false};
-    int stutterPosition{0};
-    int stutterLength{0};
-    int stutterRepeatCount{0};
-    int stutterRepeatsTotal{2};
+    // Beat-repeat effect state
+    bool isStuttering {false};
+    int stutterPosition {0};
+    int stutterLength {0};
+    int stutterRepeatCount {0};
+    int stutterRepeatsTotal {2};
 
-    // Buffer for storing audio segments for stutter effect
+    // Buffer for storing audio segments for beat-repeat effect
     juce::AudioBuffer<float> stutterBuffer;
+
+    // History buffer to store recent audio for accurate beat repeating
+    juce::AudioBuffer<float> historyBuffer;
+    int historyWritePosition {0};
+    int historyBufferSize {0};
+
+    // Most recent buffer size for reference
+    int currentBufferSize {0};
 
     // Random number generator
     juce::Random random;

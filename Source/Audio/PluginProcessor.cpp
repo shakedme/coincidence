@@ -196,7 +196,7 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     audioProcessor->processAudio(buffer, processedMidi, midiMessages);
 
     // Process audio with glitch effects
-    glitchEngine->processAudio(buffer, playHead);
+    glitchEngine->processAudio(buffer, playHead, midiMessages);
 
     timingManager->updateSamplePosition(buffer.getNumSamples());
 }
@@ -300,11 +300,6 @@ void PluginProcessor::setStateInformation(const void* data, int sizeInBytes)
                                         sound->setMarkerPositions(startMarker, endMarker);
                                     }
                                 }
-                            }
-                            else
-                            {
-                                // File not found, log error
-                                juce::Logger::writeToLog("Failed to load sample: " + path + " (file not found)");
                             }
                         }
                     }

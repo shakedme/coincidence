@@ -1,3 +1,10 @@
+// GlitchEngine.h modifications
+
+#pragma once
+
+#include <juce_audio_utils/juce_audio_utils.h>
+#include <atomic>
+#include "TimingManager.h"
 #include "GlitchEngine.h"
 
 GlitchEngine::GlitchEngine(std::shared_ptr<TimingManager> t)
@@ -23,6 +30,12 @@ void GlitchEngine::prepareToPlay(double sampleRate, int samplesPerBlock)
     stutterBuffer.setSize(2, maxStutterSamples);
     stutterBuffer.clear();
 
+    // Initialize history buffer to store 2 seconds of audio
+    historyBufferSize = static_cast<int>(sampleRate * 2.0);
+    historyBuffer.setSize(2, historyBufferSize);
+    historyBuffer.clear();
+    historyWritePosition = 0;
+
     // Reset processing state
     isStuttering = false;
     stutterPosition = 0;
@@ -37,10 +50,12 @@ void GlitchEngine::releaseResources()
 
     // Clear buffers
     stutterBuffer.clear();
+    historyBuffer.clear();
 }
 
 void GlitchEngine::processAudio(juce::AudioBuffer<float>& buffer,
-                                juce::AudioPlayHead* playHead)
+                                juce::AudioPlayHead* playHead,
+                                const juce::MidiBuffer& midiMessages)
 {
     // Get timing info from playhead
     juce::Optional<juce::AudioPlayHead::PositionInfo> posInfo;
@@ -49,134 +64,51 @@ void GlitchEngine::processAudio(juce::AudioBuffer<float>& buffer,
     {
         timingManager->updateTimingInfo(playHead);
         posInfo = playHead->getPosition();
-        if (posInfo.hasValue() && posInfo->getPpqPosition().hasValue()) {
-            juce::Logger::writeToLog(juce::String("GlitchEngine: PPQ Position: ") +
-                                     juce::String(*posInfo->getPpqPosition()) +
-                                     " BPM: " + juce::String(posInfo->getBpm().hasValue() ? *posInfo->getBpm() : 0.0));
-        }
     }
 
     int numSamples = buffer.getNumSamples();
     int numChannels = buffer.getNumChannels();
+    currentBufferSize = numSamples;
 
-    // Log current stutter state
-    juce::Logger::writeToLog("GlitchEngine: isStuttering=" + juce::String(isStuttering ? "true" : "false") +
-                             " probability=" + juce::String(stutterProbability.load()) +
-                             " stutterPosition=" + juce::String(stutterPosition) +
-                             " stutterLength=" + juce::String(stutterLength) +
-                             " repeatCount=" + juce::String(stutterRepeatCount) +
-                             " of " + juce::String(stutterRepeatsTotal));
+    // Add current buffer to history first
+    addToHistory(buffer);
 
-    // Update sample position in timing manager is handled in PluginProcessor, so removed from here
-    // timingManager->updateSamplePosition(numSamples);
+    // Safety check - if probability is 0, ensure we're not stuttering
+    if (stutterProbability <= 0.0f)
+    {
+        isStuttering = false;
+    }
 
     // Check if we've detected a loop in the transport (from TimingManager)
     if (timingManager->wasLoopDetected())
     {
-        juce::Logger::writeToLog("GlitchEngine: Loop detected in transport - resetting stutter state");
         // Reset stuttering state when transport loops
         isStuttering = false;
         stutterPosition = 0;
         stutterLength = 0;
         stutterRepeatCount = 0;
+        stutterRepeatsTotal = 0;
 
         // Clear the loop detection flag
         timingManager->clearLoopDetection();
     }
 
-    // If not currently stuttering, check if we should start
-    if (!isStuttering && stutterProbability > 0.0f)
-    {
-        bool shouldTrigger = shouldTriggerStutter();
-        juce::Logger::writeToLog("GlitchEngine: Stutter trigger check result: " + juce::String(shouldTrigger ? "true" : "false"));
-
-        if (shouldTrigger)
-        {
-            // Create a temporary settings object for use with the timing manager
-            Params::GeneratorSettings settings;
-
-            // Use TimingManager to determine if we're at a grid-aligned position
-            bool shouldTriggerGrid = false;
-
-            // Try different rate options to see if any should trigger
-            Params::RateOption rateOptions[] = {
-                Params::RATE_1_4, Params::RATE_1_8, Params::RATE_1_16};
-
-            Params::RateOption selectedRate = Params::RATE_1_4; // Default
-
-            for (auto rate: rateOptions)
-            {
-                if (timingManager->shouldTriggerNote(rate, settings))
-                {
-                    shouldTriggerGrid = true;
-                    selectedRate = rate;
-                    juce::Logger::writeToLog("GlitchEngine: Grid trigger at rate: " + juce::String(rate) +
-                                             " PPQ: " + juce::String(timingManager->getPpqPosition()));
-                    break;
-                }
-            }
-
-            if (shouldTriggerGrid)
-            {
-                // We're at a grid position, start stuttering
-                isStuttering = true;
-                stutterPosition = 0;
-
-                // Use the timing manager to calculate stutter length based on musical timing
-                stutterLength = static_cast<int>(
-                    timingManager->getNoteDurationInSamples(selectedRate, settings));
-
-                juce::Logger::writeToLog("GlitchEngine: Starting stutter - Rate: " + juce::String(static_cast<int>(selectedRate)) +
-                                         " Length: " + juce::String(stutterLength) + " samples" +
-                                         " (" + juce::String(stutterLength / sampleRate) + " seconds)");
-
-                // Determine number of repeats (2-4)
-                stutterRepeatsTotal = 2 + random.nextInt(3); // 2 to 4
-                stutterRepeatCount = 0;
-
-                juce::Logger::writeToLog("GlitchEngine: Stutter repeats: " + juce::String(stutterRepeatsTotal));
-
-                // Make sure stutterLength doesn't exceed the stutter buffer size
-                int originalLength = stutterLength;
-                stutterLength = juce::jmin(stutterLength, stutterBuffer.getNumSamples());
-                if (originalLength != stutterLength) {
-                    juce::Logger::writeToLog("GlitchEngine: Limiting stutter length from " +
-                                             juce::String(originalLength) + " to " + juce::String(stutterLength) +
-                                             " (buffer size: " + juce::String(stutterBuffer.getNumSamples()) + ")");
-                }
-
-                // Copy current buffer to stutter buffer for looping
-                for (int channel = 0;
-                     channel < juce::jmin(numChannels, stutterBuffer.getNumChannels());
-                     ++channel)
-                {
-                    // First, copy what we have from the current buffer
-                    stutterBuffer.copyFrom(channel, 0, buffer, channel, 0, numSamples);
-
-                    // Fill the rest of the stutter length with repeated data if needed
-                    for (int pos = numSamples; pos < stutterLength; pos += numSamples) {
-                        int copySize = juce::jmin(numSamples, stutterLength - pos);
-                        stutterBuffer.copyFrom(channel, pos, buffer, channel, 0, copySize);
-                    }
-                }
-
-                juce::Logger::writeToLog("GlitchEngine: Copied " + juce::String(numSamples) +
-                                         " samples to stutter buffer (may be repeated to fill " +
-                                         juce::String(stutterLength) + " samples)");
-
-                // Update last trigger time in the timing manager
-                timingManager->updateLastTriggerTime(selectedRate,
-                                                     timingManager->getPpqPosition());
-            }
-        }
-    }
-
-    // If we're stuttering, replace audio with the stutter buffer
+    // If we're already stuttering, continue the stutter effect
     if (isStuttering)
     {
         // Create a temporary buffer for mixing
         juce::AudioBuffer<float> tempBuffer(numChannels, numSamples);
         tempBuffer.clear();
+
+        // Safety check for division by zero
+        if (stutterLength <= 0)
+        {
+            isStuttering = false;
+            stutterPosition = 0;
+            stutterLength = 0;
+            stutterRepeatCount = 0;
+            return;
+        }
 
         for (int channel = 0;
              channel < juce::jmin(numChannels, stutterBuffer.getNumChannels());
@@ -222,25 +154,10 @@ void GlitchEngine::processAudio(juce::AudioBuffer<float>& buffer,
 
         // Log position wraparound
         if (stutterPosition < oldPosition) {
-            juce::Logger::writeToLog("GlitchEngine: Stutter buffer position wrapped around from " +
-                                     juce::String(oldPosition) + " to " + juce::String(stutterPosition) +
-                                     " (increment: " + juce::String(numSamples) +
-                                     ", length: " + juce::String(stutterLength) + ")");
-        }
-
-        // Check if we should finish this stutter instance
-        if (stutterPosition < numSamples)
-        {
             // We've completed a full loop through the stutter buffer
             stutterRepeatCount++;
-            juce::Logger::writeToLog("GlitchEngine: Stutter repeat " + juce::String(stutterRepeatCount) +
-                                     " of " + juce::String(stutterRepeatsTotal));
-
             if (stutterRepeatCount >= stutterRepeatsTotal)
             {
-                juce::Logger::writeToLog("GlitchEngine: Ending stutter after " +
-                                         juce::String(stutterRepeatCount) + " repeats");
-
                 // End the stutter with a crossfade
                 for (int channel = 0; channel < numChannels; ++channel)
                 {
@@ -255,125 +172,176 @@ void GlitchEngine::processAudio(juce::AudioBuffer<float>& buffer,
                     }
                 }
 
-                // End the stutter
+                // Fully reset the stutter state
                 isStuttering = false;
+                stutterPosition = 0;
+                stutterLength = 0;
+                stutterRepeatCount = 0;
+                stutterRepeatsTotal = 0;
+            }
+        }
+
+        // Safety timeout - prevent stutters from lasting too long
+        if (stutterRepeatCount > 8) // Maximum number of repeats to prevent hanging
+        {
+            isStuttering = false;
+            stutterPosition = 0;
+            stutterLength = 0;
+            stutterRepeatCount = 0;
+            stutterRepeatsTotal = 0;
+        }
+    }
+    // If not currently stuttering, check if we should start
+    else if (stutterProbability > 0.0f)
+    {
+        // Apply probability check first
+        if (random.nextFloat() < (stutterProbability / 100.0f))
+        {
+            // Look for MIDI note-on events to use as stutter points
+            if (!midiMessages.isEmpty())
+            {
+                for (const auto metadata : midiMessages)
+                {
+                    auto message = metadata.getMessage();
+                    if (message.isNoteOn())
+                    {
+                        // Found a note-on - this is a good point to start stuttering
+                        int samplePosition = metadata.samplePosition;
+                        // Choose a rate (1/8, 1/16 note, etc.)
+                        Params::RateOption selectedRate = selectRandomRate();
+
+                        // Calculate stutter length based on musical timing
+                        Params::GeneratorSettings settings;
+                        int captureLength = static_cast<int>(
+                            timingManager->getNoteDurationInSamples(selectedRate, settings));
+
+                        // Limit to a reasonable value
+                        captureLength = juce::jmin(captureLength, stutterBuffer.getNumSamples());
+
+
+                        // Capture the musical segment starting from the note position
+                        captureFromHistory(samplePosition, captureLength);
+
+                        // Configure stutter parameters
+                        isStuttering = true;
+                        stutterLength = captureLength;
+                        stutterPosition = 0;
+                        stutterRepeatsTotal = 2 + random.nextInt(3); // 2-4 repeats
+                        stutterRepeatCount = 0;
+
+                        // Apply stutter effect immediately for the rest of this buffer
+                        juce::AudioBuffer<float> tempBuffer(numChannels, numSamples - samplePosition);
+                        tempBuffer.clear();
+
+                        for (int channel = 0; channel < juce::jmin(numChannels, stutterBuffer.getNumChannels()); ++channel)
+                        {
+                            float* channelData = tempBuffer.getWritePointer(channel);
+                            const float* stutterData = stutterBuffer.getReadPointer(channel);
+
+                            for (int i = 0; i < numSamples - samplePosition; ++i)
+                            {
+                                int stutterIndex = i % stutterLength;
+                                channelData[i] = stutterData[stutterIndex];
+                            }
+
+                            // Copy the stutter data back to the main buffer starting at the note position
+                            buffer.copyFrom(channel, samplePosition, tempBuffer, channel, 0, numSamples - samplePosition);
+                        }
+
+                        // Update stutter position for the next buffer
+                        stutterPosition = (numSamples - samplePosition) % stutterLength;
+
+                        break; // Only use the first note-on event
+                    }
+                }
             }
         }
     }
     // If not stuttering, the original audio in buffer passes through unchanged
 }
 
-bool GlitchEngine::shouldTriggerStutter()
+void GlitchEngine::addToHistory(const juce::AudioBuffer<float>& buffer)
 {
-    // Get current stutter probability
-    float probability = stutterProbability.load();
+    // Add the current buffer to the history circular buffer
+    int numSamples = buffer.getNumSamples();
 
-    // If probability is zero, never trigger
-    if (probability <= 0.0f)
-        return false;
+    for (int channel = 0; channel < juce::jmin(buffer.getNumChannels(), historyBuffer.getNumChannels()); ++channel)
+    {
+        if (historyWritePosition + numSamples <= historyBufferSize)
+        {
+            // Simple copy if it doesn't wrap around
+            historyBuffer.copyFrom(channel, historyWritePosition, buffer, channel, 0, numSamples);
+        }
+        else
+        {
+            // Handle wrap-around case
+            int firstPartSize = historyBufferSize - historyWritePosition;
+            historyBuffer.copyFrom(channel, historyWritePosition, buffer, channel, 0, firstPartSize);
+            historyBuffer.copyFrom(channel, 0, buffer, channel, firstPartSize, numSamples - firstPartSize);
+        }
+    }
 
-    // We'll leverage the current timing position to make stutters more musical
-    // Only trigger stutters with a certain probability, weighted by proximity to musical grid positions
-
-    // Basic probability calculation
-    float baseProb = probability / 100.0f;
-
-    // Add some randomness - we don't want every beat to stutter
-    float randomFactor = random.nextFloat();
-
-    // Use our randomness, but weight it based on how close we are to a significant beat boundary
-    // This gives a more musical feel to the stutters
-    double ppqPosition = timingManager->getPpqPosition();
-    double lastPpqPosition = timingManager->getLastPpqPosition();
-
-    // Check if we're close to a beat boundary (whole, half, quarter notes)
-    double distToWholeBeat = std::abs(ppqPosition - std::floor(ppqPosition));
-    double distToHalfBeat = std::abs(ppqPosition - (std::floor(ppqPosition * 2.0) / 2.0));
-    double distToQuarterBeat =
-        std::abs(ppqPosition - (std::floor(ppqPosition * 4.0) / 4.0));
-
-    // The closest we are to a significant boundary, the more likely we trigger
-    double closestBoundaryDist =
-        std::min({distToWholeBeat, distToHalfBeat, distToQuarterBeat});
-
-    // Normalize to 0-1 range (0 = on beat, 1 = furthest from beat)
-    double normalizedDist =
-        closestBoundaryDist * 4.0; // 4.0 = 1/16th note is max distance
-    normalizedDist = std::min(normalizedDist, 1.0);
-
-    // Calculate musical weight (higher when closer to beat)
-    float musicalWeight = 1.0f - static_cast<float>(normalizedDist);
-
-    // Final probability is base probability * random factor * musical weight
-    float finalProb = baseProb * musicalWeight;
-
-    // Adjust to account for buffer size (important for lower sample rates)
-    float adjustedProb = finalProb * bufferSize / (sampleRate / 4.0f);
-
-    // Limit max probability to avoid too frequent stutters
-    adjustedProb = juce::jmin(adjustedProb, 0.5f);
-
-    // Random decision
-    return randomFactor < adjustedProb;
+    // Update write position with wrap-around
+    historyWritePosition = (historyWritePosition + numSamples) % historyBufferSize;
 }
 
-int GlitchEngine::calculateStutterLength(
-    const juce::Optional<juce::AudioPlayHead::PositionInfo>& posInfo)
+void GlitchEngine::captureFromHistory(int triggerSamplePosition, int lengthToCapture)
 {
-    // Create a temporary settings object for use with timing manager
-    Params::GeneratorSettings settings;
+    // Determine starting position in history buffer
+    // We need to account for the fact that:
+    // 1. historyWritePosition points to where the *next* buffer will be written
+    // 2. triggerSamplePosition is relative to the *current* buffer
 
-    // Choose a random rhythm mode (normal, dotted, or triplet)
-    const int rhythmModes[] = {
-        Params::RHYTHM_NORMAL, Params::RHYTHM_DOTTED, Params::RHYTHM_TRIPLET};
+    // Calculate samples from end of current buffer
+    int samplesFromEnd = currentBufferSize - triggerSamplePosition;
 
-    settings.rhythmMode = static_cast<Params::RhythmMode>(rhythmModes[random.nextInt(3)]);
+    // Calculate absolute history buffer position where trigger point is
+    int historyTriggerPos = (historyWritePosition - samplesFromEnd + historyBufferSize) % historyBufferSize;
 
-    // Choose a random note division (1/4, 1/8, or 1/16 note)
-    const Params::RateOption divisions[] = {
-        Params::RATE_1_4, Params::RATE_1_8, Params::RATE_1_16};
+    // Ensure stutter buffer is big enough
+    if (stutterBuffer.getNumSamples() < lengthToCapture) {
+        stutterBuffer.setSize(stutterBuffer.getNumChannels(), lengthToCapture, true, true, true);
+    }
 
-    Params::RateOption selectedRate = divisions[random.nextInt(3)];
+    // Clear stutter buffer
+    stutterBuffer.clear();
 
-    // Use timing manager to calculate stutter length in samples
-    double stutterLengthSamples =
-        timingManager->getNoteDurationInSamples(selectedRate, settings);
-
-    // Return the stutter length as an integer
-    return static_cast<int>(stutterLengthSamples);
+    // Copy the segment from history buffer to stutter buffer
+    for (int channel = 0; channel < juce::jmin(stutterBuffer.getNumChannels(), historyBuffer.getNumChannels()); ++channel)
+    {
+        if (historyTriggerPos + lengthToCapture <= historyBufferSize)
+        {
+            // Simple case - no wrap-around
+            stutterBuffer.copyFrom(channel, 0, historyBuffer, channel, historyTriggerPos, lengthToCapture);
+        }
+        else
+        {
+            // Handle wrap-around case
+            int firstPartSize = historyBufferSize - historyTriggerPos;
+            stutterBuffer.copyFrom(channel, 0, historyBuffer, channel, historyTriggerPos, firstPartSize);
+            stutterBuffer.copyFrom(channel, firstPartSize, historyBuffer, channel, 0, lengthToCapture - firstPartSize);
+        }
+    }
 }
 
-double GlitchEngine::findNearestGridPosition(
-    const juce::Optional<juce::AudioPlayHead::PositionInfo>& posInfo)
+Params::RateOption GlitchEngine::selectRandomRate()
 {
-    // This method is kept for backwards compatibility, but we should prefer
-    // using the TimingManager's grid position detection instead.
+    // Rates for beat-repeat (1/4, 1/8, or 1/16 note most musically useful)
+    Params::RateOption rates[] = {
+        Params::RATE_1_4,
+        Params::RATE_1_8,
+        Params::RATE_1_16
+    };
 
-    // We can forward this to the TimingManager or implement a simplified version
-    // Just return the current PPQ position if we don't have valid timing info
-    if (!posInfo->getPpqPosition().hasValue() || !posInfo->getBpm().hasValue())
-        return 0.0;
+    // Choose one randomly, weighted toward shorter durations
+    // 1/4: 20%, 1/8: 40%, 1/16: 40% chance
+    float randomValue = random.nextFloat();
 
-    // Get current PPQ position
-    double currentPpq = *posInfo->getPpqPosition();
-
-    // For simple quantization to quarter notes:
-    double quarterNoteGridPos =
-        std::floor(currentPpq) + 0.0; // Nearest quarter note behind
-    double eighthNoteGridPos =
-        std::floor(currentPpq * 2.0) / 2.0; // Nearest eighth note behind
-    double sixteenthNoteGridPos =
-        std::floor(currentPpq * 4.0) / 4.0; // Nearest sixteenth note behind
-
-    // Find the closest of these positions
-    double distToQuarter = std::abs(currentPpq - quarterNoteGridPos);
-    double distToEighth = std::abs(currentPpq - eighthNoteGridPos);
-    double distToSixteenth = std::abs(currentPpq - sixteenthNoteGridPos);
-
-    if (distToQuarter <= distToEighth && distToQuarter <= distToSixteenth)
-        return quarterNoteGridPos;
-    else if (distToEighth <= distToSixteenth)
-        return eighthNoteGridPos;
-    else
-        return sixteenthNoteGridPos;
+    if (randomValue < 0.2f) {
+        return rates[0]; // 1/4 note
+    } else if (randomValue < 0.6f) {
+        return rates[1]; // 1/8 note
+    } else {
+        return rates[2]; // 1/16 note
+    }
 }
