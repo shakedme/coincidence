@@ -1,7 +1,7 @@
 #pragma once
 
 #include <juce_audio_utils/juce_audio_utils.h>
-#include "Params.h"
+#include "../Params.h"
 
 /**
  * Class to manage musical scales and note modifications

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <juce_audio_utils/juce_audio_utils.h>
-#include "../../Audio/SampleManager.h"
+#include "../../Audio/Sampler/SampleManager.h"
 
 class SampleDetailComponent : public juce::Component,
                               private juce::ChangeListener

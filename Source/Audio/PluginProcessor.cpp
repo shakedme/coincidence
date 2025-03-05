@@ -14,17 +14,18 @@ PluginProcessor::PluginProcessor()
     audioProcessor = std::make_unique<::JammerAudioProcessor>(*this);
     timingManager = std::make_shared<TimingManager>();
     noteGenerator = std::make_unique<NoteGenerator>(*this, timingManager);
-    glitchEngine = std::make_unique<GlitchEngine>(timingManager);
+    fxEngine = std::make_unique<FxEngine>(timingManager);
 
 
     // Update settings from parameters
-    updateSettingsFromParameters();
+    updateMidiSettingsFromParameters();
+    updateFxSettingsFromParameters();
 
     // Start timer for any background tasks
     startTimerHz(50);
 
-    auto* fileLogger = new FileLogger();
-    juce::Logger::setCurrentLogger(fileLogger);
+//    auto* fileLogger = new FileLogger();
+//    juce::Logger::setCurrentLogger(fileLogger);
 }
 
 PluginProcessor::~PluginProcessor()
@@ -33,7 +34,7 @@ PluginProcessor::~PluginProcessor()
 }
 
 //==============================================================================
-void PluginProcessor::updateSettingsFromParameters()
+void PluginProcessor::updateMidiSettingsFromParameters()
 {
     // Update rate settings
     for (int i = 0; i < Params::NUM_RATE_OPTIONS; ++i)
@@ -78,11 +79,11 @@ void PluginProcessor::updateSettingsFromParameters()
     // Remove any code related to useRandomSample or randomizeProbability
 }
 
-void PluginProcessor::updateGlitchSettingsFromParameters()
+void PluginProcessor::updateFxSettingsFromParameters()
 {
     // Update glitch settings from parameters
-    glitchSettings.stutterAmount = *parameters.getRawParameterValue("glitch_stutter");
-    glitchEngine->setStutterProbability(glitchSettings.stutterAmount);
+    fxSettings.stutterProbability = *parameters.getRawParameterValue("glitch_stutter");
+    fxEngine->setSettings(fxSettings);
 }
 
 //==============================================================================
@@ -153,7 +154,7 @@ void PluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     // Initialize components
     audioProcessor->prepareToPlay(sampleRate, samplesPerBlock);
     noteGenerator->prepareToPlay(sampleRate, samplesPerBlock);
-    glitchEngine->prepareToPlay(sampleRate, samplesPerBlock);
+    fxEngine->prepareToPlay(sampleRate, samplesPerBlock);
 }
 
 void PluginProcessor::releaseResources()
@@ -161,15 +162,15 @@ void PluginProcessor::releaseResources()
     // Release components
     audioProcessor->releaseResources();
     noteGenerator->releaseResources();
-    glitchEngine->releaseResources();
+    fxEngine->releaseResources();
 }
 
 void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
                                    juce::MidiBuffer& midiMessages)
 {
     // Update plugin settings from parameters
-    updateSettingsFromParameters();
-    updateGlitchSettingsFromParameters();
+    updateMidiSettingsFromParameters();
+    updateFxSettingsFromParameters();
 
     // Clear audio
     buffer.clear();
@@ -195,8 +196,8 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     // If samples are loaded, uses generated midi to trigger samples
     audioProcessor->processAudio(buffer, processedMidi, midiMessages);
 
-    // Process audio with glitch effects
-    glitchEngine->processAudio(buffer, playHead, midiMessages);
+    // Process audio effects
+    fxEngine->processAudio(buffer, playHead, midiMessages);
 
     timingManager->updateSamplePosition(buffer.getNumSamples());
 }

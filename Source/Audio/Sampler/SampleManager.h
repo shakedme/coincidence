@@ -4,7 +4,7 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <vector>
 #include <memory>
-#include "Params.h"
+#include "../Params.h"
 
 class SampleManager
 {

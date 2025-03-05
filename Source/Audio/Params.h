@@ -13,16 +13,18 @@ namespace Params
 
 // Rate options
 enum RateOption {
-    RATE_1_2 = 0,  // Half note
-    RATE_1_4,      // Quarter note
-    RATE_1_8,      // Eighth note
-    RATE_1_16,     // Sixteenth note
-    RATE_1_32,     // Thirty-second note
+    RATE_1_2 = 0,
+    RATE_1_4,
+    RATE_1_8,
+    RATE_1_16,
+    RATE_1_32,
+    RATE_1_64,
     NUM_RATE_OPTIONS
 };
 
-struct GlitchSettings {
-    float stutterAmount = 0.0f;      // 0-100%
+struct FxSettings
+{
+    float stutterProbability = 0.0f;      // 0-100%
 };
 
 // Scale types

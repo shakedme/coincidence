@@ -32,14 +32,15 @@ target_sources(${BaseTargetName} PRIVATE
         Gui/Components/SampleList.cpp
         Audio/Params.cpp
         Audio/PluginProcessor.cpp
-        Audio/SampleManager.cpp
-        Audio/Sampler.cpp
-        Audio/TimingManager.cpp
-        Audio/ScaleManager.cpp
-        Audio/NoteGenerator.cpp
+        Audio/Sampler/SampleManager.cpp
+        Audio/Sampler/Sampler.cpp
+        Audio/Shared/TimingManager.cpp
+        Audio/Midi/ScaleManager.cpp
+        Audio/Midi/NoteGenerator.cpp
         Audio/JammerAudioProcessor.cpp
         Audio/FileLogger.cpp
-        Audio/GlitchEngine.cpp
+        Audio/Effects/FxEngine.cpp
+        Audio/Effects/Stutter.cpp
         )
 
 target_compile_definitions(${BaseTargetName}

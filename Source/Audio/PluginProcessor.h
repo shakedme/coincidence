@@ -2,11 +2,11 @@
 
 #include <juce_audio_utils/juce_audio_utils.h>
 #include "Params.h"
-#include "TimingManager.h"
-#include "ScaleManager.h"
-#include "NoteGenerator.h"
+#include "Shared/TimingManager.h"
+#include "Midi/ScaleManager.h"
+#include "Midi/NoteGenerator.h"
 #include "JammerAudioProcessor.h"
-#include "GlitchEngine.h"
+#include "Effects/FxEngine.h"
 
 // Forward declarations
 class PluginEditor;
@@ -72,20 +72,20 @@ public:
     float getCurrentRandomizedGate() const { return noteGenerator->getCurrentRandomizedGate(); }
     float getCurrentRandomizedVelocity() const { return noteGenerator->getCurrentRandomizedVelocity(); }
 
-    void updateGlitchSettingsFromParameters();
-    const Params::GlitchSettings& getGlitchSettings() const { return glitchSettings; }
+    void updateFxSettingsFromParameters();
+    const Params::FxSettings& getGlitchSettings() const { return fxSettings; }
 private:
     // Update settings from parameters
-    void updateSettingsFromParameters();
+    void updateMidiSettingsFromParameters();
     
     // Plugin state
     Params::GeneratorSettings settings;
-    Params::GlitchSettings glitchSettings;
+    Params::FxSettings fxSettings;
 
     // Specialized components for handling different aspects of the plugin
     std::unique_ptr<NoteGenerator> noteGenerator;
     std::unique_ptr<JammerAudioProcessor> audioProcessor;
-    std::unique_ptr<GlitchEngine> glitchEngine;
+    std::unique_ptr<FxEngine> fxEngine;
     std::shared_ptr<TimingManager> timingManager;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginProcessor)
 };

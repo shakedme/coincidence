@@ -1,6 +1,6 @@
 #include "JammerAudioProcessor.h"
 #include "PluginProcessor.h"
-#include "Sampler.h"
+#include "Sampler/Sampler.h"
 
 JammerAudioProcessor::JammerAudioProcessor(PluginProcessor& p)
     : processor(p)

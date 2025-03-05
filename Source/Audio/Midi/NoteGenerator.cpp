@@ -1,6 +1,6 @@
 #include "NoteGenerator.h"
-#include "PluginProcessor.h"
-#include "../Gui/PluginEditor.h"
+#include "../PluginProcessor.h"
+#include "../../Gui/PluginEditor.h"
 
 NoteGenerator::NoteGenerator(PluginProcessor& processorRef, std::shared_ptr<TimingManager> timingManagerRef)
     : processor(processorRef), timingManager(timingManagerRef)

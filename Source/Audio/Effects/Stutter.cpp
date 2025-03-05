@@ -1,30 +1,18 @@
-// GlitchEngine.h modifications
+//
+// Created by Shaked Melman on 05/03/2025.
+//
 
-#pragma once
+#include "Stutter.h"
 
-#include <juce_audio_utils/juce_audio_utils.h>
-#include <atomic>
-#include "TimingManager.h"
-#include "GlitchEngine.h"
-
-GlitchEngine::GlitchEngine(std::shared_ptr<TimingManager> t)
-    : timingManager(t)
+Stutter::Stutter(std::shared_ptr<TimingManager> timingManager)
+    : timingManager(timingManager)
 {
     // Initialize random generator
     random.setSeedRandomly();
 }
 
-GlitchEngine::~GlitchEngine()
+void Stutter::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
-    releaseResources();
-}
-
-void GlitchEngine::prepareToPlay(double sampleRate, int samplesPerBlock)
-{
-    // Store audio settings
-    this->sampleRate = sampleRate;
-    this->bufferSize = samplesPerBlock;
-
     // Initialize stutter buffer with reasonable size (4 bars at 120BPM)
     int maxStutterSamples = static_cast<int>(sampleRate * 8.0);
     stutterBuffer.setSize(2, maxStutterSamples);
@@ -43,7 +31,7 @@ void GlitchEngine::prepareToPlay(double sampleRate, int samplesPerBlock)
     stutterRepeatCount = 0;
 }
 
-void GlitchEngine::releaseResources()
+void Stutter::releaseResources()
 {
     // Reset state
     isStuttering = false;
@@ -53,64 +41,37 @@ void GlitchEngine::releaseResources()
     historyBuffer.clear();
 }
 
-void GlitchEngine::processAudio(juce::AudioBuffer<float>& buffer,
-                                juce::AudioPlayHead* playHead,
-                                const juce::MidiBuffer& midiMessages)
+void Stutter::applyStutterEffect(juce::AudioBuffer<float>& buffer,
+                                 std::vector<int> triggerSamplePositions)
 {
-    // Update timing information
-    updateTimingInfo(playHead);
-
     // Store buffer info for later use
     int numSamples = buffer.getNumSamples();
     int numChannels = buffer.getNumChannels();
-    currentBufferSize = numSamples;
 
     addToHistory(buffer);
     handleTransportLoopDetection();
 
-    if (stutterProbability <= 0.0f)
-    {
-        isStuttering = false;
-    }
-
+//     Process stutter effect
     if (isStuttering)
     {
         processActiveStutter(buffer, numSamples, numChannels);
     }
-    else if (stutterProbability > 0.0f)
+    else if (shouldStutter() && !triggerSamplePositions.empty())
     {
-        checkAndStartNewStutter(buffer, midiMessages, numSamples, numChannels);
+        startStutterAtPosition(
+            buffer, triggerSamplePositions[0], numSamples, numChannels);
     }
 }
 
-void GlitchEngine::updateTimingInfo(juce::AudioPlayHead* playHead)
+bool Stutter::shouldStutter()
 {
-    if (playHead != nullptr)
-    {
-        timingManager->updateTimingInfo(playHead);
-    }
+    return settings.stutterProbability > 0.0f
+           && random.nextFloat() < (settings.stutterProbability / 100.0f);
 }
 
-void GlitchEngine::handleTransportLoopDetection()
-{
-    // Check if we've detected a loop in the transport (from TimingManager)
-    if (timingManager->wasLoopDetected())
-    {
-        // Reset stuttering state when transport loops
-        isStuttering = false;
-        stutterPosition = 0;
-        stutterLength = 0;
-        stutterRepeatCount = 0;
-        stutterRepeatsTotal = 0;
-
-        // Clear the loop detection flag
-        timingManager->clearLoopDetection();
-    }
-}
-
-void GlitchEngine::processActiveStutter(juce::AudioBuffer<float>& buffer,
-                                        int numSamples,
-                                        int numChannels)
+void Stutter::processActiveStutter(juce::AudioBuffer<float>& buffer,
+                                   int numSamples,
+                                   int numChannels)
 {
     // Safety check for division by zero
     if (stutterLength <= 0)
@@ -133,9 +94,9 @@ void GlitchEngine::processActiveStutter(juce::AudioBuffer<float>& buffer,
     updateStutterPosition(numSamples);
 }
 
-void GlitchEngine::copyStutterDataToBuffer(juce::AudioBuffer<float>& tempBuffer,
-                                           int numSamples,
-                                           int numChannels)
+void Stutter::copyStutterDataToBuffer(juce::AudioBuffer<float>& tempBuffer,
+                                      int numSamples,
+                                      int numChannels)
 {
     for (int channel = 0;
          channel < juce::jmin(numChannels, stutterBuffer.getNumChannels());
@@ -153,10 +114,10 @@ void GlitchEngine::copyStutterDataToBuffer(juce::AudioBuffer<float>& tempBuffer,
     }
 }
 
-void GlitchEngine::applyStutterCrossfade(juce::AudioBuffer<float>& buffer,
-                                         const juce::AudioBuffer<float>& tempBuffer,
-                                         int numSamples,
-                                         int numChannels)
+void Stutter::applyStutterCrossfade(juce::AudioBuffer<float>& buffer,
+                                    const juce::AudioBuffer<float>& tempBuffer,
+                                    int numSamples,
+                                    int numChannels)
 {
     float fadeLength = juce::jmin(100, numSamples); // 100 samples for crossfade
 
@@ -182,7 +143,7 @@ void GlitchEngine::applyStutterCrossfade(juce::AudioBuffer<float>& buffer,
     }
 }
 
-void GlitchEngine::updateStutterPosition(int numSamples)
+void Stutter::updateStutterPosition(int numSamples)
 {
     int oldPosition = stutterPosition;
     stutterPosition = (stutterPosition + numSamples) % stutterLength;
@@ -205,7 +166,7 @@ void GlitchEngine::updateStutterPosition(int numSamples)
     }
 }
 
-void GlitchEngine::endStutterEffect()
+void Stutter::endStutterEffect()
 {
     // We will apply the crossfade when actually ending the stutter in processActiveStutter
     // This just marks that we should end the stutter
@@ -216,7 +177,7 @@ void GlitchEngine::endStutterEffect()
     stutterRepeatsTotal = 0;
 }
 
-void GlitchEngine::resetStutterState()
+void Stutter::resetStutterState()
 {
     isStuttering = false;
     stutterPosition = 0;
@@ -225,43 +186,10 @@ void GlitchEngine::resetStutterState()
     stutterRepeatsTotal = 0;
 }
 
-void GlitchEngine::checkAndStartNewStutter(juce::AudioBuffer<float>& buffer,
-                                           const juce::MidiBuffer& midiMessages,
-                                           int numSamples,
-                                           int numChannels)
-{
-    if (random.nextFloat() < (stutterProbability / 100.0f))
-    {
-        checkForMidiTriggers(buffer, midiMessages, numSamples, numChannels);
-    }
-}
-
-void GlitchEngine::checkForMidiTriggers(juce::AudioBuffer<float>& buffer,
-                                        const juce::MidiBuffer& midiMessages,
-                                        int numSamples,
-                                        int numChannels)
-{
-    // Look for MIDI note-on events to use as stutter points
-    if (!midiMessages.isEmpty())
-    {
-        for (const auto metadata: midiMessages)
-        {
-            auto message = metadata.getMessage();
-            if (message.isNoteOn())
-            {
-                // Found a note-on - this is a good point to start stuttering
-                int samplePosition = metadata.samplePosition;
-                startStutterAtPosition(buffer, samplePosition, numSamples, numChannels);
-                break; // Only use the first note-on event
-            }
-        }
-    }
-}
-
-void GlitchEngine::startStutterAtPosition(juce::AudioBuffer<float>& buffer,
-                                          int samplePosition,
-                                          int numSamples,
-                                          int numChannels)
+void Stutter::startStutterAtPosition(juce::AudioBuffer<float>& buffer,
+                                     int samplePosition,
+                                     int numSamples,
+                                     int numChannels)
 {
     // Choose a rate (1/8, 1/16 note, etc.)
     Params::RateOption selectedRate = selectRandomRate();
@@ -271,27 +199,27 @@ void GlitchEngine::startStutterAtPosition(juce::AudioBuffer<float>& buffer,
     int captureLength =
         static_cast<int>(timingManager->getNoteDurationInSamples(selectedRate, settings));
 
-    // Limit to a reasonable value
+//    // Limit to a reasonable value
     captureLength = juce::jmin(captureLength, stutterBuffer.getNumSamples());
 
     // Capture the musical segment starting from the note position
     captureFromHistory(samplePosition, captureLength);
-
-    // Configure stutter parameters
+//
+//    // Configure stutter parameters
     isStuttering = true;
     stutterLength = captureLength;
     stutterPosition = 0;
     stutterRepeatsTotal = 2 + random.nextInt(3); // 2-4 repeats
     stutterRepeatCount = 0;
 
-    // Apply stutter effect immediately for the rest of this buffer
+//    // Apply stutter effect immediately for the rest of this buffer
     applyImmediateStutterEffect(buffer, samplePosition, numSamples, numChannels);
 }
 
-void GlitchEngine::applyImmediateStutterEffect(juce::AudioBuffer<float>& buffer,
-                                               int samplePosition,
-                                               int numSamples,
-                                               int numChannels)
+void Stutter::applyImmediateStutterEffect(juce::AudioBuffer<float>& buffer,
+                                          int samplePosition,
+                                          int numSamples,
+                                          int numChannels)
 {
     juce::AudioBuffer<float> tempBuffer(numChannels, numSamples - samplePosition);
     tempBuffer.clear();
@@ -318,7 +246,7 @@ void GlitchEngine::applyImmediateStutterEffect(juce::AudioBuffer<float>& buffer,
     stutterPosition = (numSamples - samplePosition) % stutterLength;
 }
 
-void GlitchEngine::addToHistory(const juce::AudioBuffer<float>& buffer)
+void Stutter::addToHistory(const juce::AudioBuffer<float>& buffer)
 {
     // Add the current buffer to the history circular buffer
     int numSamples = buffer.getNumSamples();
@@ -348,7 +276,7 @@ void GlitchEngine::addToHistory(const juce::AudioBuffer<float>& buffer)
     historyWritePosition = (historyWritePosition + numSamples) % historyBufferSize;
 }
 
-void GlitchEngine::captureFromHistory(int triggerSamplePosition, int lengthToCapture)
+void Stutter::captureFromHistory(int triggerSamplePosition, int lengthToCapture)
 {
     // Determine starting position in history buffer
     // We need to account for the fact that:
@@ -376,7 +304,7 @@ void GlitchEngine::captureFromHistory(int triggerSamplePosition, int lengthToCap
     captureHistorySegment(historyTriggerPos, lengthToCapture);
 }
 
-void GlitchEngine::captureHistorySegment(int historyTriggerPos, int lengthToCapture)
+void Stutter::captureHistorySegment(int historyTriggerPos, int lengthToCapture)
 {
     for (int channel = 0; channel < juce::jmin(stutterBuffer.getNumChannels(),
                                                historyBuffer.getNumChannels());
@@ -404,28 +332,51 @@ void GlitchEngine::captureHistorySegment(int historyTriggerPos, int lengthToCapt
     }
 }
 
-Params::RateOption GlitchEngine::selectRandomRate()
+void Stutter::handleTransportLoopDetection()
 {
-    Params::RateOption rates[] = {
-        Params::RATE_1_4, Params::RATE_1_8, Params::RATE_1_16, Params::RATE_1_32};
+    // Check if we've detected a loop in the transport (from TimingManager)
+    if (timingManager->wasLoopDetected())
+    {
+        // Reset stuttering state when transport loops
+        isStuttering = false;
+        stutterPosition = 0;
+        stutterLength = 0;
+        stutterRepeatCount = 0;
+        stutterRepeatsTotal = 0;
 
-    // 1/4: 20%, 1/8: 40%, 1/16: 40%, 1/32: 20%
+        // Clear the loop detection flag
+        timingManager->clearLoopDetection();
+    }
+}
+
+Params::RateOption Stutter::selectRandomRate()
+{
+    Params::RateOption rates[] = {Params::RATE_1_4,
+                                  Params::RATE_1_8,
+                                  Params::RATE_1_16,
+                                  Params::RATE_1_32,
+                                  Params::RATE_1_64};
+
     float randomValue = random.nextFloat();
 
-    if (randomValue < 0.2f)
+    if (randomValue < 0.1f)
     {
         return rates[0]; // 1/4 note
     }
-    else if (randomValue < 0.4f)
-    {
-        return rates[3]; // 1/32 note
-    }
-    else if (randomValue < 0.7f)
+    else if (randomValue < 0.35f)
     {
         return rates[1]; // 1/8 note
     }
-    else
+    else if (randomValue < 0.75f)
     {
         return rates[2]; // 1/16 note
+    }
+    else if (randomValue < 0.9f)
+    {
+        return rates[3]; // 1/32 note
+    }
+    else
+    {
+        return rates[4]; // 1/64 note
     }
 }
