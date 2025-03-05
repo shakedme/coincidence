@@ -22,7 +22,7 @@ target_sources(${BaseTargetName} PRIVATE
         Gui/LookAndFeel.cpp
         Gui/PluginEditor.cpp
         Gui/Sections/BaseSection.cpp
-        Gui/Sections/GlitchSection.cpp
+        Gui/Sections/EffectsSection.cpp
         Gui/Sections/GrooveSection.cpp
         Gui/Sections/PitchSection.cpp
         Gui/Sections/SampleSection.cpp

@@ -209,7 +209,7 @@ void Stutter::startStutterAtPosition(juce::AudioBuffer<float>& buffer,
     isStuttering = true;
     stutterLength = captureLength;
     stutterPosition = 0;
-    stutterRepeatsTotal = 2 + random.nextInt(3); // 2-4 repeats
+    stutterRepeatsTotal = 2 + random.nextInt(2); // 2-4 repeats
     stutterRepeatCount = 0;
 
 //    // Apply stutter effect immediately for the rest of this buffer

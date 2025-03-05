@@ -5,7 +5,7 @@
 #include "LookAndFeel.h"
 #include "Sections/GrooveSection.h"
 #include "Sections/PitchSection.h"
-#include "Sections/GlitchSection.h"
+#include "Sections/EffectsSection.h"
 #include "Sections/SampleSection.h"
 #include "melatonin_inspector/melatonin_inspector.h"
 
@@ -37,7 +37,7 @@ private:
     // UI Sections
     std::unique_ptr<GrooveSectionComponent> grooveSection;
     std::unique_ptr<PitchSectionComponent> pitchSection;
-    std::unique_ptr<GlitchSectionComponent> glitchSection;
+    std::unique_ptr<EffectsSection> glitchSection;
     std::unique_ptr<SampleSectionComponent> sampleSection;
     
     // Keyboard component and state

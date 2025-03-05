@@ -15,7 +15,7 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     pitchSection = std::make_unique<PitchSectionComponent>(*this, audioProcessor);
     addAndMakeVisible(pitchSection.get());
 
-    glitchSection = std::make_unique<GlitchSectionComponent>(*this, audioProcessor);
+    glitchSection = std::make_unique<EffectsSection>(*this, audioProcessor);
     addAndMakeVisible(glitchSection.get());
 
     sampleSection = std::make_unique<SampleSectionComponent>(*this, audioProcessor);
