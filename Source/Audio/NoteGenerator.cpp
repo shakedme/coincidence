@@ -2,8 +2,8 @@
 #include "PluginProcessor.h"
 #include "../Gui/PluginEditor.h"
 
-NoteGenerator::NoteGenerator(PluginProcessor& processorRef)
-    : processor(processorRef)
+NoteGenerator::NoteGenerator(PluginProcessor& processorRef, std::shared_ptr<TimingManager> timingManagerRef)
+    : processor(processorRef), timingManager(timingManagerRef)
 {
     // Initialize state
     releaseResources();
@@ -12,7 +12,7 @@ NoteGenerator::NoteGenerator(PluginProcessor& processorRef)
 void NoteGenerator::prepareToPlay(double sampleRate, int)
 {
     // Initialize timing manager
-    timingManager.prepareToPlay(sampleRate);
+    timingManager->prepareToPlay(sampleRate);
     
     // Reset note state
     releaseResources();
@@ -21,11 +21,11 @@ void NoteGenerator::prepareToPlay(double sampleRate, int)
 void NoteGenerator::releaseResources()
 {
     // Clear any active notes
-    noteIsActive_ = false;
+    noteIsActive = false;
     isInputNoteActive = false;
     currentInputNote = -1;
     currentActiveNote = -1;
-    currentActiveSampleIdx_ = -1;
+    currentActiveSampleIdx = -1;
     
     // Clear pending notes
     pendingNotes.clear();
@@ -52,7 +52,7 @@ void NoteGenerator::processIncomingMidi(const juce::MidiBuffer& midiMessages,
             isInputNoteActive = false;
 
             // Send note off for the active note
-            if (noteIsActive_ && currentActiveNote >= 0)
+            if (noteIsActive && currentActiveNote >= 0)
             {
                 stopActiveNote(processedMidi, time);
             }
@@ -67,11 +67,11 @@ void NoteGenerator::processIncomingMidi(const juce::MidiBuffer& midiMessages,
 
 void NoteGenerator::checkActiveNotes(juce::MidiBuffer& midiMessages, int numSamples)
 {
-    if (noteIsActive_)  // Only check if we have an active note
+    if (noteIsActive)  // Only check if we have an active note
     {
         // Calculate when the note should end (in samples relative to the start of this buffer)
         juce::int64 noteEndPosition =
-            (noteStartPosition + noteDurationInSamples) - timingManager.getSamplePosition();
+            (noteStartPosition + noteDurationInSamples) - timingManager->getSamplePosition();
 
         // If the note should end during this buffer
         if (noteEndPosition >= 0 && noteEndPosition < numSamples)
@@ -79,9 +79,9 @@ void NoteGenerator::checkActiveNotes(juce::MidiBuffer& midiMessages, int numSamp
             // Send note off at the exact sample position it should end
             midiMessages.addEvent(juce::MidiMessage::noteOff(1, currentActiveNote),
                                  static_cast<int>(noteEndPosition));
-            noteIsActive_ = false;
+            noteIsActive = false;
             currentActiveNote = -1;
-            currentActiveSampleIdx_ = -1;
+            currentActiveSampleIdx = -1;
         }
     }
 }
@@ -101,7 +101,7 @@ std::vector<NoteGenerator::EligibleRate> NoteGenerator::collectEligibleRates(
         if (settings.rates[rateIndex].value > 0.0f)
         {
             // Check if we should trigger a note at this rate
-            if (timingManager.shouldTriggerNote(rate, settings))
+            if (timingManager->shouldTriggerNote(rate, settings))
             {
                 // Use the rate's configured value directly as its weight
                 float weight = settings.rates[rateIndex].value;
@@ -144,7 +144,7 @@ Params::RateOption NoteGenerator::selectRateFromEligible(
 void NoteGenerator::generateNewNotes(juce::MidiBuffer& midiMessages, 
                                      const Params::GeneratorSettings& settings)
 {
-    if (!isInputNoteActive || noteIsActive_)
+    if (!isInputNoteActive || noteIsActive)
     {
         return;
     }
@@ -221,13 +221,13 @@ void NoteGenerator::playNewNote(Params::RateOption selectedRate,
 
     // Calculate next expected grid position
     double nextExpectedGridPoint;
-    double ppqPosition = timingManager.getPpqPosition();
-    double bpm = timingManager.getBpm();
+    double ppqPosition = timingManager->getPpqPosition();
+    double bpm = timingManager->getBpm();
     int rateIndex = static_cast<int>(selectedRate);
-    double lastTriggerTime = timingManager.getLastTriggerTimes()[rateIndex];
+    double lastTriggerTime = timingManager->getLastTriggerTimes()[rateIndex];
 
     // Special case for loop points or first trigger
-    if (timingManager.wasLoopDetected() || lastTriggerTime <= 0.0)
+    if (timingManager->wasLoopDetected() || lastTriggerTime <= 0.0)
     {
         // At loop points, align with the closest grid
         double gridStartPpq =
@@ -257,7 +257,7 @@ void NoteGenerator::playNewNote(Params::RateOption selectedRate,
     }
 
     // Calculate precise sample position for this grid point
-    double samplesPerQuarterNote = (60.0 / bpm) * timingManager.getSampleRate();
+    double samplesPerQuarterNote = (60.0 / bpm) * timingManager->getSampleRate();
     double ppqOffsetFromCurrent = nextExpectedGridPoint - ppqPosition;
 
     // Convert to sample offset - this ensures grid alignment
@@ -269,7 +269,7 @@ void NoteGenerator::playNewNote(Params::RateOption selectedRate,
         sampleOffset = 0;
     }
 
-    juce::int64 absoluteNotePosition = timingManager.getSamplePosition() + sampleOffset;
+    juce::int64 absoluteNotePosition = timingManager->getSamplePosition() + sampleOffset;
 
     // Calculate note properties
     int noteLengthSamples = calculateNoteLength(selectedRate, settings);
@@ -299,11 +299,11 @@ void NoteGenerator::playNewNote(Params::RateOption selectedRate,
         // Store the active note data
         currentActiveNote = noteToPlay;
         currentActiveVelocity = velocity;
-        currentActiveSampleIdx_ = sampleIndex;
+        currentActiveSampleIdx = sampleIndex;
 
         noteStartPosition = absoluteNotePosition;
         noteDurationInSamples = noteLengthSamples;
-        noteIsActive_ = true;
+        noteIsActive = true;
 
         // Update keyboard state
         if (auto* editor = dynamic_cast<PluginEditor*>(processor.getActiveEditor()))
@@ -327,10 +327,10 @@ void NoteGenerator::playNewNote(Params::RateOption selectedRate,
 
     // Update lastTriggerTimes to exactly the grid point we just played
     // This ensures the next note will be spaced exactly one grid interval away
-    timingManager.updateLastTriggerTime(selectedRate, nextExpectedGridPoint);
+    timingManager->updateLastTriggerTime(selectedRate, nextExpectedGridPoint);
 
     // If we were in a loop, we're now past that state
-    timingManager.clearLoopDetection();
+    timingManager->clearLoopDetection();
 }
 
 void NoteGenerator::processPendingNotes(juce::MidiBuffer& midiMessages, int numSamples)
@@ -343,7 +343,7 @@ void NoteGenerator::processPendingNotes(juce::MidiBuffer& midiMessages, int numS
     while (it != pendingNotes.end())
     {
         // Calculate local buffer position
-        juce::int64 localPosition = it->startSamplePosition - timingManager.getSamplePosition();
+        juce::int64 localPosition = it->startSamplePosition - timingManager->getSamplePosition();
 
         // If the note start position is in this buffer
         if (localPosition >= 0 && localPosition < numSamples)
@@ -356,10 +356,10 @@ void NoteGenerator::processPendingNotes(juce::MidiBuffer& midiMessages, int numS
             // Update the active note info
             currentActiveNote = it->noteNumber;
             currentActiveVelocity = it->velocity;
-            currentActiveSampleIdx_ = it->sampleIndex;
+            currentActiveSampleIdx = it->sampleIndex;
             noteStartPosition = it->startSamplePosition;
             noteDurationInSamples = it->durationInSamples;
-            noteIsActive_ = true;
+            noteIsActive = true;
 
             // Update keyboard state
             if (auto* editor = dynamic_cast<PluginEditor*>(processor.getActiveEditor()))
@@ -387,7 +387,7 @@ void NoteGenerator::processPendingNotes(juce::MidiBuffer& midiMessages, int numS
 int NoteGenerator::calculateNoteLength(Params::RateOption rate, const Params::GeneratorSettings& settings)
 {
     // Get base duration in samples for this rate
-    double baseDuration = timingManager.getNoteDurationInSamples(rate, settings);
+    double baseDuration = timingManager->getNoteDurationInSamples(rate, settings);
 
     // Apply gate percentage (0-100%)
     double gateValue = settings.gate.value / 100.0; // Convert to 0.0-1.0
@@ -397,7 +397,7 @@ int NoteGenerator::calculateNoteLength(Params::RateOption rate, const Params::Ge
     {
         gateValue = applyRandomization(
             settings.gate.value, settings.gate.randomize, settings.gate.direction);
-        currentRandomizedGate_ = static_cast<float>(gateValue) * 100;
+        currentRandomizedGate = static_cast<float>(gateValue) * 100;
     }
 
     gateValue = juce::jlimit(0.1, 0.98, gateValue);
@@ -406,7 +406,7 @@ int NoteGenerator::calculateNoteLength(Params::RateOption rate, const Params::Ge
     int lengthInSamples = static_cast<int>(baseDuration * gateValue);
 
     // Minimum length safety check - at least 5ms
-    int minLengthSamples = static_cast<int>(timingManager.getSampleRate() * 0.005);
+    int minLengthSamples = static_cast<int>(timingManager->getSampleRate() * 0.005);
     return std::max(lengthInSamples, minLengthSamples);
 }
 
@@ -421,7 +421,7 @@ int NoteGenerator::calculateVelocity(const Params::GeneratorSettings& settings)
         velocityValue = applyRandomization(settings.velocity.value,
                                          settings.velocity.randomize,
                                          settings.velocity.direction);
-        currentRandomizedVelocity_ = static_cast<float>(velocityValue) * 100;
+        currentRandomizedVelocity = static_cast<float>(velocityValue) * 100;
         velocityValue = velocityValue * 127.0f;
         velocityValue = juce::jlimit(1.0, 127.0, velocityValue);
     }
@@ -454,7 +454,7 @@ float NoteGenerator::applyRandomization(float value, float randomizeValue, Param
 
 void NoteGenerator::stopActiveNote(juce::MidiBuffer& midiMessages, int currentSamplePosition)
 {
-    if (noteIsActive_ && currentActiveNote >= 0)
+    if (noteIsActive && currentActiveNote >= 0)
     {
         // Send note off message - channel 1 (fixed)
         midiMessages.addEvent(juce::MidiMessage::noteOff(1, currentActiveNote),
@@ -466,7 +466,7 @@ void NoteGenerator::stopActiveNote(juce::MidiBuffer& midiMessages, int currentSa
             editor->updateKeyboardState(false, currentActiveNote, 0);
         }
 
-        noteIsActive_ = false;
+        noteIsActive = false;
         currentActiveNote = -1;
     }
 }

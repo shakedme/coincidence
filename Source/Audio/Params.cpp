@@ -90,6 +90,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
         juce::StringArray("Left", "Bidirectional", "Right", "Random"),
         BIDIRECTIONAL)); // Default to bidirectional
 
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "glitch_stutter", "Stutter Amount", 0.0f, 100.0f, 0.0f));
+
     return layout;
 }
 

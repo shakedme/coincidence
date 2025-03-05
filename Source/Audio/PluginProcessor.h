@@ -6,6 +6,7 @@
 #include "ScaleManager.h"
 #include "NoteGenerator.h"
 #include "JammerAudioProcessor.h"
+#include "GlitchEngine.h"
 
 // Forward declarations
 class PluginEditor;
@@ -71,17 +72,21 @@ public:
     float getCurrentRandomizedGate() const { return noteGenerator->getCurrentRandomizedGate(); }
     float getCurrentRandomizedVelocity() const { return noteGenerator->getCurrentRandomizedVelocity(); }
 
+    void updateGlitchSettingsFromParameters();
+    const Params::GlitchSettings& getGlitchSettings() const { return glitchSettings; }
 private:
     // Update settings from parameters
     void updateSettingsFromParameters();
     
     // Plugin state
     Params::GeneratorSettings settings;
-    
+    Params::GlitchSettings glitchSettings;
+
     // Specialized components for handling different aspects of the plugin
     std::unique_ptr<NoteGenerator> noteGenerator;
     std::unique_ptr<JammerAudioProcessor> audioProcessor;
-    
+    std::unique_ptr<GlitchEngine> glitchEngine;
+    std::shared_ptr<TimingManager> timingManager;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginProcessor)
 };
 

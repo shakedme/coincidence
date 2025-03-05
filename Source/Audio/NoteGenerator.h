@@ -28,13 +28,10 @@ public:
         juce::int64 durationInSamples;
         int sampleIndex = -1; // For sample playback
     };
-    
-    NoteGenerator(PluginProcessor& processor);
+
+    NoteGenerator(PluginProcessor& p, std::shared_ptr<TimingManager> t);
     ~NoteGenerator() = default;
 
-    // Managers
-    TimingManager timingManager;
-    
     // Initialize with sample rate
     void prepareToPlay(double sampleRate, int samplesPerBlock);
     
@@ -75,9 +72,10 @@ public:
     void stopActiveNote(juce::MidiBuffer& midiMessages, int currentSamplePosition);
     
     // Accessors
-    float getCurrentRandomizedGate() const { return currentRandomizedGate_; }
-    float getCurrentRandomizedVelocity() const { return currentRandomizedVelocity_; }
-    int getCurrentActiveSampleIdx() const { return currentActiveSampleIdx_; }
+    float getCurrentRandomizedGate() const { return currentRandomizedGate; }
+    float getCurrentRandomizedVelocity() const { return currentRandomizedVelocity; }
+    int getCurrentActiveSampleIdx() const { return currentActiveSampleIdx; }
+    bool isNoteActive() const { return noteIsActive; }
     
     // Get the list of pending notes
     const std::vector<PendingNote>& getPendingNotes() const { return pendingNotes; }
@@ -85,26 +83,28 @@ public:
 private:
     // Reference to the main processor
     PluginProcessor& processor;
-    
+
+
     // Managers for specific functionality
     ScaleManager scaleManager;
-    
+    std::shared_ptr<TimingManager> timingManager;
+
     // MIDI generation state
     // Monophonic note tracking
     int currentActiveNote = -1;
     int currentActiveVelocity = 0;
     juce::int64 noteStartPosition = 0;
     juce::int64 noteDurationInSamples = 0;
-    bool noteIsActive_ = false;
+    bool noteIsActive = false;
 
     int currentInputNote = -1;
     bool isInputNoteActive = false;
-    int currentActiveSampleIdx_ = -1;
+    int currentActiveSampleIdx = -1;
     
     // Pending notes for future processing
     std::vector<PendingNote> pendingNotes;
     
     // Randomized values for visualization
-    std::atomic<float> currentRandomizedGate_{0.0f};
-    std::atomic<float> currentRandomizedVelocity_{0.0f};
+    std::atomic<float> currentRandomizedGate {0.0f};
+    std::atomic<float> currentRandomizedVelocity {0.0f};
 }; 

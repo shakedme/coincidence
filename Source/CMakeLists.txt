@@ -39,6 +39,7 @@ target_sources(${BaseTargetName} PRIVATE
         Audio/NoteGenerator.cpp
         Audio/JammerAudioProcessor.cpp
         Audio/FileLogger.cpp
+        Audio/GlitchEngine.cpp
         )
 
 target_compile_definitions(${BaseTargetName}

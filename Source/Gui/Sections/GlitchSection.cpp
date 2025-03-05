@@ -30,6 +30,10 @@ GlitchSectionComponent::GlitchSectionComponent(PluginEditor& e,
 
         // These parameters don't exist yet, so we won't create attachments
     }
+
+    sliderAttachments.push_back(
+        std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+            processor.parameters, "glitch_stutter", *glitchKnobs[1]));
 }
 
 GlitchSectionComponent::~GlitchSectionComponent()

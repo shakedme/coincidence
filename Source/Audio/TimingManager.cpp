@@ -80,9 +80,8 @@ void TimingManager::updateLastTriggerTime(Params::RateOption rate, double trigge
     lastTriggerTimes[static_cast<int>(rate)] = triggerTime;
 }
 
-bool TimingManager::shouldTriggerNote(Params::RateOption rate, const Params::GeneratorSettings& settings)
+double TimingManager::getDurationInQuarters(Params::RateOption rate, const Params::GeneratorSettings& settings)
 {
-    // Calculate the duration in quarter notes
     double durationInQuarters;
     switch (rate)
     {
@@ -119,6 +118,13 @@ bool TimingManager::shouldTriggerNote(Params::RateOption rate, const Params::Gen
             break;
     }
 
+    return durationInQuarters;
+}
+
+bool TimingManager::shouldTriggerNote(Params::RateOption rate, const Params::GeneratorSettings& settings)
+{
+    // Calculate the duration in quarter notes
+    double durationInQuarters = getDurationInQuarters(rate, settings);
     int rateIndex = static_cast<int>(rate);
 
     // If we just detected a loop or it's the first trigger for this rate
@@ -195,45 +201,7 @@ double TimingManager::getNoteDurationInSamples(Params::RateOption rate, const Pa
     double quarterNotesPerSecond = bpm / 60.0;
     double secondsPerQuarterNote = 1.0 / quarterNotesPerSecond;
 
-    double durationInQuarters;
-
-    switch (rate)
-    {
-        case Params::RATE_1_2:
-            durationInQuarters = 2.0;
-            break; // Half note
-        case Params::RATE_1_4:
-            durationInQuarters = 1.0;
-            break; // Quarter note
-        case Params::RATE_1_8:
-            durationInQuarters = 0.5;
-            break; // Eighth note
-        case Params::RATE_1_16:
-            durationInQuarters = 0.25;
-            break; // Sixteenth note
-        case Params::RATE_1_32:
-            durationInQuarters = 0.125;
-            break; // Thirty-second note
-        default:
-            durationInQuarters = 1.0;
-            break;
-    }
-
-    // Apply rhythm mode modifications
-    switch (settings.rhythmMode)
-    {
-        case Params::RHYTHM_DOTTED:
-            durationInQuarters *= 1.5; // Dotted note = 1.5x the normal duration
-            break;
-        case Params::RHYTHM_TRIPLET:
-            durationInQuarters *= 2.0 / 3.0; // Triplet = 2/3 the normal duration
-            break;
-        case Params::RHYTHM_NORMAL:
-        default:
-            // No modification for normal rhythm
-            break;
-    }
-
+    double durationInQuarters = getDurationInQuarters(rate, settings);
     double durationInSeconds = secondsPerQuarterNote * durationInQuarters;
     double durationInSamples = durationInSeconds * sampleRate;
 

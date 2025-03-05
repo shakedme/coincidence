@@ -12,7 +12,10 @@ PluginProcessor::PluginProcessor()
 {
     // Create specialized components
     audioProcessor = std::make_unique<::JammerAudioProcessor>(*this);
-    noteGenerator = std::make_unique<NoteGenerator>(*this);
+    timingManager = std::make_shared<TimingManager>();
+    noteGenerator = std::make_unique<NoteGenerator>(*this, timingManager);
+    glitchEngine = std::make_unique<GlitchEngine>(timingManager);
+
 
     // Update settings from parameters
     updateSettingsFromParameters();
@@ -73,6 +76,13 @@ void PluginProcessor::updateSettingsFromParameters()
         static_cast<int>(*parameters.getRawParameterValue("rhythm_mode")));
 
     // Remove any code related to useRandomSample or randomizeProbability
+}
+
+void PluginProcessor::updateGlitchSettingsFromParameters()
+{
+    // Update glitch settings from parameters
+    glitchSettings.stutterAmount = *parameters.getRawParameterValue("glitch_stutter");
+    glitchEngine->setStutterProbability(glitchSettings.stutterAmount);
 }
 
 //==============================================================================
@@ -143,6 +153,7 @@ void PluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     // Initialize components
     audioProcessor->prepareToPlay(sampleRate, samplesPerBlock);
     noteGenerator->prepareToPlay(sampleRate, samplesPerBlock);
+    glitchEngine->prepareToPlay(sampleRate, samplesPerBlock);
 }
 
 void PluginProcessor::releaseResources()
@@ -150,6 +161,7 @@ void PluginProcessor::releaseResources()
     // Release components
     audioProcessor->releaseResources();
     noteGenerator->releaseResources();
+    glitchEngine->releaseResources();
 }
 
 void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
@@ -157,6 +169,7 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 {
     // Update plugin settings from parameters
     updateSettingsFromParameters();
+    updateGlitchSettingsFromParameters();
 
     // Clear audio
     buffer.clear();
@@ -164,7 +177,7 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     // Create processed MIDI buffer
     juce::MidiBuffer processedMidi;
 
-    noteGenerator->timingManager.updateTimingInfo(getPlayHead());
+    timingManager->updateTimingInfo(getPlayHead());
 
     // Process incoming MIDI messages
     noteGenerator->processIncomingMidi(
@@ -176,15 +189,16 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     // Process any pending notes scheduled from previous buffers
     noteGenerator->processPendingNotes(processedMidi, buffer.getNumSamples());
 
-    // Generate new notes if input note is active and no note is currently playing
-    if (noteGenerator->isInputNoteActive() && !noteGenerator->isNoteActive())
-    {
-        noteGenerator->generateNewNotes(processedMidi, settings);
-    }
+    // Generates midi based on settings
+    noteGenerator->generateNewNotes(processedMidi, settings);
 
-    // Process audio through sampler if samples are loaded
+    // If samples are loaded, uses generated midi to trigger samples
     audioProcessor->processAudio(buffer, processedMidi, midiMessages);
-    noteGenerator->timingManager.updateSamplePosition(buffer.getNumSamples());
+
+    // If samples are loaded - run buffer through glitch engine
+    glitchEngine->processAudio(buffer, playHead);
+
+    timingManager->updateSamplePosition(buffer.getNumSamples());
 }
 
 //==============================================================================

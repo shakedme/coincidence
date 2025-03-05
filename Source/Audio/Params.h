@@ -21,6 +21,10 @@ enum RateOption {
     NUM_RATE_OPTIONS
 };
 
+struct GlitchSettings {
+    float stutterAmount = 0.0f;      // 0-100%
+};
+
 // Scale types
 enum ScaleType {
     SCALE_MAJOR = 0,

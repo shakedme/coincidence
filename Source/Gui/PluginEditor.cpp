@@ -139,6 +139,14 @@ void PluginEditor::timerCallback()
         keyboardComponent->repaint();
         keyboardNeedsUpdate = false;
     }
+
+    // Handle any stray notes by making sure keyboard state is correct
+    if (isShowing() && keyboardComponent != nullptr && !audioProcessor.isNoteActive()
+        && keyboardState != nullptr)
+    {
+        keyboardState->allNotesOff(1);
+        keyboardComponent->repaint();
+    }
 }
 
 bool PluginEditor::isInterestedInFileDrag(const juce::StringArray& files)

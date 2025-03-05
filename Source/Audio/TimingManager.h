@@ -46,6 +46,8 @@ public:
     
     // Clear loop detection state
     void clearLoopDetection() { loopJustDetected = false; }
+
+    double getDurationInQuarters(Params::RateOption rate, const Params::GeneratorSettings& settings);
     
 private:
     // Timing state
@@ -57,4 +59,4 @@ private:
     double lastTriggerTimes[Params::NUM_RATE_OPTIONS] = {0.0};
     bool loopJustDetected = false;
     double lastContinuousPpqPosition = 0.0;  // For detecting transport loops
-}; 
+};
