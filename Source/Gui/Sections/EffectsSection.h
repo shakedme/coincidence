@@ -14,11 +14,20 @@ public:
     ~EffectsSection() override;
 
     void resized() override;
-
+    void paint(juce::Graphics& g) override;
 private:
     // UI Components
     std::unique_ptr<juce::Slider> stutterKnob;
     std::unique_ptr<juce::Label> stutterLabel;
+    
+    // Reverb UI Components
+    std::unique_ptr<juce::Slider> reverbMixKnob;
+    std::unique_ptr<juce::Slider> reverbProbabilityKnob;
+    std::unique_ptr<juce::Slider> reverbTimeKnob;
+    std::unique_ptr<juce::Label> reverbMixLabel;
+    std::unique_ptr<juce::Label> reverbProbabilityLabel;
+    std::unique_ptr<juce::Label> reverbTimeLabel;
+    std::unique_ptr<juce::Label> reverbSectionLabel;
 };
 
 #endif //JUCECMAKEREPO_GLITCHSECTION_H

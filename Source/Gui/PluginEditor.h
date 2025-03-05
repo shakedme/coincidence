@@ -39,12 +39,12 @@ private:
     std::unique_ptr<PitchSectionComponent> pitchSection;
     std::unique_ptr<EffectsSection> glitchSection;
     std::unique_ptr<SampleSectionComponent> sampleSection;
-    
+
     // Keyboard component and state
     std::unique_ptr<juce::MidiKeyboardState> keyboardState;
     std::unique_ptr<juce::MidiKeyboardComponent> keyboardComponent;
     std::atomic<bool> keyboardNeedsUpdate = false;
-    
+
     bool isCurrentlyOver = false;
 
     void setupKeyboard();

@@ -83,6 +83,12 @@ void PluginProcessor::updateFxSettingsFromParameters()
 {
     // Update glitch settings from parameters
     fxSettings.stutterProbability = *parameters.getRawParameterValue("glitch_stutter");
+    
+    // Update reverb settings from parameters
+    fxSettings.reverbMix = *parameters.getRawParameterValue("reverb_mix");
+    fxSettings.reverbProbability = *parameters.getRawParameterValue("reverb_probability");
+    fxSettings.reverbTime = *parameters.getRawParameterValue("reverb_time");
+    
     fxEngine->setSettings(fxSettings);
 }
 

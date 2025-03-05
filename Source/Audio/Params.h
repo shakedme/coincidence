@@ -25,6 +25,9 @@ enum RateOption {
 struct FxSettings
 {
     float stutterProbability = 0.0f;      // 0-100%
+    float reverbMix = 50.0f;              // 0-100% (dry/wet mix)
+    float reverbProbability = 0.0f;       // 0-100% (chance of applying reverb)
+    float reverbTime = 50.0f;             // 0-100% (reverb decay time)
 };
 
 // Scale types

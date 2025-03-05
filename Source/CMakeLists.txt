@@ -41,6 +41,7 @@ target_sources(${BaseTargetName} PRIVATE
         Audio/FileLogger.cpp
         Audio/Effects/FxEngine.cpp
         Audio/Effects/Stutter.cpp
+        Audio/Effects/Reverb.cpp
         )
 
 target_compile_definitions(${BaseTargetName}
@@ -51,6 +52,7 @@ target_compile_definitions(${BaseTargetName}
 
 target_link_libraries(${BaseTargetName} PRIVATE
         juce_audio_utils
+        juce_dsp
         juce_recommended_config_flags
         juce_recommended_lto_flags
         juce_recommended_warning_flags
