@@ -195,7 +195,7 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     // If samples are loaded, uses generated midi to trigger samples
     audioProcessor->processAudio(buffer, processedMidi, midiMessages);
 
-    // If samples are loaded - run buffer through glitch engine
+    // Process audio with glitch effects
     glitchEngine->processAudio(buffer, playHead);
 
     timingManager->updateSamplePosition(buffer.getNumSamples());

@@ -127,6 +127,12 @@ bool TimingManager::shouldTriggerNote(Params::RateOption rate, const Params::Gen
     double durationInQuarters = getDurationInQuarters(rate, settings);
     int rateIndex = static_cast<int>(rate);
 
+    // Log the incoming parameters
+    juce::Logger::writeToLog("TimingManager: shouldTriggerNote check for rate " + juce::String(static_cast<int>(rate)) +
+                             " Duration in quarters: " + juce::String(durationInQuarters) +
+                             " PPQ: " + juce::String(ppqPosition) +
+                             " Last trigger: " + juce::String(lastTriggerTimes[rateIndex]));
+
     // If we just detected a loop or it's the first trigger for this rate
     if (loopJustDetected || lastTriggerTimes[rateIndex] <= 0.0)
     {
@@ -139,9 +145,15 @@ bool TimingManager::shouldTriggerNote(Params::RateOption rate, const Params::Gen
         // If we're close to a grid point at the start of the loop, we should trigger
         double ppqSinceGrid = ppqPosition - gridStartPpq;
 
+        // Log grid timing info
+        juce::Logger::writeToLog("TimingManager: Loop or first trigger - Grid start: " + juce::String(gridStartPpq) +
+                                 " PPQ since grid: " + juce::String(ppqSinceGrid) +
+                                 " Trigger window: " + juce::String(triggerWindowInPPQ));
+
         // Trigger if we're very close to a grid point
         if (ppqSinceGrid < triggerWindowInPPQ)
         {
+            juce::Logger::writeToLog("TimingManager: Triggering on grid point (close to grid)");
             return true;
         }
 
@@ -151,49 +163,65 @@ bool TimingManager::shouldTriggerNote(Params::RateOption rate, const Params::Gen
         double ppqSpanOfCurrentBuffer = (blockSize / sampleRate) * (bpm / 60.0);
         double ppqUntilNextGrid = nextGridPpq - ppqPosition;
 
+        juce::Logger::writeToLog("TimingManager: Next grid: " + juce::String(nextGridPpq) +
+                                 " PPQ until next grid: " + juce::String(ppqUntilNextGrid) +
+                                 " Buffer span: " + juce::String(ppqSpanOfCurrentBuffer));
+
         if (ppqUntilNextGrid >= 0 && ppqUntilNextGrid <= ppqSpanOfCurrentBuffer)
         {
+            juce::Logger::writeToLog("TimingManager: Triggering on next grid point (within buffer)");
             return true;
         }
 
+        juce::Logger::writeToLog("TimingManager: Not triggering (no grid point in range)");
         return false;
     }
 
     // Normal case - not at a loop point
     // Find the next grid point that should trigger a note
     double lastTriggerTime = lastTriggerTimes[rateIndex];
-    
+
     // Calculate the next expected grid point
     double nextGridPoint = 0.0;
-    
+
     // Calculate the number of whole grid units since the last trigger
     double gridsSinceLastTrigger = std::floor((ppqPosition - lastTriggerTime) / durationInQuarters);
-    
+
     // Calculate the next grid point after our last trigger
     nextGridPoint = lastTriggerTime + ((gridsSinceLastTrigger + 1) * durationInQuarters);
-    
+
     // Calculate a narrow window for triggering (adaptive to tempo)
     double triggerWindowInPPQ = 0.01 * std::max(1.0, bpm / 120.0);
-    
+
     // Check if the next grid point is within this buffer
     double ppqUntilNextGrid = nextGridPoint - ppqPosition;
     int blockSize = 1024; // Typical buffer size
     double ppqSpanOfCurrentBuffer = (blockSize / sampleRate) * (bpm / 60.0);
-    
+
+    juce::Logger::writeToLog("TimingManager: Normal trigger check - Last trigger: " + juce::String(lastTriggerTime) +
+                             " Grids since last: " + juce::String(gridsSinceLastTrigger) +
+                             " Next grid: " + juce::String(nextGridPoint) +
+                             " PPQ until next: " + juce::String(ppqUntilNextGrid) +
+                             " Buffer span: " + juce::String(ppqSpanOfCurrentBuffer));
+
     // Grid point is coming up in this buffer
     if (ppqUntilNextGrid >= 0 && ppqUntilNextGrid <= ppqSpanOfCurrentBuffer)
     {
+        juce::Logger::writeToLog("TimingManager: Triggering on next grid point (within buffer)");
         return true;
     }
-    
+
     // We already passed the grid point slightly (timing issue)
     if (ppqUntilNextGrid < 0 && ppqUntilNextGrid > -triggerWindowInPPQ)
     {
+        juce::Logger::writeToLog("TimingManager: Triggering on just-passed grid point (timing allowance)");
         return true;
     }
-    
+
+    juce::Logger::writeToLog("TimingManager: Not triggering (no grid point in range)");
     return false;
 }
+
 
 double TimingManager::getNoteDurationInSamples(Params::RateOption rate, const Params::GeneratorSettings& settings)
 {

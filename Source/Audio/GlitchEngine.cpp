@@ -48,17 +48,32 @@ void GlitchEngine::processAudio(juce::AudioBuffer<float>& buffer,
     if (playHead != nullptr)
     {
         timingManager->updateTimingInfo(playHead);
+        posInfo = playHead->getPosition();
+        if (posInfo.hasValue() && posInfo->getPpqPosition().hasValue()) {
+            juce::Logger::writeToLog(juce::String("GlitchEngine: PPQ Position: ") +
+                                     juce::String(*posInfo->getPpqPosition()) +
+                                     " BPM: " + juce::String(posInfo->getBpm().hasValue() ? *posInfo->getBpm() : 0.0));
+        }
     }
 
     int numSamples = buffer.getNumSamples();
     int numChannels = buffer.getNumChannels();
 
-    // Update sample position in timing manager
-    timingManager->updateSamplePosition(numSamples);
+    // Log current stutter state
+    juce::Logger::writeToLog("GlitchEngine: isStuttering=" + juce::String(isStuttering ? "true" : "false") +
+                             " probability=" + juce::String(stutterProbability.load()) +
+                             " stutterPosition=" + juce::String(stutterPosition) +
+                             " stutterLength=" + juce::String(stutterLength) +
+                             " repeatCount=" + juce::String(stutterRepeatCount) +
+                             " of " + juce::String(stutterRepeatsTotal));
+
+    // Update sample position in timing manager is handled in PluginProcessor, so removed from here
+    // timingManager->updateSamplePosition(numSamples);
 
     // Check if we've detected a loop in the transport (from TimingManager)
     if (timingManager->wasLoopDetected())
     {
+        juce::Logger::writeToLog("GlitchEngine: Loop detected in transport - resetting stutter state");
         // Reset stuttering state when transport loops
         isStuttering = false;
         stutterPosition = 0;
@@ -72,13 +87,16 @@ void GlitchEngine::processAudio(juce::AudioBuffer<float>& buffer,
     // If not currently stuttering, check if we should start
     if (!isStuttering && stutterProbability > 0.0f)
     {
-        if (shouldTriggerStutter())
+        bool shouldTrigger = shouldTriggerStutter();
+        juce::Logger::writeToLog("GlitchEngine: Stutter trigger check result: " + juce::String(shouldTrigger ? "true" : "false"));
+
+        if (shouldTrigger)
         {
             // Create a temporary settings object for use with the timing manager
             Params::GeneratorSettings settings;
 
             // Use TimingManager to determine if we're at a grid-aligned position
-            bool shouldTrigger = false;
+            bool shouldTriggerGrid = false;
 
             // Try different rate options to see if any should trigger
             Params::RateOption rateOptions[] = {
@@ -90,13 +108,15 @@ void GlitchEngine::processAudio(juce::AudioBuffer<float>& buffer,
             {
                 if (timingManager->shouldTriggerNote(rate, settings))
                 {
-                    shouldTrigger = true;
+                    shouldTriggerGrid = true;
                     selectedRate = rate;
+                    juce::Logger::writeToLog("GlitchEngine: Grid trigger at rate: " + juce::String(rate) +
+                                             " PPQ: " + juce::String(timingManager->getPpqPosition()));
                     break;
                 }
             }
 
-            if (shouldTrigger)
+            if (shouldTriggerGrid)
             {
                 // We're at a grid position, start stuttering
                 isStuttering = true;
@@ -106,12 +126,24 @@ void GlitchEngine::processAudio(juce::AudioBuffer<float>& buffer,
                 stutterLength = static_cast<int>(
                     timingManager->getNoteDurationInSamples(selectedRate, settings));
 
+                juce::Logger::writeToLog("GlitchEngine: Starting stutter - Rate: " + juce::String(static_cast<int>(selectedRate)) +
+                                         " Length: " + juce::String(stutterLength) + " samples" +
+                                         " (" + juce::String(stutterLength / sampleRate) + " seconds)");
+
                 // Determine number of repeats (2-4)
                 stutterRepeatsTotal = 2 + random.nextInt(3); // 2 to 4
                 stutterRepeatCount = 0;
 
+                juce::Logger::writeToLog("GlitchEngine: Stutter repeats: " + juce::String(stutterRepeatsTotal));
+
                 // Make sure stutterLength doesn't exceed the stutter buffer size
+                int originalLength = stutterLength;
                 stutterLength = juce::jmin(stutterLength, stutterBuffer.getNumSamples());
+                if (originalLength != stutterLength) {
+                    juce::Logger::writeToLog("GlitchEngine: Limiting stutter length from " +
+                                             juce::String(originalLength) + " to " + juce::String(stutterLength) +
+                                             " (buffer size: " + juce::String(stutterBuffer.getNumSamples()) + ")");
+                }
 
                 // Copy current buffer to stutter buffer for looping
                 for (int channel = 0;
@@ -120,7 +152,17 @@ void GlitchEngine::processAudio(juce::AudioBuffer<float>& buffer,
                 {
                     // First, copy what we have from the current buffer
                     stutterBuffer.copyFrom(channel, 0, buffer, channel, 0, numSamples);
+
+                    // Fill the rest of the stutter length with repeated data if needed
+                    for (int pos = numSamples; pos < stutterLength; pos += numSamples) {
+                        int copySize = juce::jmin(numSamples, stutterLength - pos);
+                        stutterBuffer.copyFrom(channel, pos, buffer, channel, 0, copySize);
+                    }
                 }
+
+                juce::Logger::writeToLog("GlitchEngine: Copied " + juce::String(numSamples) +
+                                         " samples to stutter buffer (may be repeated to fill " +
+                                         juce::String(stutterLength) + " samples)");
 
                 // Update last trigger time in the timing manager
                 timingManager->updateLastTriggerTime(selectedRate,
@@ -175,16 +217,30 @@ void GlitchEngine::processAudio(juce::AudioBuffer<float>& buffer,
         }
 
         // Update stutter position
+        int oldPosition = stutterPosition;
         stutterPosition = (stutterPosition + numSamples) % stutterLength;
+
+        // Log position wraparound
+        if (stutterPosition < oldPosition) {
+            juce::Logger::writeToLog("GlitchEngine: Stutter buffer position wrapped around from " +
+                                     juce::String(oldPosition) + " to " + juce::String(stutterPosition) +
+                                     " (increment: " + juce::String(numSamples) +
+                                     ", length: " + juce::String(stutterLength) + ")");
+        }
 
         // Check if we should finish this stutter instance
         if (stutterPosition < numSamples)
         {
             // We've completed a full loop through the stutter buffer
             stutterRepeatCount++;
+            juce::Logger::writeToLog("GlitchEngine: Stutter repeat " + juce::String(stutterRepeatCount) +
+                                     " of " + juce::String(stutterRepeatsTotal));
 
             if (stutterRepeatCount >= stutterRepeatsTotal)
             {
+                juce::Logger::writeToLog("GlitchEngine: Ending stutter after " +
+                                         juce::String(stutterRepeatCount) + " repeats");
+
                 // End the stutter with a crossfade
                 for (int channel = 0; channel < numChannels; ++channel)
                 {
