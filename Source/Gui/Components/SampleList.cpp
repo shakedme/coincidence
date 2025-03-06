@@ -29,7 +29,7 @@ SampleList::SampleList(PluginProcessor& p)
 
     // Add columns
     sampleListBox->getHeader().addColumn("Name", 1, getWidth() * 0.6f, 80, -1, juce::TableHeaderComponent::notResizable);
-    sampleListBox->getHeader().addColumn("Probability", 2, getWidth() * 0.4f, 80, -1, juce::TableHeaderComponent::notResizable);
+    sampleListBox->getHeader().addColumn("Probability", 2, getWidth() * 0.38f, 80, -1, juce::TableHeaderComponent::notResizable);
     
     addAndMakeVisible(sampleListBox.get());
 }

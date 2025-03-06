@@ -67,9 +67,8 @@ void PitchSectionComponent::resized()
     const int toggleWidth = 80;
     const int directionWidth = knobSize + 20;
     const int totalWidth = toggleWidth + directionWidth + 10; // 10 pixels spacing between controls
-    const int startX = area.getCentreX() - totalWidth / 2;
-    
-    semitonesDirectionSelector->setBounds(startX + toggleWidth + 10, arpControlsY, directionWidth, 25);
+
+    semitonesDirectionSelector->setBounds(getWidth() / 2 - directionWidth / 2, arpControlsY, directionWidth, 25);
 }
 
 void PitchSectionComponent::setupScaleTypeControls()

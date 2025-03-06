@@ -217,12 +217,20 @@ juce::AudioProcessorEditor* PluginProcessor::createEditor()
 //==============================================================================
 void PluginProcessor::getStateInformation(juce::MemoryBlock& destData)
 {
-    // Get the parameter state
-    auto state = parameters.copyState();
-    std::unique_ptr<juce::XmlElement> xml(state.createXml());
+    // Create a fresh XmlElement for our state (not using parameters.copyState() directly)
+    auto mainXml = std::make_unique<juce::XmlElement>("JAMMER_STATE");
+    
+    // Add parameter state as a child
+    auto paramsXml = parameters.copyState().createXml();
+    mainXml->addChildElement(paramsXml.release());
+    
+    // Add direction information explicitly
+    auto* directionXml = new juce::XmlElement("Direction");
+    directionXml->setAttribute("type", static_cast<int>(getSampleDirectionType()));
+    mainXml->addChildElement(directionXml);
 
     // Add sample information to the XML
-    juce::XmlElement* samplesXml = new juce::XmlElement("Samples");
+    auto* samplesXml = new juce::XmlElement("Samples");
 
     // Get sample manager reference
     SampleManager& sampleManager = getSampleManager();
@@ -230,7 +238,7 @@ void PluginProcessor::getStateInformation(juce::MemoryBlock& destData)
     // Add each loaded sample to the XML
     for (int i = 0; i < sampleManager.getNumSamples(); ++i)
     {
-        juce::XmlElement* sampleXml = new juce::XmlElement("Sample");
+        auto* sampleXml = new juce::XmlElement("Sample");
 
         // Add sample path
         sampleXml->setAttribute("path", sampleManager.getSampleFilePath(i).getFullPathName());
@@ -240,16 +248,49 @@ void PluginProcessor::getStateInformation(juce::MemoryBlock& destData)
         {
             sampleXml->setAttribute("startMarker", sound->getStartMarkerPosition());
             sampleXml->setAttribute("endMarker", sound->getEndMarkerPosition());
+            
+            // Add group index
+            sampleXml->setAttribute("groupIndex", sound->getGroupIndex());
         }
+        
+        // Add sample probability
+        sampleXml->setAttribute("probability", sampleManager.getSampleProbability(i));
 
         samplesXml->addChildElement(sampleXml);
     }
+    
+    // Add groups to the XML
+    auto* groupsXml = new juce::XmlElement("Groups");
+    
+    // Add each group
+    for (int i = 0; i < sampleManager.getNumGroups(); ++i)
+    {
+        if (const auto* group = sampleManager.getGroup(i))
+        {
+            auto* groupXml = new juce::XmlElement("Group");
+            
+            // Add group index
+            groupXml->setAttribute("index", i);
+            
+            // Add group name if available
+            if (group->name.isNotEmpty())
+                groupXml->setAttribute("name", group->name);
+            
+            // Add group probability
+            groupXml->setAttribute("probability", sampleManager.getGroupProbability(i));
+            
+            groupsXml->addChildElement(groupXml);
+        }
+    }
 
-    // Add samples element to the main XML
-    xml->addChildElement(samplesXml);
+    // Add samples and groups elements to the main XML
+    mainXml->addChildElement(samplesXml);
+    mainXml->addChildElement(groupsXml);
 
     // Copy XML to binary data
-    copyXmlToBinary(*xml, destData);
+    copyXmlToBinary(*mainXml, destData);
+    
+    juce::Logger::writeToLog("Saved plugin state with " + juce::String(sampleManager.getNumSamples()) + " samples");
 }
 
 void PluginProcessor::setStateInformation(const void* data, int sizeInBytes)
@@ -258,9 +299,40 @@ void PluginProcessor::setStateInformation(const void* data, int sizeInBytes)
 
     if (xmlState != nullptr)
     {
-        // First restore parameters
-        if (xmlState->hasTagName(parameters.state.getType()))
-            parameters.replaceState(juce::ValueTree::fromXml(*xmlState));
+        juce::Logger::writeToLog("Loading plugin state...");
+        
+        // Handle both formats - either direct parameters or our custom container
+        juce::XmlElement* paramsXml = nullptr;
+        
+        if (xmlState->hasTagName("JAMMER_STATE"))
+        {
+            // New format - find the parameters element (first child)
+            paramsXml = xmlState->getFirstChildElement();
+        }
+        else if (xmlState->hasTagName(parameters.state.getType()))
+        {
+            // Old format - the root element is the parameters
+            paramsXml = xmlState.get();
+        }
+        
+        // Restore parameters if found
+        if (paramsXml != nullptr && paramsXml->hasTagName(parameters.state.getType()))
+        {
+            parameters.replaceState(juce::ValueTree::fromXml(*paramsXml));
+            juce::Logger::writeToLog("Restored parameters");
+        }
+
+        // Check for explicit direction information (in case it wasn't saved in the parameters)
+        if (juce::XmlElement* directionXml = xmlState->getChildByName("Direction"))
+        {
+            int directionType = directionXml->getIntAttribute("type", static_cast<int>(Params::BIDIRECTIONAL));
+            auto* param = parameters.getParameter("sample_direction");
+            if (param)
+            {
+                param->setValueNotifyingHost(param->convertTo0to1(directionType));
+                juce::Logger::writeToLog("Restored direction: " + juce::String(directionType));
+            }
+        }
 
         // Now look for samples
         if (juce::XmlElement* samplesXml = xmlState->getChildByName("Samples"))
@@ -270,8 +342,10 @@ void PluginProcessor::setStateInformation(const void* data, int sizeInBytes)
 
             // Clear existing samples
             sampleManager.clearAllSamples();
+            juce::Logger::writeToLog("Clearing existing samples");
 
             // Load each sample
+            int sampleCount = 0;
             for (int i = 0; i < samplesXml->getNumChildElements(); ++i)
             {
                 if (auto* sampleXml = samplesXml->getChildElement(i))
@@ -286,6 +360,7 @@ void PluginProcessor::setStateInformation(const void* data, int sizeInBytes)
                             {
                                 // Load the sample
                                 sampleManager.addSample(sampleFile);
+                                sampleCount++;
 
                                 // Get the index of the just-added sample
                                 int newSampleIndex = sampleManager.getNumSamples() - 1;
@@ -302,12 +377,98 @@ void PluginProcessor::setStateInformation(const void* data, int sizeInBytes)
                                         sound->setMarkerPositions(startMarker, endMarker);
                                     }
                                 }
+                                
+                                // Set sample probability if it exists
+                                if (sampleXml->hasAttribute("probability"))
+                                {
+                                    float probability = (float)sampleXml->getDoubleAttribute("probability", 1.0);
+                                    sampleManager.setSampleProbability(newSampleIndex, probability);
+                                }
+                                
+                                // Store group index for later assignment (after all groups are loaded)
+                                if (sampleXml->hasAttribute("groupIndex"))
+                                {
+                                    int groupIndex = sampleXml->getIntAttribute("groupIndex", -1);
+                                    if (groupIndex >= 0)
+                                    {
+                                        auto* sound = sampleManager.getSampleSound(newSampleIndex);
+                                        if (sound != nullptr)
+                                        {
+                                            sound->setGroupIndex(groupIndex);
+                                        }
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                juce::Logger::writeToLog("Sample file not found: " + path);
                             }
                         }
                     }
                 }
             }
+            
+            juce::Logger::writeToLog("Loaded " + juce::String(sampleCount) + " samples");
+            
+            // After loading all samples, restore groups
+            if (juce::XmlElement* groupsXml = xmlState->getChildByName("Groups"))
+            {
+                int groupCount = 0;
+                
+                // Load each group
+                for (int i = 0; i < groupsXml->getNumChildElements(); ++i)
+                {
+                    if (auto* groupXml = groupsXml->getChildElement(i))
+                    {
+                        if (groupXml->hasTagName("Group"))
+                        {
+                            int groupIndex = groupXml->getIntAttribute("index", -1);
+                            
+                            if (groupIndex >= 0)
+                            {
+                                // Collect all samples that belong to this group
+                                juce::Array<int> sampleIndices;
+                                
+                                for (int j = 0; j < sampleManager.getNumSamples(); ++j)
+                                {
+                                    if (auto* sound = sampleManager.getSampleSound(j))
+                                    {
+                                        if (sound->getGroupIndex() == groupIndex)
+                                        {
+                                            sampleIndices.add(j);
+                                        }
+                                    }
+                                }
+                                
+                                // Create the group if there are samples in it
+                                if (!sampleIndices.isEmpty())
+                                {
+                                    sampleManager.createGroup(sampleIndices);
+                                    groupCount++;
+                                    
+                                    // Set group probability if it exists
+                                    if (groupXml->hasAttribute("probability"))
+                                    {
+                                        float probability = (float)groupXml->getDoubleAttribute("probability", 1.0);
+                                        sampleManager.setGroupProbability(groupIndex, probability);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                juce::Logger::writeToLog("Created " + juce::String(groupCount) + " groups");
+            }
         }
+        else
+        {
+            juce::Logger::writeToLog("No samples element found in state");
+        }
+    }
+    else
+    {
+        juce::Logger::writeToLog("Failed to load state - invalid XML");
     }
 }
 

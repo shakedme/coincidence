@@ -32,21 +32,20 @@ void SampleSectionComponent::resized()
 
     // Right side controls - direction selector and group list
     int controlsX = area.getX() + sampleListWidth + 15;
-    int controlsWidth = area.getWidth() - sampleListWidth - 25;
+    int controlsWidth = area.getWidth() - sampleListWidth - 15;
 
-    // Position the sample direction selector at the top of right panel
     sampleDirectionSelector->setBounds(
-        controlsX + (controlsWidth - 80) / 2, // Center it horizontally
-        controlsY + 10, // Place it at the top
-        80, // Width
-        25); // Height
+        10 + sampleListWidth / 2 - 40,
+        getHeight() - 27,
+        80,
+        25);
         
     // Position the group list view below the direction selector
     groupListView->setBounds(
         controlsX,
-        controlsY + 45, // Below the direction selector
+        40,
         controlsWidth,
-        sampleListHeight - 50); // Take up most of the remaining height
+        sampleListHeight - 50);
 
     const int toggleWidth = 60;
     const int toggleHeight = 20;
