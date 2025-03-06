@@ -107,4 +107,18 @@ private:
     // Randomized values for visualization
     std::atomic<float> currentRandomizedGate {0.0f};
     std::atomic<float> currentRandomizedVelocity {0.0f};
-}; 
+
+    void addNoteWithinCurrentBuffer(juce::MidiBuffer& buffer,
+                                    int play,
+                                    int velocity,
+                                    int offset,
+                                    juce::int64 position,
+                                    int samples,
+                                    int index);
+    void addPendingNote(int noteToPlay,
+                        int velocity,
+                        int noteLengthSamples,
+                        int sampleIndex,
+                        juce::int64 position);
+
+};
