@@ -4,7 +4,6 @@
 
 #include "BaseSection.h"
 
-
 BaseSectionComponent::BaseSectionComponent(PluginEditor& e,
                                            PluginProcessor& p,
                                            const juce::String& title,
@@ -17,11 +16,11 @@ BaseSectionComponent::BaseSectionComponent(PluginEditor& e,
     sectionLabel = std::make_unique<juce::Label>();
     sectionLabel->setText(title, juce::dontSendNotification);
     sectionLabel->setJustificationType(juce::Justification::centred);
-    sectionLabel->setFont(juce::Font(juce::FontOptions(TITLE_FONT_SIZE, juce::Font::bold)));
+    sectionLabel->setFont(
+        juce::Font(juce::FontOptions(TITLE_FONT_SIZE, juce::Font::bold)));
     sectionLabel->setColour(juce::Label::textColourId, colour);
     addAndMakeVisible(sectionLabel.get());
 }
-
 
 // Update the paint method to call drawMetallicPanel
 void BaseSectionComponent::paint(juce::Graphics& g)
@@ -104,4 +103,26 @@ void BaseSectionComponent::drawMetallicPanel(juce::Graphics& g)
         lf->drawScrew(g, bounds.getX() + 10, bounds.getBottom() - 10, 8);
         lf->drawScrew(g, bounds.getRight() - 10, bounds.getBottom() - 10, 8);
     }
+}
+
+void BaseSectionComponent::initKnob(std::unique_ptr<juce::Slider>& knob,
+                                    const juce::String& tooltip,
+                                    const juce::String& name,
+                                    int min,
+                                    int max,
+                                    double interval,
+                                    const juce::String& suffix)
+{
+    knob = std::unique_ptr<juce::Slider>(createRotarySlider(tooltip));
+    knob->setName(name);
+    knob->setRange(min, max, interval);
+    knob->setTextValueSuffix("%");
+    addAndMakeVisible(knob.get());
+}
+
+void BaseSectionComponent::initLabel(std::unique_ptr<juce::Label>& label, const juce::String& text, juce::Justification justification, float fontSize)
+{
+    label = std::unique_ptr<juce::Label>(createLabel(text, justification));
+    label->setFont(juce::Font(juce::FontOptions(fontSize)));
+    addAndMakeVisible(label.get());
 }

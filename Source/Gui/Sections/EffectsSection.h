@@ -28,6 +28,12 @@ private:
     std::unique_ptr<juce::Label> reverbProbabilityLabel;
     std::unique_ptr<juce::Label> reverbTimeLabel;
     std::unique_ptr<juce::Label> reverbSectionLabel;
+
+    std::unique_ptr<juce::Slider> reverbDampingKnob;
+    std::unique_ptr<juce::Label> reverbDampingLabel;
+
+    std::unique_ptr<juce::Slider> reverbWidthKnob;
+    std::unique_ptr<juce::Label> reverbWidthLabel;
 };
 
 #endif //JUCECMAKEREPO_GLITCHSECTION_H

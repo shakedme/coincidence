@@ -30,20 +30,34 @@ void SampleSectionComponent::resized()
     sampleList->setBounds(listArea);
     sampleDetailView->setBounds(listArea);
 
-    // Right side controls - direction selector
+    // Right side controls - direction selector and group list
     int controlsX = area.getX() + sampleListWidth + 15;
-    int controlsWidth = area.getWidth() - sampleListWidth - 25;
+    int controlsWidth = area.getWidth() - sampleListWidth - 15;
 
-    // Position the sample direction selector in the center of right panel
     sampleDirectionSelector->setBounds(
-        controlsX + (controlsWidth - 80) / 2, // Center it horizontally
-        controlsY + 60, // Place it in the middle vertically
-        80, // Width
-        25); // Height
+        10 + sampleListWidth / 2 - 40,
+        getHeight() - 27,
+        80,
+        25);
+        
+    // Position the group list view below the direction selector
+    groupListView->setBounds(
+        controlsX,
+        40,
+        controlsWidth,
+        sampleListHeight - 50);
+
+    const int toggleWidth = 60;
+    const int toggleHeight = 20;
+    const int toggleX = area.getRight() - toggleWidth - 25;
+    const int toggleY = 7;
+    pitchFollowToggle->setBounds(toggleX, toggleY, toggleWidth, toggleHeight);
 }
 
 void SampleSectionComponent::initComponents(PluginProcessor& processorRef)
 {
+
+    juce::Rectangle<int> area = getLocalBounds();
     // Create the sample list component
     sampleList = std::make_unique<SampleList>(processorRef);
     sampleList->onSampleDetailRequested = [this](int sampleIndex) {
@@ -82,6 +96,36 @@ void SampleSectionComponent::initComponents(PluginProcessor& processorRef)
         }
     };
     addAndMakeVisible(sampleDirectionSelector.get());
+    
+    // Create the group list view
+    groupListView = std::make_unique<GroupListView>(processorRef);
+    addAndMakeVisible(groupListView.get());
+
+    pitchFollowToggle = std::make_unique<Toggle>(juce::Colour(0xffbf52d9));
+    pitchFollowToggle->setTooltip("Enable pitch following for sample playback");
+
+    auto* pitchFollowParam = dynamic_cast<juce::AudioParameterBool*>(
+        processorRef.parameters.getParameter("sample_pitch_follow"));
+
+    if (pitchFollowParam)
+        pitchFollowToggle->setValue(pitchFollowParam->get());
+
+    pitchFollowToggle->onValueChanged = [&processorRef](bool followPitch) {
+        auto* param = processorRef.parameters.getParameter("sample_pitch_follow");
+        if (param) {
+            param->beginChangeGesture();
+            param->setValueNotifyingHost(followPitch ? 1.0f : 0.0f);
+            param->endChangeGesture();
+        }
+    };
+    addAndMakeVisible(pitchFollowToggle.get());
+
+    // Create label
+    pitchFollowLabel = std::make_unique<juce::Label>();
+    pitchFollowLabel->setText("ORIG | PITCH", juce::dontSendNotification);
+    pitchFollowLabel->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
+    pitchFollowLabel->setJustificationType(juce::Justification::centred);
+    addAndMakeVisible(pitchFollowLabel.get());
 }
 
 void SampleSectionComponent::paint(juce::Graphics& g)
@@ -110,13 +154,15 @@ void SampleSectionComponent::paint(juce::Graphics& g)
         g.setFont(juce::Font(juce::FontOptions(14.0f)));
         g.drawText("Drag & Drop Samples Here", contentArea, juce::Justification::centred, true);
 
-        // Hide the sample direction selector when no samples are loaded
+        // Hide the sample direction selector and group list when no samples are loaded
         sampleDirectionSelector->setVisible(false);
+        groupListView->setVisible(false);
     }
     else
     {
-        // Show the sample direction selector when samples are loaded
+        // Show the sample direction selector and group list when samples are loaded
         sampleDirectionSelector->setVisible(true);
+        groupListView->setVisible(true);
     }
 }
 

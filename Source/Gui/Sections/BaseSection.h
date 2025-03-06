@@ -64,6 +64,21 @@ protected:
     juce::Slider* createRotarySlider(const juce::String& tooltip);
     void drawMetallicPanel(juce::Graphics& g);
     void clearAttachments();
+    void initKnob(
+        std::unique_ptr<juce::Slider>& knob,
+        const juce::String& tooltip,
+        const juce::String& name,
+        int min = 0,
+        int max = 100,
+        double interval = 0.1,
+        const juce::String& textSuffix = "%"
+        );
+    void initLabel(
+        std::unique_ptr<juce::Label>& label,
+        const juce::String& text,
+        juce::Justification justification = juce::Justification::centred,
+        float fontSize = 11.0f
+        );
 };
 
 #endif //JUCECMAKEREPO_BASESECTION_H

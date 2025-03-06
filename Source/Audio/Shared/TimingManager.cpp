@@ -24,7 +24,7 @@ void TimingManager::prepareToPlay(double liveSampleRate)
     {
         lastTriggerTimes[i] = 0.0;
     }
-    
+
     loopJustDetected = false;
 }
 
@@ -80,7 +80,35 @@ void TimingManager::updateLastTriggerTime(Params::RateOption rate, double trigge
     lastTriggerTimes[static_cast<int>(rate)] = triggerTime;
 }
 
-double TimingManager::getDurationInQuarters(Params::RateOption rate, const Params::GeneratorSettings& settings)
+double TimingManager::getNextExpectedGridPoint(Params::RateOption selectedRate,
+                                               const Params::GeneratorSettings& settings,
+                                               int rateIndex)
+{
+    double durationInQuarters = getDurationInQuarters(selectedRate, settings);
+    double lastTriggerTime = getLastTriggerTimes()[rateIndex];
+
+    if (wasLoopDetected() || lastTriggerTime <= 0.0)
+    {
+        // At loop points, align with the closest grid
+        double gridStartPpq =
+            std::floor(ppqPosition / durationInQuarters) * durationInQuarters;
+
+        // If we're very close to a grid point, use that
+        double ppqSinceGrid = ppqPosition - gridStartPpq;
+        double triggerWindowInPPQ = 0.05 * std::max(1.0, bpm / 120.0);
+        return ppqSinceGrid < triggerWindowInPPQ ? gridStartPpq
+                                                 : gridStartPpq + durationInQuarters;
+    }
+    // Calculate how many grid units have passed since the last trigger
+    double gridsSinceLastTrigger =
+        std::floor((ppqPosition - lastTriggerTime) / durationInQuarters);
+
+    // The next grid point should be exactly on a grid division from the last trigger
+    return lastTriggerTime + ((gridsSinceLastTrigger + 1) * durationInQuarters);
+}
+
+double TimingManager::getDurationInQuarters(Params::RateOption rate,
+                                            const Params::GeneratorSettings& settings)
 {
     double durationInQuarters;
     switch (rate)
@@ -121,7 +149,8 @@ double TimingManager::getDurationInQuarters(Params::RateOption rate, const Param
     return durationInQuarters;
 }
 
-bool TimingManager::shouldTriggerNote(Params::RateOption rate, const Params::GeneratorSettings& settings)
+bool TimingManager::shouldTriggerNote(Params::RateOption rate,
+                                      const Params::GeneratorSettings& settings)
 {
     // Calculate the duration in quarter notes
     double durationInQuarters = getDurationInQuarters(rate, settings);
@@ -131,7 +160,8 @@ bool TimingManager::shouldTriggerNote(Params::RateOption rate, const Params::Gen
     if (loopJustDetected || lastTriggerTimes[rateIndex] <= 0.0)
     {
         // Find the closest grid point at or before current position
-        double gridStartPpq = std::floor(ppqPosition / durationInQuarters) * durationInQuarters;
+        double gridStartPpq =
+            std::floor(ppqPosition / durationInQuarters) * durationInQuarters;
 
         // Calculate a reasonable window for triggering (adaptive to tempo)
         double triggerWindowInPPQ = 0.05 * std::max(1.0, bpm / 120.0);
@@ -167,7 +197,8 @@ bool TimingManager::shouldTriggerNote(Params::RateOption rate, const Params::Gen
     double nextGridPoint = 0.0;
 
     // Calculate the number of whole grid units since the last trigger
-    double gridsSinceLastTrigger = std::floor((ppqPosition - lastTriggerTime) / durationInQuarters);
+    double gridsSinceLastTrigger =
+        std::floor((ppqPosition - lastTriggerTime) / durationInQuarters);
 
     // Calculate the next grid point after our last trigger
     nextGridPoint = lastTriggerTime + ((gridsSinceLastTrigger + 1) * durationInQuarters);
@@ -195,8 +226,8 @@ bool TimingManager::shouldTriggerNote(Params::RateOption rate, const Params::Gen
     return false;
 }
 
-
-double TimingManager::getNoteDurationInSamples(Params::RateOption rate, const Params::GeneratorSettings& settings)
+double TimingManager::getNoteDurationInSamples(Params::RateOption rate,
+                                               const Params::GeneratorSettings& settings)
 {
     // Calculate duration in quarter notes
     double quarterNotesPerSecond = bpm / 60.0;
@@ -208,4 +239,4 @@ double TimingManager::getNoteDurationInSamples(Params::RateOption rate, const Pa
 
     // Return the duration, ensuring it's at least one sample
     return juce::jmax(1.0, durationInSamples);
-} 
+}

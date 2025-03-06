@@ -18,8 +18,21 @@ public:
         juce::File file;
         int index;
         std::unique_ptr<SamplerSound> sound;
+        float probability = 1.0f; // Default probability value (1.0 = 100%)
+        int groupIndex = -1;      // -1 means not part of any group, 0-3 for groups
 
         SampleInfo(const juce::String& n, const juce::File& f, int idx);
+    };
+
+    // Group of samples
+    struct Group
+    {
+        juce::String name;
+        int index;
+        float probability = 1.0f; // Default probability value (1.0 = 100%)
+        std::vector<int> sampleIndices;
+
+        Group(const juce::String& n, int idx) : name(n), index(idx) {}
     };
 
     // Sample management
@@ -29,6 +42,15 @@ public:
     juce::File getSampleFilePath(int index) const;
     int getNextSampleIndex(Params::DirectionType direction);
     void rebuildSounds();
+    void createGroup(const juce::Array<int>& sampleIndices);
+    void removeGroup(int groupIndex);
+    void removeSampleFromGroup(int sampleIndex);
+    int getNumGroups() const { return static_cast<int>(groups.size()); }
+    const Group* getGroup(int index) const;
+    void setSampleProbability(int sampleIndex, float probability);
+    float getSampleProbability(int sampleIndex) const;
+    void setGroupProbability(int groupIndex, float probability);
+    float getGroupProbability(int groupIndex) const;
     
     // Getters
     size_t getNumSamples() const { return sampleList.size(); }
@@ -50,6 +72,9 @@ private:
 
     // Loaded samples
     std::vector<std::unique_ptr<SampleInfo>> sampleList;
+    
+    // Sample groups (max 4 groups)
+    std::vector<std::unique_ptr<Group>> groups;
     
     // Playback engine
     juce::Synthesiser sampler;

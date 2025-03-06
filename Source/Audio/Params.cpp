@@ -93,15 +93,24 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         "glitch_stutter", "Stutter Amount", 0.0f, 100.0f, 0.0f));
 
+    layout.add(std::make_unique<juce::AudioParameterBool>(
+        "sample_pitch_follow", "Sample Pitch Follow", false)); // Default: original pitch
+
     // Reverb parameters
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         "reverb_mix", "Reverb Mix", 0.0f, 100.0f, 50.0f));
-        
+
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         "reverb_probability", "Reverb Probability", 0.0f, 100.0f, 0.0f));
-        
+
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         "reverb_time", "Reverb Time", 0.0f, 100.0f, 50.0f));
+
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "reverb_damping", "Reverb Damping", 0.0f, 100.0f, 50.0f));
+
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "reverb_width", "Reverb Width", 0.0f, 100.0f, 100.0f));
 
     return layout;
 }

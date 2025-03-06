@@ -28,6 +28,8 @@ struct FxSettings
     float reverbMix = 50.0f;              // 0-100% (dry/wet mix)
     float reverbProbability = 0.0f;       // 0-100% (chance of applying reverb)
     float reverbTime = 50.0f;             // 0-100% (reverb decay time)
+    float reverbDamping = 50.0f;          // 0-100% (high frequency damping)
+    float reverbWidth = 100.0f;           // 0-100% (stereo width)
 };
 
 // Scale types

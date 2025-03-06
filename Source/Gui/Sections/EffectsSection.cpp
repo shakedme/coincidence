@@ -8,16 +8,8 @@ EffectsSection::EffectsSection(PluginEditor& e, PluginProcessor& p)
     : BaseSectionComponent(e, p, "EFFECTS", juce::Colour(0xffd9a652))
 {
     // Stutter effect control
-    stutterKnob = std::unique_ptr<juce::Slider>(createRotarySlider("Stutter"));
-    stutterKnob->setName("stutter_probability");
-    stutterKnob->setRange(0.0, 100.0, 0.1);
-    stutterKnob->setTextValueSuffix("%");
-    addAndMakeVisible(stutterKnob.get());
-
-    stutterLabel = std::unique_ptr<juce::Label>(
-        createLabel("STUTTER", juce::Justification::centred));
-    stutterLabel->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
-    addAndMakeVisible(stutterLabel.get());
+    initKnob(stutterKnob, "Stutter", "stutter_probability", 0, 100, 0.1, "%");
+    initLabel(stutterLabel, "STUTTER");
 
     sliderAttachments.push_back(
         std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
@@ -34,42 +26,30 @@ EffectsSection::EffectsSection(PluginEditor& e, PluginProcessor& p)
     // Reverb controls
 
     // Mix knob
-    reverbMixKnob = std::unique_ptr<juce::Slider>(createRotarySlider("Reverb Mix"));
-    reverbMixKnob->setName("reverb_mix");
-    reverbMixKnob->setRange(0.0, 100.0, 0.1);
-    reverbMixKnob->setTextValueSuffix("%");
-    addAndMakeVisible(reverbMixKnob.get());
-
-    reverbMixLabel =
-        std::unique_ptr<juce::Label>(createLabel("MIX", juce::Justification::centred));
-    reverbMixLabel->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
-    addAndMakeVisible(reverbMixLabel.get());
+    initKnob(reverbMixKnob, "Reverb Mix", "reverb_mix", 0, 100, 0.1, "%");
+    initLabel(reverbMixLabel, "MIX");
 
     // Probability knob
-    reverbProbabilityKnob =
-        std::unique_ptr<juce::Slider>(createRotarySlider("Reverb Probability"));
-    reverbProbabilityKnob->setName("reverb_probability");
-    reverbProbabilityKnob->setRange(0.0, 100.0, 0.1);
-    reverbProbabilityKnob->setTextValueSuffix("%");
-    addAndMakeVisible(reverbProbabilityKnob.get());
-
-    reverbProbabilityLabel = std::unique_ptr<juce::Label>(
-        createLabel("PROBABILITY", juce::Justification::centred));
-    reverbProbabilityLabel->setFont(
-        juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
-    addAndMakeVisible(reverbProbabilityLabel.get());
+    initKnob(reverbProbabilityKnob,
+             "Reverb Probability",
+             "reverb_probability",
+             0,
+             100,
+             0.1,
+             "%");
+    initLabel(reverbProbabilityLabel, "PROBABILITY");
 
     // Time knob
-    reverbTimeKnob = std::unique_ptr<juce::Slider>(createRotarySlider("Reverb Time"));
-    reverbTimeKnob->setName("reverb_time");
-    reverbTimeKnob->setRange(0.0, 100.0, 0.1);
-    reverbTimeKnob->setTextValueSuffix("%");
-    addAndMakeVisible(reverbTimeKnob.get());
+    initKnob(reverbTimeKnob, "Reverb Time", "reverb_time", 0, 100, 0.1, "%");
+    initLabel(reverbTimeLabel, "TIME");
 
-    reverbTimeLabel =
-        std::unique_ptr<juce::Label>(createLabel("TIME", juce::Justification::centred));
-    reverbTimeLabel->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
-    addAndMakeVisible(reverbTimeLabel.get());
+    // Damping knob
+    initKnob(reverbDampingKnob, "Reverb Damping", "reverb_damping", 0, 100, 0.1, "%");
+    initLabel(reverbDampingLabel, "DAMPING");
+
+    // Width knob
+    initKnob(reverbWidthKnob, "Reverb Width", "reverb_width", 0, 100, 0.1, "%");
+    initLabel(reverbWidthLabel, "WIDTH");
 
     // Parameter attachments
     sliderAttachments.push_back(
@@ -83,6 +63,15 @@ EffectsSection::EffectsSection(PluginEditor& e, PluginProcessor& p)
     sliderAttachments.push_back(
         std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
             processor.parameters, "reverb_time", *reverbTimeKnob));
+
+    sliderAttachments.push_back(
+        std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+            processor.parameters, "reverb_damping", *reverbDampingKnob));
+
+    sliderAttachments.push_back(
+        std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+            processor.parameters, "reverb_width", *reverbWidthKnob));
+
 }
 
 EffectsSection::~EffectsSection()
@@ -139,6 +128,10 @@ void EffectsSection::resized()
     stutterKnob->setBounds(stutterX, rowY, knobSize, knobSize);
     stutterLabel->setBounds(stutterX, rowY + knobSize, knobSize, labelHeight);
 
+    const int divider1X = area.getWidth() * 0.25f;
+    const int divider2X = area.getWidth() * 0.75f;
+    const int reverbSectionWidth = divider2X - divider1X;
+    const int reverbKnobGap = reverbSectionWidth - 10 / 5 * knobSize;
     // Hide the reverb section label as we're now drawing it directly in paint()
     reverbSectionLabel->setVisible(false);
 
@@ -146,10 +139,19 @@ void EffectsSection::resized()
     reverbMixKnob->setBounds(reverbMixX, rowY, knobSize, knobSize);
     reverbMixLabel->setBounds(reverbMixX, rowY + knobSize, knobSize, labelHeight);
 
-    reverbTimeKnob->setBounds(reverbTimeX, rowY, knobSize, knobSize);
-    reverbTimeLabel->setBounds(reverbTimeX, rowY + knobSize, knobSize, labelHeight);
+    reverbTimeKnob->setBounds(reverbTimeX + reverbKnobGap, rowY, knobSize, knobSize);
+    reverbTimeLabel->setBounds(
+        reverbTimeX + reverbKnobGap, rowY + knobSize, knobSize, labelHeight);
 
-    reverbProbabilityKnob->setBounds(reverbProbX, rowY, knobSize, knobSize);
+    reverbProbabilityKnob->setBounds(reverbProbX + 2 * reverbKnobGap, rowY, knobSize, knobSize);
     reverbProbabilityLabel->setBounds(
+        reverbProbX - 10, rowY + knobSize, knobSize + 20, labelHeight);
+
+    reverbDampingKnob->setBounds(reverbProbX+ 2 * reverbKnobGap, rowY, knobSize, knobSize);
+    reverbDampingLabel->setBounds(
+        reverbProbX - 10, rowY + knobSize, knobSize + 20, labelHeight);
+
+    reverbWidthKnob->setBounds(reverbProbX+ 2 * reverbKnobGap, rowY, knobSize, knobSize);
+    reverbWidthLabel->setBounds(
         reverbProbX - 10, rowY + knobSize, knobSize + 20, labelHeight);
 }

@@ -37,6 +37,10 @@ public:
     
     // Calculate the duration in samples for a given rate
     double getNoteDurationInSamples(Params::RateOption rate, const Params::GeneratorSettings& settings);
+
+    double getNextExpectedGridPoint(Params::RateOption selectedRate,
+                                     const Params::GeneratorSettings& settings,
+                                     int rateIndex);
     
     // Update the last trigger time for a rate
     void updateLastTriggerTime(Params::RateOption rate, double triggerTime);

@@ -21,6 +21,8 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     sampleSection = std::make_unique<SampleSectionComponent>(*this, audioProcessor);
     addAndMakeVisible(sampleSection.get());
 
+    tooltipWindow = std::make_unique<juce::TooltipWindow>(this, 0);
+
     // Set up keyboard
     setupKeyboard();
 
@@ -177,7 +179,6 @@ void PluginEditor::fileDragEnter(const juce::StringArray& files, int x, int y)
         sampleSection->fileDragEnter(files, localPoint.x, localPoint.y);
     }
 
-    isCurrentlyOver = true;
     repaint();
 }
 
@@ -185,7 +186,5 @@ void PluginEditor::fileDragExit(const juce::StringArray& files)
 {
     if (sampleSection)
         sampleSection->fileDragExit(files);
-
-    isCurrentlyOver = false;
     repaint();
 }
