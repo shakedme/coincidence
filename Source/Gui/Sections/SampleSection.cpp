@@ -30,16 +30,23 @@ void SampleSectionComponent::resized()
     sampleList->setBounds(listArea);
     sampleDetailView->setBounds(listArea);
 
-    // Right side controls - direction selector
+    // Right side controls - direction selector and group list
     int controlsX = area.getX() + sampleListWidth + 15;
     int controlsWidth = area.getWidth() - sampleListWidth - 25;
 
-    // Position the sample direction selector in the center of right panel
+    // Position the sample direction selector at the top of right panel
     sampleDirectionSelector->setBounds(
         controlsX + (controlsWidth - 80) / 2, // Center it horizontally
-        controlsY + 60, // Place it in the middle vertically
+        controlsY + 10, // Place it at the top
         80, // Width
         25); // Height
+        
+    // Position the group list view below the direction selector
+    groupListView->setBounds(
+        controlsX,
+        controlsY + 45, // Below the direction selector
+        controlsWidth,
+        sampleListHeight - 50); // Take up most of the remaining height
 }
 
 void SampleSectionComponent::initComponents(PluginProcessor& processorRef)
@@ -82,6 +89,10 @@ void SampleSectionComponent::initComponents(PluginProcessor& processorRef)
         }
     };
     addAndMakeVisible(sampleDirectionSelector.get());
+    
+    // Create the group list view
+    groupListView = std::make_unique<GroupListView>(processorRef);
+    addAndMakeVisible(groupListView.get());
 }
 
 void SampleSectionComponent::paint(juce::Graphics& g)
@@ -110,13 +121,15 @@ void SampleSectionComponent::paint(juce::Graphics& g)
         g.setFont(juce::Font(juce::FontOptions(14.0f)));
         g.drawText("Drag & Drop Samples Here", contentArea, juce::Justification::centred, true);
 
-        // Hide the sample direction selector when no samples are loaded
+        // Hide the sample direction selector and group list when no samples are loaded
         sampleDirectionSelector->setVisible(false);
+        groupListView->setVisible(false);
     }
     else
     {
-        // Show the sample direction selector when samples are loaded
+        // Show the sample direction selector and group list when samples are loaded
         sampleDirectionSelector->setVisible(true);
+        groupListView->setVisible(true);
     }
 }
 

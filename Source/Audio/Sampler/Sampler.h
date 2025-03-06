@@ -28,6 +28,10 @@ public:
     // Get the sample index for identification
     int getIndex() const { return index; }
     void setIndex(int idx) { index = idx; }
+    
+    // Get/set group index
+    int getGroupIndex() const { return groupIndex; }
+    void setGroupIndex(int idx) { groupIndex = idx; }
 
     float getStartMarkerPosition() const { return startMarkerPosition; }
     float getEndMarkerPosition() const { return endMarkerPosition; }
@@ -45,6 +49,7 @@ private:
     double sourceSampleRate;
     bool isAppropriatelyActive = true; // By default, all sounds are active
     int index = -1; // Sample index
+    int groupIndex = -1; // Group index, -1 means no group
     float startMarkerPosition = 0.0f;
     float endMarkerPosition = 1.0f;
 

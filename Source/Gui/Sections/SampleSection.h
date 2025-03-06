@@ -4,6 +4,7 @@
 #include "../Components/DirectionSelector.h"
 #include "../Components/SampleList.h"
 #include "../Components/SampleDetail.h"
+#include "../Components/GroupListView.h"
 #include "../../Audio/Params.h"
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_audio_utils/juce_audio_utils.h>
@@ -37,6 +38,9 @@ private:
 
     // Direction selector
     std::unique_ptr<DirectionSelector> sampleDirectionSelector;
+    
+    // Group list view
+    std::unique_ptr<GroupListView> groupListView;
 
     // View state
     bool showingDetailView = false;

@@ -30,6 +30,7 @@ target_sources(${BaseTargetName} PRIVATE
         Gui/Components/DirectionSelector.h
         Gui/Components/SampleDetail.h
         Gui/Components/SampleList.cpp
+        Gui/Components/GroupListView.h
         Audio/Params.cpp
         Audio/PluginProcessor.cpp
         Audio/Sampler/SampleManager.cpp
