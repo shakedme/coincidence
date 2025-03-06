@@ -76,7 +76,8 @@ void PluginProcessor::updateMidiSettingsFromParameters()
     settings.rhythmMode = static_cast<RhythmMode>(
         static_cast<int>(*parameters.getRawParameterValue("rhythm_mode")));
 
-    // Remove any code related to useRandomSample or randomizeProbability
+    bool pitchFollowEnabled = static_cast<bool>(*parameters.getRawParameterValue("sample_pitch_follow"));
+    SamplerVoice::setPitchFollowEnabled(pitchFollowEnabled);
 }
 
 void PluginProcessor::updateFxSettingsFromParameters()

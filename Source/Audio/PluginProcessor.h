@@ -7,6 +7,7 @@
 #include "Midi/NoteGenerator.h"
 #include "JammerAudioProcessor.h"
 #include "Effects/FxEngine.h"
+#include "Sampler/Sampler.h"
 
 // Forward declarations
 class PluginEditor;

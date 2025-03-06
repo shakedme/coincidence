@@ -19,6 +19,8 @@ SamplerSound::SamplerSound(const juce::String& soundName,
         source.read(
             &audioData, 0, static_cast<int>(source.lengthInSamples), 0, true, true);
     }
+
+
 }
 
 bool SamplerSound::appliesToNote(int midiNoteNumber)
@@ -205,10 +207,15 @@ void SamplerVoice::startNote(int midiNoteNumber,
             currentSampleIndex = samplerSound->getIndex();
         }
 
-        // Calculate the pitch ratio based on the midi note
         double midiNoteHz = juce::MidiMessage::getMidiNoteInHertz(midiNoteNumber);
         double soundMidiNoteHz = juce::MidiMessage::getMidiNoteInHertz(60); // C4 as reference
-        pitchRatio = midiNoteHz / soundMidiNoteHz;
+
+        // Apply pitch ratio based on the global setting
+        if (pitchFollowEnabled) {
+            pitchRatio = midiNoteHz / soundMidiNoteHz;
+        } else {
+            pitchRatio = 1.0; // Original pitch
+        }
 
         // Account for source sample rate difference
         pitchRatio *= getSampleRate() / samplerSound->getSourceSampleRate();
@@ -304,3 +311,5 @@ SamplerSound* SamplerVoice::getCorrectSoundForIndex(int index)
     
     return nullptr;
 }
+
+bool SamplerVoice::pitchFollowEnabled = false;

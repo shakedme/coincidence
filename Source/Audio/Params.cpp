@@ -93,6 +93,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         "glitch_stutter", "Stutter Amount", 0.0f, 100.0f, 0.0f));
 
+    layout.add(std::make_unique<juce::AudioParameterBool>(
+        "sample_pitch_follow", "Sample Pitch Follow", false)); // Default: original pitch
+
     return layout;
 }
 

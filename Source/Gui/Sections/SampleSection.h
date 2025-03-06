@@ -6,8 +6,10 @@
 #include "../Components/SampleDetail.h"
 #include "../Components/GroupListView.h"
 #include "../../Audio/Params.h"
+#include "../Components/Toggle.h"
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_audio_utils/juce_audio_utils.h>
+
 
 class SampleSectionComponent : public BaseSectionComponent,
                                public juce::FileDragAndDropTarget,
@@ -35,6 +37,8 @@ private:
     std::unique_ptr<SampleList> sampleList;
     std::unique_ptr<SampleDetailComponent> sampleDetailView;
     std::unique_ptr<juce::TextButton> removeSampleButton;
+    std::unique_ptr<Toggle> pitchFollowToggle;
+    std::unique_ptr<juce::Label> pitchFollowLabel;
 
     // Direction selector
     std::unique_ptr<DirectionSelector> sampleDirectionSelector;

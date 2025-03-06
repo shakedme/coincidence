@@ -14,6 +14,8 @@ public:
                  juce::AudioFormatReader& source,
                  const juce::BigInteger& notes);
 
+
+
     // SynthesiserSound methods
     bool appliesToNote(int midiNoteNumber) override;
     bool appliesToChannel(int midiChannel) override;
@@ -53,6 +55,7 @@ private:
     float startMarkerPosition = 0.0f;
     float endMarkerPosition = 1.0f;
 
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SamplerSound)
 };
 
@@ -63,6 +66,9 @@ class SamplerVoice : public juce::SynthesiserVoice
 {
 public:
     SamplerVoice();
+
+    static void setPitchFollowEnabled(bool enabled) { pitchFollowEnabled = enabled; }
+    static bool isPitchFollowEnabled() { return pitchFollowEnabled; }
 
     bool canPlaySound(juce::SynthesiserSound* sound) override;
     void renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
@@ -103,6 +109,7 @@ private:
     // Static shared sample index and sound map
     static int currentGlobalSampleIndex;
     static std::map<int, SamplerSound*> indexToSoundMap;
+    static bool pitchFollowEnabled;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SamplerVoice)
 };
