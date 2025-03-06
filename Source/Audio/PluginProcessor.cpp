@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "../Gui/PluginEditor.h"
+#include "Effects/FxEngine.h"
 
 using namespace Params;
 
@@ -14,7 +15,7 @@ PluginProcessor::PluginProcessor()
     audioProcessor = std::make_unique<::JammerAudioProcessor>(*this);
     timingManager = std::make_shared<TimingManager>();
     noteGenerator = std::make_unique<NoteGenerator>(*this, timingManager);
-    fxEngine = std::make_unique<FxEngine>(timingManager);
+    fxEngine = std::make_unique<FxEngine>(timingManager, *this);
 
 
     // Update settings from parameters
@@ -24,8 +25,8 @@ PluginProcessor::PluginProcessor()
     // Start timer for any background tasks
     startTimerHz(50);
 
-//    auto* fileLogger = new FileLogger();
-//    juce::Logger::setCurrentLogger(fileLogger);
+    auto* fileLogger = new FileLogger();
+    juce::Logger::setCurrentLogger(fileLogger);
 }
 
 PluginProcessor::~PluginProcessor()
@@ -259,6 +260,21 @@ void PluginProcessor::getStateInformation(juce::MemoryBlock& destData)
             
             // Add group index
             sampleXml->setAttribute("groupIndex", sound->getGroupIndex());
+            
+            // Add onset mode settings
+            sampleXml->setAttribute("onsetModeEnabled", sound->isOnsetModeEnabled());
+            
+            // Save onset markers
+            const auto& onsetMarkers = sound->getOnsetMarkers();
+            if (!onsetMarkers.empty())
+            {
+                juce::XmlElement* onsetMarkersElement = sampleXml->createNewChildElement("OnsetMarkers");
+                for (auto marker : onsetMarkers)
+                {
+                    juce::XmlElement* markerElement = onsetMarkersElement->createNewChildElement("Marker");
+                    markerElement->setAttribute("position", marker);
+                }
+            }
         }
         
         // Add sample probability
@@ -266,14 +282,14 @@ void PluginProcessor::getStateInformation(juce::MemoryBlock& destData)
 
         samplesXml->addChildElement(sampleXml);
     }
-    
+
     // Add groups to the XML
     auto* groupsXml = new juce::XmlElement("Groups");
     
     // Add each group
-    for (int i = 0; i < sampleManager.getNumGroups(); ++i)
+    for (int i = 0; i < getSampleManager().getNumGroups(); ++i)
     {
-        if (const auto* group = sampleManager.getGroup(i))
+        if (const auto* group = getSampleManager().getGroup(i))
         {
             auto* groupXml = new juce::XmlElement("Group");
             
@@ -285,7 +301,7 @@ void PluginProcessor::getStateInformation(juce::MemoryBlock& destData)
                 groupXml->setAttribute("name", group->name);
             
             // Add group probability
-            groupXml->setAttribute("probability", sampleManager.getGroupProbability(i));
+            groupXml->setAttribute("probability", getSampleManager().getGroupProbability(i));
             
             groupsXml->addChildElement(groupXml);
         }
@@ -297,8 +313,6 @@ void PluginProcessor::getStateInformation(juce::MemoryBlock& destData)
 
     // Copy XML to binary data
     copyXmlToBinary(*mainXml, destData);
-    
-    juce::Logger::writeToLog("Saved plugin state with " + juce::String(sampleManager.getNumSamples()) + " samples");
 }
 
 void PluginProcessor::setStateInformation(const void* data, int sizeInBytes)
@@ -307,8 +321,7 @@ void PluginProcessor::setStateInformation(const void* data, int sizeInBytes)
 
     if (xmlState != nullptr)
     {
-        juce::Logger::writeToLog("Loading plugin state...");
-        
+
         // Handle both formats - either direct parameters or our custom container
         juce::XmlElement* paramsXml = nullptr;
         
@@ -327,7 +340,6 @@ void PluginProcessor::setStateInformation(const void* data, int sizeInBytes)
         if (paramsXml != nullptr && paramsXml->hasTagName(parameters.state.getType()))
         {
             parameters.replaceState(juce::ValueTree::fromXml(*paramsXml));
-            juce::Logger::writeToLog("Restored parameters");
         }
 
         // Check for explicit direction information (in case it wasn't saved in the parameters)
@@ -338,7 +350,6 @@ void PluginProcessor::setStateInformation(const void* data, int sizeInBytes)
             if (param)
             {
                 param->setValueNotifyingHost(param->convertTo0to1(directionType));
-                juce::Logger::writeToLog("Restored direction: " + juce::String(directionType));
             }
         }
 
@@ -350,7 +361,6 @@ void PluginProcessor::setStateInformation(const void* data, int sizeInBytes)
 
             // Clear existing samples
             sampleManager.clearAllSamples();
-            juce::Logger::writeToLog("Clearing existing samples");
 
             // Load each sample
             int sampleCount = 0;
@@ -393,6 +403,42 @@ void PluginProcessor::setStateInformation(const void* data, int sizeInBytes)
                                     sampleManager.setSampleProbability(newSampleIndex, probability);
                                 }
                                 
+                                // Set onset mode if it exists
+                                if (sampleXml->hasAttribute("onsetModeEnabled"))
+                                {
+                                    bool onsetModeEnabled = sampleXml->getBoolAttribute("onsetModeEnabled", false);
+                                    if (auto* sound = sampleManager.getSampleSound(newSampleIndex))
+                                    {
+                                        sound->setOnsetModeEnabled(onsetModeEnabled);
+                                    }
+                                }
+                                
+                                // Load onset markers if they exist
+                                if (auto* onsetMarkersElement = sampleXml->getChildByName("OnsetMarkers"))
+                                {
+                                    std::vector<float> onsetMarkers;
+                                    
+                                    for (int m = 0; m < onsetMarkersElement->getNumChildElements(); ++m)
+                                    {
+                                        if (auto* markerElement = onsetMarkersElement->getChildElement(m))
+                                        {
+                                            if (markerElement->hasTagName("Marker") && markerElement->hasAttribute("position"))
+                                            {
+                                                float position = (float)markerElement->getDoubleAttribute("position", 0.0);
+                                                onsetMarkers.push_back(position);
+                                            }
+                                        }
+                                    }
+                                    
+                                    if (!onsetMarkers.empty())
+                                    {
+                                        if (auto* sound = sampleManager.getSampleSound(newSampleIndex))
+                                        {
+                                            sound->setOnsetMarkers(onsetMarkers);
+                                        }
+                                    }
+                                }
+                                
                                 // Store group index for later assignment (after all groups are loaded)
                                 if (sampleXml->hasAttribute("groupIndex"))
                                 {
@@ -407,17 +453,11 @@ void PluginProcessor::setStateInformation(const void* data, int sizeInBytes)
                                     }
                                 }
                             }
-                            else
-                            {
-                                juce::Logger::writeToLog("Sample file not found: " + path);
-                            }
                         }
                     }
                 }
             }
-            
-            juce::Logger::writeToLog("Loaded " + juce::String(sampleCount) + " samples");
-            
+
             // After loading all samples, restore groups
             if (juce::XmlElement* groupsXml = xmlState->getChildByName("Groups"))
             {
@@ -465,18 +505,9 @@ void PluginProcessor::setStateInformation(const void* data, int sizeInBytes)
                         }
                     }
                 }
-                
-                juce::Logger::writeToLog("Created " + juce::String(groupCount) + " groups");
             }
         }
-        else
-        {
-            juce::Logger::writeToLog("No samples element found in state");
-        }
-    }
-    else
-    {
-        juce::Logger::writeToLog("Failed to load state - invalid XML");
+
     }
 }
 

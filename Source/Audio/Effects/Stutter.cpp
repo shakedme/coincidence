@@ -42,7 +42,7 @@ void Stutter::releaseResources()
 }
 
 void Stutter::applyStutterEffect(juce::AudioBuffer<float>& buffer,
-                                 std::vector<int> triggerSamplePositions)
+                                 std::vector<juce::int64> triggerSamplePositions)
 {
     // Store buffer info for later use
     int numSamples = buffer.getNumSamples();
@@ -187,7 +187,7 @@ void Stutter::resetStutterState()
 }
 
 void Stutter::startStutterAtPosition(juce::AudioBuffer<float>& buffer,
-                                     int samplePosition,
+                                     juce::int64 samplePosition,
                                      int numSamples,
                                      int numChannels)
 {
@@ -217,7 +217,7 @@ void Stutter::startStutterAtPosition(juce::AudioBuffer<float>& buffer,
 }
 
 void Stutter::applyImmediateStutterEffect(juce::AudioBuffer<float>& buffer,
-                                          int samplePosition,
+                                          juce::int64 samplePosition,
                                           int numSamples,
                                           int numChannels)
 {
@@ -276,7 +276,7 @@ void Stutter::addToHistory(const juce::AudioBuffer<float>& buffer)
     historyWritePosition = (historyWritePosition + numSamples) % historyBufferSize;
 }
 
-void Stutter::captureFromHistory(int triggerSamplePosition, int lengthToCapture)
+void Stutter::captureFromHistory(juce::int64 triggerSamplePosition, int lengthToCapture)
 {
     // Determine starting position in history buffer
     // We need to account for the fact that:
@@ -284,7 +284,7 @@ void Stutter::captureFromHistory(int triggerSamplePosition, int lengthToCapture)
     // 2. triggerSamplePosition is relative to the *current* buffer
 
     // Calculate samples from end of current buffer
-    int samplesFromEnd = currentBufferSize - triggerSamplePosition;
+    juce::int64 samplesFromEnd = currentBufferSize - triggerSamplePosition;
 
     // Calculate absolute history buffer position where trigger point is
     int historyTriggerPos =

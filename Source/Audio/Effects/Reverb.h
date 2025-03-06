@@ -9,43 +9,37 @@
 class Reverb
 {
 public:
-    Reverb(std::shared_ptr<TimingManager> timingManager);
+    Reverb(std::shared_ptr<TimingManager> t);
     ~Reverb() = default;
 
     void prepareToPlay(double sampleRate, int samplesPerBlock);
     void releaseResources();
-    void applyReverbEffect(juce::AudioBuffer<float>& buffer,
-                           const std::vector<int>& triggerSamplePositions);
-
-    // Setters
     void setSettings(Params::FxSettings s);
-    void setBufferSize(int numSamples) { currentBufferSize = numSamples; }
+    void setBufferSize(int numSamples);
+    
+    void applyReverbEffect(juce::AudioBuffer<float>& buffer, 
+                          const std::vector<juce::int64>& triggerSamplePositions,
+                          const std::vector<juce::int64>& noteDurations);
 
 private:
-    // Settings
-    Params::FxSettings settings;
+    struct ActiveReverb
+    {
+        juce::int64 startSample;
+        juce::int64 duration;
+        juce::int64 currentPosition;
+        bool isActive;
+    };
 
-    // JUCE's reverb processor
+    std::shared_ptr<TimingManager> timingManager;
     juce::Reverb juceReverb;
     juce::Reverb::Parameters juceReverbParams;
-
-    // Timing manager
-    std::shared_ptr<TimingManager> timingManager;
-
-    // Most recent buffer size for reference
-    int currentBufferSize {0};
+    Params::FxSettings settings;
+    
     double sampleRate {44100.0};
-
-    // Active notes for selective reverb application
-    struct ActiveNote
-    {
-        int startSample;
-        int duration;
-        bool active;
-    };
-    std::vector<ActiveNote> activeNotes;
-
-    // Utility methods
+    int currentBufferSize {512};
+    
+    // Track active reverb effects
+    ActiveReverb activeReverb;
+    
     bool shouldApplyReverb();
-    void updateActiveNotes(const std::vector<int>& triggerSamplePositions);
 };

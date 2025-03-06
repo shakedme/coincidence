@@ -5,10 +5,13 @@
 #include "Stutter.h"
 #include "Reverb.h"
 
+// Forward declarations
+class PluginProcessor;
+
 class FxEngine
 {
 public:
-    FxEngine(std::shared_ptr<TimingManager> timingManager);
+    FxEngine(std::shared_ptr<TimingManager> timingManager, PluginProcessor& processorRef);
     ~FxEngine();
 
     void prepareToPlay(double sampleRate, int samplesPerBlock);
@@ -22,6 +25,7 @@ private:
     std::unique_ptr<Stutter> stutterEffect;
     std::unique_ptr<Reverb> reverbEffect;
     std::shared_ptr<TimingManager> timingManager;
+    PluginProcessor& processor;
 
     Params::FxSettings settings;
     double sampleRate {44100.0};
@@ -29,5 +33,5 @@ private:
 
     void updateTimingInfo(juce::AudioPlayHead* playHead);
     void updateFxWithBufferSize(int numSamples);
-    std::vector<int> checkForMidiTriggers(const juce::MidiBuffer& midiMessages);
+    std::vector<juce::int64> checkForMidiTriggers(const juce::MidiBuffer& midiMessages);
 };

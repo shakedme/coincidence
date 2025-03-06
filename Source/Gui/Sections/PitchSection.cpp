@@ -63,10 +63,8 @@ void PitchSectionComponent::resized()
     octavesProbabilityLabel->setBounds(rightColumnX, secondRowY + knobSize, knobSize, labelHeight);
 
     // Position Arp Mode controls horizontally below the horizontal line
-    const int arpControlsY = area.getHeight() - 35; // 10 pixels below the horizontal line
-    const int toggleWidth = 80;
+    const int arpControlsY = area.getHeight() - 30; // 10 pixels below the horizontal line
     const int directionWidth = knobSize + 20;
-    const int totalWidth = toggleWidth + directionWidth + 10; // 10 pixels spacing between controls
 
     semitonesDirectionSelector->setBounds(getWidth() / 2 - directionWidth / 2, arpControlsY, directionWidth, 25);
 }

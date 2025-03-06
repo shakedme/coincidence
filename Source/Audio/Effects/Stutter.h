@@ -18,7 +18,7 @@ public:
     void prepareToPlay(double sampleRate, int samplesPerBlock);
     void releaseResources();
     void applyStutterEffect(juce::AudioBuffer<float>& buffer,
-                            std::vector<int> triggerSamplePositions);
+                            std::vector<juce::int64> triggerSamplePositions);
 
     // Setters
     void setSettings(Params::FxSettings s) { settings = s; }
@@ -45,11 +45,11 @@ private:
                                int numChannels);
     void updateStutterPosition(int numSamples);
     void startStutterAtPosition(juce::AudioBuffer<float>& buffer,
-                                int samplePosition,
+                                juce::int64 samplePosition,
                                 int numSamples,
                                 int numChannels);
     void applyImmediateStutterEffect(juce::AudioBuffer<float>& buffer,
-                                     int samplePosition,
+                                     juce::int64 samplePosition,
                                      int numSamples,
                                      int numChannels);
     void endStutterEffect();
@@ -57,15 +57,11 @@ private:
     void processActiveStutter(juce::AudioBuffer<float>& buffer,
                               int numSamples,
                               int numChannels);
-    void checkAndStartNewStutter(juce::AudioBuffer<float>& buffer,
-                                 const juce::MidiBuffer& midiMessages,
-                                 int numSamples,
-                                 int numChannels);
     void handleTransportLoopDetection();
 
     // Buffer management
     void addToHistory(const juce::AudioBuffer<float>& buffer);
-    void captureFromHistory(int triggerSamplePosition, int lengthToCapture);
+    void captureFromHistory(juce::int64 triggerSamplePosition, int lengthToCapture);
     void captureHistorySegment(int historyTriggerPos, int lengthToCapture);
 
     // Beat-repeat effect state

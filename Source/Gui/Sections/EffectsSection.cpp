@@ -120,38 +120,38 @@ void EffectsSection::resized()
 
     // Calculate positions for all knobs in one row
     const int stutterX = area.getWidth() * 0.125f - knobSize / 2;
-    const int reverbMixX = area.getWidth() * 0.375f - knobSize / 2;
-    const int reverbTimeX = area.getWidth() * 0.5f - knobSize / 2;
-    const int reverbProbX = area.getWidth() * 0.625f - knobSize / 2;
+    const int divider1X = area.getWidth() * 0.25f;
+    const int divider2X = area.getWidth() * 0.75f;
+    const int reverbSectionWidth = divider2X - divider1X;
+    
+    // Calculate spacing to fit 5 knobs within the section
+    const int totalKnobWidth = 5 * knobSize;  // Width of all knobs combined
+    const int remainingSpace = reverbSectionWidth - totalKnobWidth;  // Space left for gaps
+    const int gap = remainingSpace / 6;  // Divide remaining space into 6 gaps (including edges)
 
     // Position stutter knob
     stutterKnob->setBounds(stutterX, rowY, knobSize, knobSize);
     stutterLabel->setBounds(stutterX, rowY + knobSize, knobSize, labelHeight);
 
-    const int divider1X = area.getWidth() * 0.25f;
-    const int divider2X = area.getWidth() * 0.75f;
-    const int reverbSectionWidth = divider2X - divider1X;
-    const int reverbKnobGap = reverbSectionWidth - 10 / 5 * knobSize;
-    // Hide the reverb section label as we're now drawing it directly in paint()
-    reverbSectionLabel->setVisible(false);
-
-    // Position reverb knobs
-    reverbMixKnob->setBounds(reverbMixX, rowY, knobSize, knobSize);
-    reverbMixLabel->setBounds(reverbMixX, rowY + knobSize, knobSize, labelHeight);
-
-    reverbTimeKnob->setBounds(reverbTimeX + reverbKnobGap, rowY, knobSize, knobSize);
-    reverbTimeLabel->setBounds(
-        reverbTimeX + reverbKnobGap, rowY + knobSize, knobSize, labelHeight);
-
-    reverbProbabilityKnob->setBounds(reverbProbX + 2 * reverbKnobGap, rowY, knobSize, knobSize);
-    reverbProbabilityLabel->setBounds(
-        reverbProbX - 10, rowY + knobSize, knobSize + 20, labelHeight);
-
-    reverbDampingKnob->setBounds(reverbProbX+ 2 * reverbKnobGap, rowY, knobSize, knobSize);
-    reverbDampingLabel->setBounds(
-        reverbProbX - 10, rowY + knobSize, knobSize + 20, labelHeight);
-
-    reverbWidthKnob->setBounds(reverbProbX+ 2 * reverbKnobGap, rowY, knobSize, knobSize);
-    reverbWidthLabel->setBounds(
-        reverbProbX - 10, rowY + knobSize, knobSize + 20, labelHeight);
+    // Position reverb knobs with even spacing
+    int currentX = divider1X + gap;  // Start with one gap from the left edge
+    
+    reverbMixKnob->setBounds(currentX, rowY, knobSize, knobSize);
+    reverbMixLabel->setBounds(currentX, rowY + knobSize, knobSize, labelHeight);
+    
+    currentX += knobSize + gap;
+    reverbTimeKnob->setBounds(currentX, rowY, knobSize, knobSize);
+    reverbTimeLabel->setBounds(currentX, rowY + knobSize, knobSize, labelHeight);
+    
+    currentX += knobSize + gap;
+    reverbProbabilityKnob->setBounds(currentX, rowY, knobSize, knobSize);
+    reverbProbabilityLabel->setBounds(currentX, rowY + knobSize, knobSize, labelHeight);
+    
+    currentX += knobSize + gap;
+    reverbDampingKnob->setBounds(currentX, rowY, knobSize, knobSize);
+    reverbDampingLabel->setBounds(currentX, rowY + knobSize, knobSize, labelHeight);
+    
+    currentX += knobSize + gap;
+    reverbWidthKnob->setBounds(currentX, rowY, knobSize, knobSize);
+    reverbWidthLabel->setBounds(currentX, rowY + knobSize, knobSize, labelHeight);
 }

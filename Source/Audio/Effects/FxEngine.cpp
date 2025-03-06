@@ -6,9 +6,11 @@
 #include <atomic>
 #include "../Shared/TimingManager.h"
 #include "FxEngine.h"
+#include "../PluginProcessor.h"
 
-FxEngine::FxEngine(std::shared_ptr<TimingManager> t)
+FxEngine::FxEngine(std::shared_ptr<TimingManager> t, PluginProcessor& processorRef)
     : timingManager(t)
+    , processor(processorRef)
 {
     stutterEffect = std::make_unique<Stutter>(timingManager);
     reverbEffect = std::make_unique<Reverb>(timingManager);
@@ -56,10 +58,53 @@ void FxEngine::processAudio(juce::AudioBuffer<float>& buffer,
     updateTimingInfo(playHead);
     updateFxWithBufferSize(buffer.getNumSamples());
 
-    std::vector<int> triggerPositions = checkForMidiTriggers(midiMessages);
+    std::vector<juce::int64> triggerPositions = checkForMidiTriggers(midiMessages);
+    
+    // Get note durations from the NoteGenerator
+    std::vector<juce::int64> noteDurations;
+    if (!triggerPositions.empty())
+    {
+        // Get the pending notes from the NoteGenerator
+        const auto& pendingNotes = processor.getNoteGenerator().getPendingNotes();
+        const auto& noteGenerator = processor.getNoteGenerator();
+        
+        // For each trigger position, find the corresponding note duration
+        for (juce::int64 triggerPos : triggerPositions)
+        {
+            bool foundDuration = false;
+            
+            // First check pending notes
+            for (const auto& note : pendingNotes)
+            {
+                if (note.startSamplePosition == triggerPos)
+                {
+                    noteDurations.push_back(note.durationInSamples);
+                    foundDuration = true;
+                    break;
+                }
+            }
+            
+            // If not found in pending notes, check if it's the current active note
+            if (!foundDuration && noteGenerator.isNoteActive())
+            {
+                // If this trigger position matches the current note's start position
+                if (triggerPos == 0) // Current note starts at the beginning of this buffer
+                {
+                    noteDurations.push_back(noteGenerator.getCurrentNoteDuration());
+                    foundDuration = true;
+                }
+            }
+            
+            // If still no duration found, use a default duration
+            if (!foundDuration)
+            {
+                noteDurations.push_back(static_cast<int>(sampleRate * 0.5)); // 500ms fallback
+            }
+        }
+    }
     
     // Apply reverb BEFORE stutter effect
-    reverbEffect->applyReverbEffect(buffer, triggerPositions);
+    reverbEffect->applyReverbEffect(buffer, triggerPositions, noteDurations);
     
     // Then apply stutter effect
     stutterEffect->applyStutterEffect(buffer, triggerPositions);
@@ -73,9 +118,9 @@ void FxEngine::updateTimingInfo(juce::AudioPlayHead* playHead)
     }
 }
 
-std::vector<int> FxEngine::checkForMidiTriggers(const juce::MidiBuffer& midiMessages)
+std::vector<juce::int64> FxEngine::checkForMidiTriggers(const juce::MidiBuffer& midiMessages)
 {
-    std::vector<int> triggerPositions;
+    std::vector<juce::int64> triggerPositions;
 
     // Look for MIDI note-on events to use as reference points
     if (!midiMessages.isEmpty())

@@ -76,6 +76,7 @@ public:
     float getCurrentRandomizedVelocity() const { return currentRandomizedVelocity; }
     int getCurrentActiveSampleIdx() const { return currentActiveSampleIdx; }
     bool isNoteActive() const { return noteIsActive; }
+    juce::int64 getCurrentNoteDuration() const { return noteDurationInSamples; }
     
     // Get the list of pending notes
     const std::vector<PendingNote>& getPendingNotes() const { return pendingNotes; }
