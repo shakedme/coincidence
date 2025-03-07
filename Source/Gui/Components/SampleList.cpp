@@ -1,7 +1,5 @@
 #include "SampleList.h"
-
-// Custom component to contain a probability slider with fixed width
-
+#include "SampleNameCell.h"
 
 SampleList::SampleList(PluginProcessor& p)
     : processor(p)
@@ -28,9 +26,15 @@ SampleList::SampleList(PluginProcessor& p)
                                          juce::Colours::white);
 
     // Add columns
-    sampleListBox->getHeader().addColumn("Name", 1, getWidth() * 0.6f, 80, -1, juce::TableHeaderComponent::notResizable);
-    sampleListBox->getHeader().addColumn("Probability", 2, getWidth() * 0.38f, 80, -1, juce::TableHeaderComponent::notResizable);
-    
+    sampleListBox->getHeader().addColumn(
+        "Name", 1, getWidth() * 0.6f, 80, -1, juce::TableHeaderComponent::notResizable);
+    sampleListBox->getHeader().addColumn("Probability",
+                                         2,
+                                         getWidth() * 0.38f,
+                                         80,
+                                         -1,
+                                         juce::TableHeaderComponent::notResizable);
+
     addAndMakeVisible(sampleListBox.get());
 }
 
@@ -38,7 +42,7 @@ void SampleList::resized()
 {
     // Sample list takes up the entire component
     sampleListBox->setBounds(getLocalBounds());
-    
+
     // Update the column widths
     sampleListBox->getHeader().setColumnWidth(1, getWidth() * 0.6f);
     sampleListBox->getHeader().setColumnWidth(2, getWidth() * 0.4f);
@@ -54,7 +58,7 @@ void SampleList::paintRowBackground(
 {
     // Check if this row is the currently playing sample
     bool isPlayingSample = (rowNumber == activeSampleIndex);
-    
+
     // Check if this sample is part of a group
     int groupIndex = -1;
     if (rowNumber >= 0 && rowNumber < processor.getSampleManager().getNumSamples())
@@ -115,55 +119,28 @@ void SampleList::cellClicked(int rowNumber, int columnId, const juce::MouseEvent
         // Select this row if it's not already selected
         if (!sampleListBox->isRowSelected(rowNumber))
             sampleListBox->selectRow(rowNumber, false, false);
-            
+
         // Show the context menu
         juce::PopupMenu menu;
         menu.addItem(CommandIDs::GroupSelected, "Group Selected Samples");
         menu.addItem(CommandIDs::UngroupSelected, "Ungroup Selected Samples");
-        
+
         if (processor.getSampleManager().getNumGroups() > 0)
         {
             menu.addSeparator();
             menu.addItem(CommandIDs::RemoveGroups, "Remove All Groups");
         }
-        
+
         menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(this),
-                          [this](int menuItemID) {
-                              if (menuItemID != 0)
-                                  menuItemSelected(menuItemID, 0);
-                          });
+                           [this](int menuItemID)
+                           {
+                               if (menuItemID != 0)
+                                   menuItemSelected(menuItemID, 0);
+                           });
         return;
     }
 
-    // Calculate icon positions
-    int width = sampleListBox->getHeader().getColumnWidth(columnId);
-    int pencilIconX = width - (ICON_SIZE + ICON_PADDING) * 2;
-    int onsetIconX = width - (ICON_SIZE + ICON_PADDING) * 3;
-    int deleteIconX = width - (ICON_SIZE + ICON_PADDING);
-
-    // Check if clicked on pencil (edit) icon
-    if (e.x >= pencilIconX && e.x < pencilIconX + ICON_SIZE)
-    {
-        if (onSampleDetailRequested)
-            onSampleDetailRequested(rowNumber);
-        return;
-    }
-
-    // Check if clicked on delete icon
-    if (e.x >= deleteIconX && e.x < deleteIconX + ICON_SIZE)
-    {
-        processor.getSampleManager().removeSamples(rowNumber, rowNumber);
-        sampleListBox->updateContent();
-        return;
-    }
-
-    // Check if clicked on onset randomization icon
-    if (e.x >= onsetIconX && e.x < onsetIconX + ICON_SIZE)
-    {
-        toggleOnsetRandomization(rowNumber);
-        return;
-    }
-
+    // Let the TableListBoxModel handle other clicks
     juce::TableListBoxModel::cellClicked(rowNumber, columnId, e);
 }
 
@@ -179,100 +156,40 @@ void SampleList::paintCell(juce::Graphics& g,
 
     if (rowNumber < processor.getSampleManager().getNumSamples())
     {
-        if (columnId == 1) // Sample name
+        if (columnId == 1) // Sample name column
         {
-            // Reserve space for the two icons on the right
-            int textWidth = width - (ICON_SIZE + ICON_PADDING) * 2 - 8;
+            // Reserve space for the icons on the right
+            int textWidth = width - (ICON_SIZE + ICON_PADDING) * 3 - 8;
 
             // Get the sample name
-            juce::String sampleName = processor.getSampleManager().getSampleName(rowNumber);
-            
+            juce::String sampleName =
+                processor.getSampleManager().getSampleName(rowNumber);
+
             // If the sample is part of a group, add an indicator
             auto sound = processor.getSampleManager().getSampleSound(rowNumber);
             if (sound != nullptr)
             {
                 int groupIdx = sound->getGroupIndex();
-                if (groupIdx >= 0 && groupIdx < processor.getSampleManager().getNumGroups())
+                if (groupIdx >= 0
+                    && groupIdx < processor.getSampleManager().getNumGroups())
                 {
-                    if (const SampleManager::Group* group = processor.getSampleManager().getGroup(groupIdx))
+                    if (const SampleManager::Group* group =
+                            processor.getSampleManager().getGroup(groupIdx))
                     {
-                        sampleName += " [G" + juce::String(groupIdx + 1) + "]";
+                        sampleName += " [" + juce::String(groupIdx + 1) + "]";
                     }
                 }
             }
 
-            g.drawText(sampleName,
-                       0,
-                       0,
-                       textWidth,
-                       height,
-                       juce::Justification::centredLeft);
-
-            // Draw the icons on the right side
-
-            // Calculate icon positions
-            int pencilIconX = width - (ICON_SIZE + ICON_PADDING) * 2;
-            int onsetIconX = width - (ICON_SIZE + ICON_PADDING) * 3;
-            int deleteIconX = width - (ICON_SIZE + ICON_PADDING);
-            int iconY = (height - ICON_SIZE) / 2;
-
-            // Draw pencil (edit) icon
-            g.setColour(juce::Colours::lightgrey);
-            juce::Path pencilPath;
-            float penSize = ICON_SIZE * 0.8f;
-            float penX = pencilIconX + (ICON_SIZE - penSize) / 2;
-            float penY = iconY + (ICON_SIZE - penSize) / 2;
-
-            // Pencil body
-            pencilPath.startNewSubPath(penX, penY + penSize);
-            pencilPath.lineTo(penX + penSize * 0.7f, penY + penSize);
-            pencilPath.lineTo(penX + penSize, penY + penSize * 0.7f);
-            pencilPath.lineTo(penX + penSize * 0.3f, penY);
-            pencilPath.lineTo(penX, penY + penSize * 0.3f);
-            pencilPath.closeSubPath();
-
-            // Pencil tip
-            pencilPath.addTriangle(penX + penSize * 0.3f, penY,
-                                   penX + penSize * 0.15f, penY - penSize * 0.15f,
-                                   penX + penSize * 0.45f, penY + penSize * 0.15f);
-
-            g.fillPath(pencilPath);
-
-            // Draw X (delete) icon
-            g.setColour(juce::Colours::lightgrey);
-            float crossSize = ICON_SIZE * 0.6f;
-            float crossX = deleteIconX + (ICON_SIZE - crossSize) / 2;
-            float crossY = iconY + (ICON_SIZE - crossSize) / 2;
-
-            g.drawLine(crossX, crossY, crossX + crossSize, crossY + crossSize, 2.0f);
-            g.drawLine(crossX, crossY + crossSize, crossX + crossSize, crossY, 2.0f);
-
-            bool onsetRandomizationEnabled = false;
-            if (sound != nullptr)
-            {
-                onsetRandomizationEnabled = sound->isOnsetRandomizationEnabled();
-
-                // Use different color based on state
-                g.setColour(onsetRandomizationEnabled ? juce::Colour(0xff52bfd9) : juce::Colours::lightgrey);
-
-                // Draw four vertical lines
-                float lineHeight = ICON_SIZE * 0.7f;
-                float startY = iconY + (ICON_SIZE - lineHeight) / 2;
-                float spacing = (ICON_SIZE - 4) / 5.0f; // Equal spacing between 4 lines
-
-                for (int i = 0; i < 4; ++i)
-                {
-                    float lineX = onsetIconX + (i + 1) * spacing;
-                    float lineThickness = 1.5f;
-                    g.drawLine(lineX, startY, lineX, startY + lineHeight, lineThickness);
-                }
-            }
+            g.drawText(
+                sampleName, 4, 0, textWidth, height, juce::Justification::centredLeft);
         }
-        else if (columnId == 2) // Probability column - we'll use a slider component
+        else if (columnId == 2) // Probability column - we'll use the slider cell
         {
             // Get the current probability value (0.0 - 1.0)
-            float probability = processor.getSampleManager().getSampleProbability(rowNumber);
-            
+            float probability =
+                processor.getSampleManager().getSampleProbability(rowNumber);
+
             // Display a text representation in the cell
             g.drawText(juce::String(int(probability * 100)) + "%",
                        4,
@@ -284,7 +201,7 @@ void SampleList::paintCell(juce::Graphics& g,
     }
 }
 
-void SampleList::deleteKeyPressed(int/*rowNumber*/)
+void SampleList::deleteKeyPressed(int /*rowNumber*/)
 {
     // Get all selected rows
     auto selectedRows = sampleListBox->getSelectedRows();
@@ -292,7 +209,8 @@ void SampleList::deleteKeyPressed(int/*rowNumber*/)
     // If there are multiple selections, remove them all
     if (selectedRows.size() > 0)
     {
-        processor.getSampleManager().removeSamples(selectedRows[0], selectedRows.size() - 1);
+        processor.getSampleManager().removeSamples(selectedRows[0],
+                                                   selectedRows.size() - 1);
         sampleListBox->updateContent();
     }
 }
@@ -316,50 +234,76 @@ void SampleList::handleSliderValueChanged(int rowNumber, double value)
     if (rowNumber >= 0 && rowNumber < processor.getSampleManager().getNumSamples())
     {
         // Update the sample's probability
-        processor.getSampleManager().setSampleProbability(rowNumber, static_cast<float>(value));
-        
+        processor.getSampleManager().setSampleProbability(rowNumber,
+                                                          static_cast<float>(value));
+
         // Force a repaint of the cell to update the text display
         sampleListBox->repaintRow(rowNumber);
     }
 }
 
-juce::Component* SampleList::refreshComponentForCell(int rowNumber, int columnId, bool /*isRowSelected*/, juce::Component* existingComponentToUpdate)
+juce::Component*
+    SampleList::refreshComponentForCell(int rowNumber,
+                                        int columnId,
+                                        bool /*isRowSelected*/,
+                                        juce::Component* existingComponentToUpdate)
 {
-    // Only create a slider cell for the probability column
-    if (columnId == 2 && rowNumber < processor.getSampleManager().getNumSamples())
+    // Only create components for valid samples
+    if (rowNumber >= processor.getSampleManager().getNumSamples())
+        return nullptr;
+
+    // Name column - add the icons
+    if (columnId == 1)
     {
-        auto* sliderCell = dynamic_cast<ProbabilitySliderCell*>(existingComponentToUpdate);
-        
+        // Get the sample sound
+        auto* sound = processor.getSampleManager().getSampleSound(rowNumber);
+
+        // Create new component or reuse existing
+        auto* cellComponent =
+            dynamic_cast<SampleNameCellComponent*>(existingComponentToUpdate);
+        if (cellComponent == nullptr)
+        {
+            cellComponent = new SampleNameCellComponent(this, rowNumber, sound);
+        }
+        else
+        {
+            // If we're reusing, it's better to recreate to ensure state is fresh
+            delete cellComponent;
+            cellComponent = new SampleNameCellComponent(this, rowNumber, sound);
+        }
+
+        return cellComponent;
+    }
+    else if (columnId == 2) // Probability column
+    {
+        auto* sliderCell =
+            dynamic_cast<ProbabilitySliderCell*>(existingComponentToUpdate);
+
         if (sliderCell == nullptr)
         {
             sliderCell = new ProbabilitySliderCell(this, rowNumber);
         }
-        else
-        {
-            // Update the row number in case it changed
-            delete sliderCell;
-            sliderCell = new ProbabilitySliderCell(this, rowNumber);
-        }
-        
+
         // Set the slider value to the current probability
-        sliderCell->setValue(processor.getSampleManager().getSampleProbability(rowNumber), juce::dontSendNotification);
-        
+        sliderCell->setValue(processor.getSampleManager().getSampleProbability(rowNumber),
+                             juce::dontSendNotification);
+
         return sliderCell;
     }
-    
+
     return nullptr;
 }
 
 void SampleList::menuItemSelected(int menuItemID, int /*topLevelMenuIndex*/)
 {
     auto selectedRows = sampleListBox->getSelectedRows();
-    
+
     switch (menuItemID)
     {
         case CommandIDs::GroupSelected:
         {
-            if (selectedRows.size() > 0 && 
-                processor.getSampleManager().getNumGroups() < 4)
+            if (selectedRows.size() > 0
+                && processor.getSampleManager().getNumGroups() < 4)
             {
                 // Convert the selected rows to a juce::Array
                 juce::Array<int> indicesToGroup;
@@ -368,13 +312,13 @@ void SampleList::menuItemSelected(int menuItemID, int /*topLevelMenuIndex*/)
 
                 // Create a new group with these samples
                 processor.getSampleManager().createGroup(indicesToGroup);
-                
+
                 // Refresh the list
                 updateContent();
             }
             break;
         }
-        
+
         case CommandIDs::UngroupSelected:
         {
             if (selectedRows.size() > 0)
@@ -389,19 +333,19 @@ void SampleList::menuItemSelected(int menuItemID, int /*topLevelMenuIndex*/)
                         processor.getSampleManager().removeSampleFromGroup(row);
                     }
                 }
-                
+
                 // Refresh the list
                 updateContent();
             }
             break;
         }
-        
+
         case CommandIDs::RemoveGroups:
         {
             // Remove all groups
             for (int i = processor.getSampleManager().getNumGroups() - 1; i >= 0; --i)
                 processor.getSampleManager().removeGroup(i);
-                
+
             // Refresh the list
             updateContent();
             break;

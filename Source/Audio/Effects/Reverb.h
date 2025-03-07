@@ -4,6 +4,7 @@
 #include <juce_dsp/juce_dsp.h>
 #include "../Params.h"
 #include "../Shared/TimingManager.h"
+#include "FDNReverb.h"
 #include <vector>
 
 class Reverb
@@ -33,6 +34,7 @@ private:
     std::shared_ptr<TimingManager> timingManager;
     juce::Reverb juceReverb;
     juce::Reverb::Parameters juceReverbParams;
+    FDNReverb fdnReverb;
     Params::FxSettings settings;
     
     double sampleRate {44100.0};

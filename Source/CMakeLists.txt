@@ -31,6 +31,7 @@ target_sources(${BaseTargetName} PRIVATE
         Gui/Components/SampleDetail.h
         Gui/Components/SampleList.cpp
         Gui/Components/GroupListView.h
+        Gui/Components/SampleNameCell.h
         Gui/Components/Toggle.h
         Audio/Params.cpp
         Audio/PluginProcessor.cpp
@@ -45,6 +46,7 @@ target_sources(${BaseTargetName} PRIVATE
         Audio/Effects/FxEngine.cpp
         Audio/Effects/Stutter.cpp
         Audio/Effects/Reverb.cpp
+        Audio/Effects/FDNReverb.h
         )
 
 target_compile_definitions(${BaseTargetName}
@@ -53,7 +55,16 @@ target_compile_definitions(${BaseTargetName}
         JUCE_USE_CURL=0
         JUCE_VST3_CAN_REPLACE_VST2=0)
 
+
+juce_add_binary_data(JammerAssets
+        SOURCES
+        ../Assets/Icons/pencil.svg
+        ../Assets/Icons/three-lines.svg
+        ../Assets/Icons/delete.svg
+        )
+
 target_link_libraries(${BaseTargetName} PRIVATE
+        JammerAssets
         juce_audio_utils
         juce_dsp
         juce_recommended_config_flags

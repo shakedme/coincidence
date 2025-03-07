@@ -2,6 +2,8 @@
 
 #include <juce_audio_utils/juce_audio_utils.h>
 #include "../../Audio/PluginProcessor.h"
+#include "Icon.h"
+#include "BinaryData.h"
 
 class SampleList
     : public juce::Component
@@ -10,6 +12,8 @@ class SampleList
 public:
     explicit SampleList(PluginProcessor& processor);
     ~SampleList() override = default;
+
+    PluginProcessor& processor;
 
     // TableListBoxModel overrides
     int getNumRows() override;
@@ -53,10 +57,10 @@ public:
     // Menu handling
     void menuItemSelected(int menuItemID, int topLevelMenuIndex);
 
+    // Toggle onset randomization for a sample
     void toggleOnsetRandomization(int sampleIndex);
 
 private:
-    PluginProcessor& processor;
     std::unique_ptr<juce::TableListBox> sampleListBox;
 
     // Track the currently active sample for highlighting
