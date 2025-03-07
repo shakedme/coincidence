@@ -5,6 +5,7 @@
 #include "../Components/SampleList.h"
 #include "../Components/SampleDetail.h"
 #include "../Components/GroupListView.h"
+#include "../../Audio/Sampler/OnsetDetector.h"
 #include "../../Audio/Params.h"
 #include "../Components/Toggle.h"
 #include <juce_audio_processors/juce_audio_processors.h>

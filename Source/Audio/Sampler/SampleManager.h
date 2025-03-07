@@ -5,6 +5,7 @@
 #include <vector>
 #include <memory>
 #include "../Params.h"
+#include "OnsetDetector.h"
 
 class SampleManager
 {
@@ -81,4 +82,6 @@ private:
     
     // Format manager for loading audio files
     juce::AudioFormatManager formatManager;
+
+    OnsetDetector onsetDetector;
 };

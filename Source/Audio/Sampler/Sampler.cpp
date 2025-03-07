@@ -220,12 +220,32 @@ void SamplerVoice::startNote(int midiNoteNumber,
         // Account for source sample rate difference
         pitchRatio *= getSampleRate() / samplerSound->getSourceSampleRate();
 
+
+
         // Apply start marker position to calculate starting sample position
         auto& data = *samplerSound->getAudioData();
         int numSamples = data.getNumSamples();
-        sourceSamplePosition = numSamples * samplerSound->getStartMarkerPosition();
 
-        // Store end marker position as sample index for bounds checking
+        if (samplerSound->isOnsetRandomizationEnabled()) {
+            // Get onset markers
+            const auto& onsetMarkers = samplerSound->getOnsetMarkers();
+
+            // If we have onset markers, use them
+            if (!onsetMarkers.empty()) {
+                // Random index into onset markers array
+                int randomIndex = juce::Random::getSystemRandom().nextInt(onsetMarkers.size());
+
+                // Use the random onset position
+                sourceSamplePosition = numSamples * onsetMarkers[randomIndex];
+            } else {
+                // Fallback to start marker if no onset markers
+                sourceSamplePosition = numSamples * samplerSound->getStartMarkerPosition();
+            }
+        } else {
+            // Normal playback - use start marker
+            sourceSamplePosition = numSamples * samplerSound->getStartMarkerPosition();
+        }
+
         sourceEndPosition = numSamples * samplerSound->getEndMarkerPosition();
             
         // Set the output gains based on velocity (0.0-1.0)

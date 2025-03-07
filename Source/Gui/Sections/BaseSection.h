@@ -23,16 +23,6 @@ public:
 
     virtual ~BaseSectionComponent() override
     {
-#if DEBUG_DESTRUCTION
-        DBG("BaseSectionComponent [" + sectionTitle + "] destructor START");
-        DBG("    sliderAttachments size: " + juce::String(sliderAttachments.size()));
-#endif
-
-        // Let normal destruction happen
-
-#if DEBUG_DESTRUCTION
-        DBG("BaseSectionComponent [" + sectionTitle + "] destructor END");
-#endif
     }
     virtual void resized() override = 0;
     virtual void paint(juce::Graphics& g) override;

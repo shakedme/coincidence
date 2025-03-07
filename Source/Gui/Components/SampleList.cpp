@@ -138,6 +138,7 @@ void SampleList::cellClicked(int rowNumber, int columnId, const juce::MouseEvent
     // Calculate icon positions
     int width = sampleListBox->getHeader().getColumnWidth(columnId);
     int pencilIconX = width - (ICON_SIZE + ICON_PADDING) * 2;
+    int onsetIconX = width - (ICON_SIZE + ICON_PADDING) * 3;
     int deleteIconX = width - (ICON_SIZE + ICON_PADDING);
 
     // Check if clicked on pencil (edit) icon
@@ -153,6 +154,13 @@ void SampleList::cellClicked(int rowNumber, int columnId, const juce::MouseEvent
     {
         processor.getSampleManager().removeSamples(rowNumber, rowNumber);
         sampleListBox->updateContent();
+        return;
+    }
+
+    // Check if clicked on onset randomization icon
+    if (e.x >= onsetIconX && e.x < onsetIconX + ICON_SIZE)
+    {
+        toggleOnsetRandomization(rowNumber);
         return;
     }
 
@@ -204,6 +212,7 @@ void SampleList::paintCell(juce::Graphics& g,
 
             // Calculate icon positions
             int pencilIconX = width - (ICON_SIZE + ICON_PADDING) * 2;
+            int onsetIconX = width - (ICON_SIZE + ICON_PADDING) * 3;
             int deleteIconX = width - (ICON_SIZE + ICON_PADDING);
             int iconY = (height - ICON_SIZE) / 2;
 
@@ -237,6 +246,27 @@ void SampleList::paintCell(juce::Graphics& g,
 
             g.drawLine(crossX, crossY, crossX + crossSize, crossY + crossSize, 2.0f);
             g.drawLine(crossX, crossY + crossSize, crossX + crossSize, crossY, 2.0f);
+
+            bool onsetRandomizationEnabled = false;
+            if (sound != nullptr)
+            {
+                onsetRandomizationEnabled = sound->isOnsetRandomizationEnabled();
+
+                // Use different color based on state
+                g.setColour(onsetRandomizationEnabled ? juce::Colour(0xff52bfd9) : juce::Colours::lightgrey);
+
+                // Draw four vertical lines
+                float lineHeight = ICON_SIZE * 0.7f;
+                float startY = iconY + (ICON_SIZE - lineHeight) / 2;
+                float spacing = (ICON_SIZE - 4) / 5.0f; // Equal spacing between 4 lines
+
+                for (int i = 0; i < 4; ++i)
+                {
+                    float lineX = onsetIconX + (i + 1) * spacing;
+                    float lineThickness = 1.5f;
+                    g.drawLine(lineX, startY, lineX, startY + lineHeight, lineThickness);
+                }
+            }
         }
         else if (columnId == 2) // Probability column - we'll use a slider component
         {
@@ -290,9 +320,6 @@ void SampleList::handleSliderValueChanged(int rowNumber, double value)
         
         // Force a repaint of the cell to update the text display
         sampleListBox->repaintRow(rowNumber);
-        
-        // Debug output
-        DBG("Probability changed for sample " + juce::String(rowNumber) + ": " + juce::String(value));
     }
 }
 
@@ -378,6 +405,37 @@ void SampleList::menuItemSelected(int menuItemID, int /*topLevelMenuIndex*/)
             // Refresh the list
             updateContent();
             break;
+        }
+    }
+}
+
+void SampleList::toggleOnsetRandomization(int sampleIndex)
+{
+    if (sampleIndex >= 0 && sampleIndex < processor.getSampleManager().getNumSamples())
+    {
+        auto* sound = processor.getSampleManager().getSampleSound(sampleIndex);
+        if (sound != nullptr)
+        {
+            // Check if the sample has any onset markers
+            if (sound->getOnsetMarkers().empty())
+            {
+                // No onset markers available, show warning
+                juce::AlertWindow::showMessageBoxAsync(
+                    juce::AlertWindow::WarningIcon,
+                    "No Onset Markers",
+                    "This sample doesn't have any onset markers yet. Please edit the sample to detect or add onset markers.",
+                    "OK",
+                    this);
+            }
+            else
+            {
+                // Toggle onset randomization
+                bool newState = !sound->isOnsetRandomizationEnabled();
+                sound->setOnsetRandomizationEnabled(newState);
+
+                // Repaint this row
+                sampleListBox->repaintRow(sampleIndex);
+            }
         }
     }
 }

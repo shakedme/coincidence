@@ -53,6 +53,8 @@ public:
     // Menu handling
     void menuItemSelected(int menuItemID, int topLevelMenuIndex);
 
+    void toggleOnsetRandomization(int sampleIndex);
+
 private:
     PluginProcessor& processor;
     std::unique_ptr<juce::TableListBox> sampleListBox;

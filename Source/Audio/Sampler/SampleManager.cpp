@@ -55,6 +55,15 @@ void SampleManager::addSample(const juce::File& file)
         
         // Set the index on the sampler sound so it can be identified later
         samplerSound->setIndex(sampleIndex);
+
+        juce::AudioBuffer<float>* audioData = samplerSound->getAudioData();
+        double sampleRate = samplerSound->getSourceSampleRate();
+
+        if (audioData != nullptr && audioData->getNumSamples() > 0)
+        {
+            std::vector<float> onsetPositions = onsetDetector.detectOnsets(*audioData, sampleRate);
+            samplerSound->setOnsetMarkers(onsetPositions);
+        }
         
         newSample->sound.reset(samplerSound);
 
