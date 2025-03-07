@@ -28,9 +28,8 @@ SampleList::SampleList(PluginProcessor& p)
                                          juce::Colours::white);
 
     // Add columns
-    sampleListBox->getHeader().addColumn("Name", 1, getWidth() * 0.5f, 80, -1, juce::TableHeaderComponent::notResizable);
-    sampleListBox->getHeader().addColumn("Probability", 2, getWidth() * 0.3f, 80, -1, juce::TableHeaderComponent::notResizable);
-    sampleListBox->getHeader().addColumn("Onsets", 3, getWidth() * 0.2f, 80, -1, juce::TableHeaderComponent::notResizable);
+    sampleListBox->getHeader().addColumn("Name", 1, getWidth() * 0.6f, 80, -1, juce::TableHeaderComponent::notResizable);
+    sampleListBox->getHeader().addColumn("Probability", 2, getWidth() * 0.38f, 80, -1, juce::TableHeaderComponent::notResizable);
     
     addAndMakeVisible(sampleListBox.get());
 }
@@ -41,9 +40,8 @@ void SampleList::resized()
     sampleListBox->setBounds(getLocalBounds());
     
     // Update the column widths
-    sampleListBox->getHeader().setColumnWidth(1, getWidth() * 0.5f);
-    sampleListBox->getHeader().setColumnWidth(2, getWidth() * 0.3f);
-    sampleListBox->getHeader().setColumnWidth(3, getWidth() * 0.2f);
+    sampleListBox->getHeader().setColumnWidth(1, getWidth() * 0.6f);
+    sampleListBox->getHeader().setColumnWidth(2, getWidth() * 0.4f);
 }
 
 int SampleList::getNumRows()
@@ -253,26 +251,6 @@ void SampleList::paintCell(juce::Graphics& g,
                        height,
                        juce::Justification::centredLeft);
         }
-        else if (columnId == 3) // Onsets column - we'll use a toggle button
-        {
-            // Get the current toggle state
-            auto* sound = processor.getSampleManager().getSampleSound(rowNumber);
-            bool isOnsetModeEnabled = sound ? sound->isOnsetModeEnabled() : false;
-            
-            // Draw a toggle button
-            g.setColour(juce::Colours::lightgrey);
-            float toggleSize = ICON_SIZE * 0.8f;
-            float toggleX = width - (ICON_SIZE + ICON_PADDING) - (ICON_SIZE - toggleSize) / 2;
-            float toggleY = height / 2;
-
-            g.fillRect(toggleX, toggleY - toggleSize / 2, toggleSize, toggleSize);
-
-            if (isOnsetModeEnabled)
-            {
-                g.setColour(juce::Colours::green);
-                g.fillRect(toggleX + toggleSize / 4, toggleY - toggleSize / 4, toggleSize / 2, toggleSize / 2);
-            }
-        }
     }
 }
 
@@ -305,9 +283,9 @@ void SampleList::updateContent()
 
 void SampleList::handleSliderValueChanged(int rowNumber, double value)
 {
-    // Pass the new probability value to the sample manager
     if (rowNumber >= 0 && rowNumber < processor.getSampleManager().getNumSamples())
     {
+        // Update the sample's probability
         processor.getSampleManager().setSampleProbability(rowNumber, static_cast<float>(value));
         
         // Force a repaint of the cell to update the text display
@@ -315,22 +293,6 @@ void SampleList::handleSliderValueChanged(int rowNumber, double value)
         
         // Debug output
         DBG("Probability changed for sample " + juce::String(rowNumber) + ": " + juce::String(value));
-    }
-}
-
-void SampleList::handleOnsetToggleChanged(int rowNumber, bool toggleState)
-{
-    // Update the sample's onset mode
-    if (rowNumber >= 0 && rowNumber < processor.getSampleManager().getNumSamples())
-    {
-        auto* sound = processor.getSampleManager().getSampleSound(rowNumber);
-        if (sound)
-        {
-            sound->setOnsetModeEnabled(toggleState);
-            
-            // Debug output
-            DBG("Onset mode changed for sample " + juce::String(rowNumber) + ": " + juce::String(toggleState ? "ON" : "OFF"));
-        }
     }
 }
 
@@ -356,28 +318,6 @@ juce::Component* SampleList::refreshComponentForCell(int rowNumber, int columnId
         sliderCell->setValue(processor.getSampleManager().getSampleProbability(rowNumber), juce::dontSendNotification);
         
         return sliderCell;
-    }
-    else if (columnId == 3 && rowNumber < processor.getSampleManager().getNumSamples())
-    {
-        auto* toggleCell = dynamic_cast<OnsetToggleButtonCell*>(existingComponentToUpdate);
-        
-        if (toggleCell == nullptr)
-        {
-            toggleCell = new OnsetToggleButtonCell(this, rowNumber);
-        }
-        else
-        {
-            // Update the row number in case it changed
-            delete toggleCell;
-            toggleCell = new OnsetToggleButtonCell(this, rowNumber);
-        }
-        
-        // Set the toggle state based on the sample's onset mode
-        auto* sound = processor.getSampleManager().getSampleSound(rowNumber);
-        bool isOnsetModeEnabled = sound ? sound->isOnsetModeEnabled() : false;
-        toggleCell->setState(isOnsetModeEnabled, juce::dontSendNotification);
-        
-        return toggleCell;
     }
     
     return nullptr;

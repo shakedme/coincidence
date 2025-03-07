@@ -3,7 +3,6 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <map>
-#include <vector>
 
 /**
  * SamplerSound - Custom implementation of SynthesiserSound for sample playback
@@ -44,16 +43,6 @@ public:
         startMarkerPosition = juce::jlimit(0.0f, 0.99f, start);
         endMarkerPosition = juce::jlimit(startMarkerPosition + 0.01f, 1.0f, end);
     }
-    
-    // Beat onset markers
-    const std::vector<float>& getOnsetMarkers() const { return onsetMarkers; }
-    void setOnsetMarkers(const std::vector<float>& markers) { onsetMarkers = markers; }
-    void addOnsetMarker(float position) { onsetMarkers.push_back(position); }
-    void clearOnsetMarkers() { onsetMarkers.clear(); }
-    
-    // Beat onset mode
-    bool isOnsetModeEnabled() const { return useOnsetMarkersForPlayback; }
-    void setOnsetModeEnabled(bool enabled) { useOnsetMarkersForPlayback = enabled; }
 
 private:
     juce::String name;
@@ -65,8 +54,6 @@ private:
     int groupIndex = -1; // Group index, -1 means no group
     float startMarkerPosition = 0.0f;
     float endMarkerPosition = 1.0f;
-    std::vector<float> onsetMarkers; // Normalized positions (0-1) of beat onsets
-    bool useOnsetMarkersForPlayback = false; // Whether to use onset markers instead of start/end
 
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SamplerSound)
@@ -119,7 +106,6 @@ private:
     float lgain = 0.0f, rgain = 0.0f;
     bool playing = false;
     int currentSampleIndex = -1;
-    SamplerSound* currentSample = nullptr;
     // Static shared sample index and sound map
     static int currentGlobalSampleIndex;
     static std::map<int, SamplerSound*> indexToSoundMap;

@@ -260,21 +260,6 @@ void PluginProcessor::getStateInformation(juce::MemoryBlock& destData)
             
             // Add group index
             sampleXml->setAttribute("groupIndex", sound->getGroupIndex());
-            
-            // Add onset mode settings
-            sampleXml->setAttribute("onsetModeEnabled", sound->isOnsetModeEnabled());
-            
-            // Save onset markers
-            const auto& onsetMarkers = sound->getOnsetMarkers();
-            if (!onsetMarkers.empty())
-            {
-                juce::XmlElement* onsetMarkersElement = sampleXml->createNewChildElement("OnsetMarkers");
-                for (auto marker : onsetMarkers)
-                {
-                    juce::XmlElement* markerElement = onsetMarkersElement->createNewChildElement("Marker");
-                    markerElement->setAttribute("position", marker);
-                }
-            }
         }
         
         // Add sample probability
@@ -282,14 +267,14 @@ void PluginProcessor::getStateInformation(juce::MemoryBlock& destData)
 
         samplesXml->addChildElement(sampleXml);
     }
-
+    
     // Add groups to the XML
     auto* groupsXml = new juce::XmlElement("Groups");
     
     // Add each group
-    for (int i = 0; i < getSampleManager().getNumGroups(); ++i)
+    for (int i = 0; i < sampleManager.getNumGroups(); ++i)
     {
-        if (const auto* group = getSampleManager().getGroup(i))
+        if (const auto* group = sampleManager.getGroup(i))
         {
             auto* groupXml = new juce::XmlElement("Group");
             
@@ -301,7 +286,7 @@ void PluginProcessor::getStateInformation(juce::MemoryBlock& destData)
                 groupXml->setAttribute("name", group->name);
             
             // Add group probability
-            groupXml->setAttribute("probability", getSampleManager().getGroupProbability(i));
+            groupXml->setAttribute("probability", sampleManager.getGroupProbability(i));
             
             groupsXml->addChildElement(groupXml);
         }
@@ -401,42 +386,6 @@ void PluginProcessor::setStateInformation(const void* data, int sizeInBytes)
                                 {
                                     float probability = (float)sampleXml->getDoubleAttribute("probability", 1.0);
                                     sampleManager.setSampleProbability(newSampleIndex, probability);
-                                }
-                                
-                                // Set onset mode if it exists
-                                if (sampleXml->hasAttribute("onsetModeEnabled"))
-                                {
-                                    bool onsetModeEnabled = sampleXml->getBoolAttribute("onsetModeEnabled", false);
-                                    if (auto* sound = sampleManager.getSampleSound(newSampleIndex))
-                                    {
-                                        sound->setOnsetModeEnabled(onsetModeEnabled);
-                                    }
-                                }
-                                
-                                // Load onset markers if they exist
-                                if (auto* onsetMarkersElement = sampleXml->getChildByName("OnsetMarkers"))
-                                {
-                                    std::vector<float> onsetMarkers;
-                                    
-                                    for (int m = 0; m < onsetMarkersElement->getNumChildElements(); ++m)
-                                    {
-                                        if (auto* markerElement = onsetMarkersElement->getChildElement(m))
-                                        {
-                                            if (markerElement->hasTagName("Marker") && markerElement->hasAttribute("position"))
-                                            {
-                                                float position = (float)markerElement->getDoubleAttribute("position", 0.0);
-                                                onsetMarkers.push_back(position);
-                                            }
-                                        }
-                                    }
-                                    
-                                    if (!onsetMarkers.empty())
-                                    {
-                                        if (auto* sound = sampleManager.getSampleSound(newSampleIndex))
-                                        {
-                                            sound->setOnsetMarkers(onsetMarkers);
-                                        }
-                                    }
                                 }
                                 
                                 // Store group index for later assignment (after all groups are loaded)

@@ -172,82 +172,70 @@ void SamplerVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
 int SamplerVoice::currentGlobalSampleIndex = -1;
 std::map<int, SamplerSound*> SamplerVoice::indexToSoundMap;
 
-void SamplerVoice::startNote(int midiNoteNumber, 
-                            float velocity, 
-                            juce::SynthesiserSound* sound, 
-                            int /*currentPitchWheelPosition*/)
+void SamplerVoice::startNote(int midiNoteNumber,
+                            float velocity,
+                            juce::SynthesiserSound* sound,
+                            int /*pitchWheelPosition*/)
 {
-    // Check if we can play this sound
+    // Reset voice state first
+    reset();
+
+    // Cast to our custom sound class
     if (auto* samplerSound = dynamic_cast<SamplerSound*>(sound))
     {
-        // Only play the sound if it matches the current global sample index or if it's a note-on event from MIDI
-        if (samplerSound->getIndex() == currentGlobalSampleIndex || currentGlobalSampleIndex == -1)
-        {
-            currentSampleIndex = samplerSound->getIndex();
+        // If we're not actively playing this sound, return
+        if (!samplerSound->isActive())
+            return;
 
-            // Store the current sample
-            currentSample = samplerSound;
-            
-            // Calculate the pitch ratio based on the note being played
-            auto noteHz = juce::MidiMessage::getMidiNoteInHertz(midiNoteNumber);
-            auto soundHz = juce::MidiMessage::getMidiNoteInHertz(60); // Middle C as reference
-            
-            // Adjust pitch based on pitch follow setting
-            if (pitchFollowEnabled)
-            {
-                pitchRatio = noteHz / soundHz;
-            }
-            else
-            {
-                pitchRatio = 1.0; // No pitch change if pitch follow is disabled
-            }
-            
-            // Adjust for sample rate differences
-            pitchRatio *= getSampleRate() / samplerSound->getSourceSampleRate();
+        // Restore sample index selection logic
+        // First, prioritize any sample index set through the controller
+        if (currentGlobalSampleIndex >= 0) {
+            currentSampleIndex = currentGlobalSampleIndex;
 
-            // Apply start marker position to calculate starting sample position
-            auto& data = *samplerSound->getAudioData();
-            int numSamples = data.getNumSamples();
-            
-            // Check if onset mode is enabled and there are onset markers
-            if (samplerSound->isOnsetModeEnabled() && !samplerSound->getOnsetMarkers().empty())
-            {
-                // Pick a random onset marker
-                const auto& onsetMarkers = samplerSound->getOnsetMarkers();
-                int randomIndex = juce::Random::getSystemRandom().nextInt(onsetMarkers.size());
-                float startPos = onsetMarkers[randomIndex];
-                
-                // Find the next onset or use the end marker
-                float endPos = samplerSound->getEndMarkerPosition();
-                for (auto marker : onsetMarkers)
-                {
-                    if (marker > startPos)
-                    {
-                        endPos = marker;
-                        break;
-                    }
+            // Get the correct sound for this index if it exists
+            if (SamplerSound* correctSound = getCorrectSoundForIndex(currentSampleIndex)) {
+                // If the correct sound exists but isn't the assigned sound,
+                // still use the assigned sound's parameters but note the index change
+                if (correctSound != samplerSound) {
+                    // We'll continue with the assigned sound but use the requested index
+                    // This keeps voice allocation stable while enabling sample switching
+                    samplerSound = correctSound; // Use the correct sound for this index
                 }
-                
-                // Set sample position based on selected marker
-                sourceSamplePosition = numSamples * startPos;
-                sourceEndPosition = numSamples * endPos;
             }
-            else
-            {
-                // Use normal start/end markers
-                sourceSamplePosition = numSamples * samplerSound->getStartMarkerPosition();
-                sourceEndPosition = numSamples * samplerSound->getEndMarkerPosition();
-            }
-            
-            // Set the output gains based on velocity (0.0-1.0)
-            // MIDI velocity is 0-127, so if velocity is already in that range, don't divide
-            float velocityGain = (velocity <= 1.0f) ? velocity : (velocity / 127.0f);
-            lgain = velocityGain;
-            rgain = velocityGain;
-            
-            // Flag that we're now playing
-            playing = true;
+        } else {
+            // Use the sample's own index as a fallback
+            currentSampleIndex = samplerSound->getIndex();
         }
+
+        double midiNoteHz = juce::MidiMessage::getMidiNoteInHertz(midiNoteNumber);
+        double soundMidiNoteHz = juce::MidiMessage::getMidiNoteInHertz(60); // C4 as reference
+
+        // Apply pitch ratio based on the global setting
+        if (pitchFollowEnabled) {
+            pitchRatio = midiNoteHz / soundMidiNoteHz;
+        } else {
+            pitchRatio = 1.0; // Original pitch
+        }
+
+        // Account for source sample rate difference
+        pitchRatio *= getSampleRate() / samplerSound->getSourceSampleRate();
+
+        // Apply start marker position to calculate starting sample position
+        auto& data = *samplerSound->getAudioData();
+        int numSamples = data.getNumSamples();
+        sourceSamplePosition = numSamples * samplerSound->getStartMarkerPosition();
+
+        // Store end marker position as sample index for bounds checking
+        sourceEndPosition = numSamples * samplerSound->getEndMarkerPosition();
+            
+        // Set the output gains based on velocity (0.0-1.0)
+        // MIDI velocity is 0-127, so if velocity is already in that range, don't divide
+        float velocityGain = (velocity <= 1.0f) ? velocity : (velocity / 127.0f);
+        lgain = velocityGain;
+        rgain = velocityGain;
+            
+        // Flag that we're now playing
+        playing = true;
     }
 }
 

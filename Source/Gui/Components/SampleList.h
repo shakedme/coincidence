@@ -3,10 +3,6 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 #include "../../Audio/PluginProcessor.h"
 
-// Forward declare the custom cell components
-class ProbabilitySliderCell;
-class OnsetToggleButtonCell;
-
 class SampleList
     : public juce::Component
     , public juce::TableListBoxModel
@@ -53,9 +49,6 @@ public:
 
     // Called by the slider cell when its value changes
     void handleSliderValueChanged(int rowNumber, double value);
-    
-    // Called by the onset toggle button when its value changes
-    void handleOnsetToggleChanged(int rowNumber, bool toggleState);
 
     // Menu handling
     void menuItemSelected(int menuItemID, int topLevelMenuIndex);
@@ -150,48 +143,4 @@ private:
     juce::Slider slider;
     SampleList* ownerList;
     int row;
-};
-
-// Custom component for the Use Onsets toggle button
-class OnsetToggleButtonCell
-    : public juce::Component
-    , private juce::Button::Listener
-{
-public:
-    OnsetToggleButtonCell(SampleList* owner, int rowNumber)
-        : ownerList(owner)
-        , row(rowNumber)
-    {
-        toggleButton.setButtonText("Beat Slice");
-        toggleButton.setTooltip("Enable beat onset playback mode");
-        toggleButton.addListener(this);
-        addAndMakeVisible(toggleButton);
-    }
-
-    ~OnsetToggleButtonCell() override = default;
-
-    void resized() override
-    {
-        toggleButton.setBounds(getLocalBounds().reduced(2));
-    }
-
-    void setState(bool state, juce::NotificationType notification)
-    {
-        toggleButton.setToggleState(state, notification);
-    }
-
-private:
-    void buttonClicked(juce::Button* button) override
-    {
-        if (button == &toggleButton && ownerList != nullptr)
-        {
-            ownerList->handleOnsetToggleChanged(row, toggleButton.getToggleState());
-        }
-    }
-
-    SampleList* ownerList;
-    int row;
-    juce::ToggleButton toggleButton;
-
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OnsetToggleButtonCell)
 };
