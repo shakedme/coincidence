@@ -22,11 +22,6 @@ public:
 
     // Setters
     void setSettings(Params::FxSettings s) { settings = s; }
-    void setBufferSize(int numSamples)
-    {
-        currentBufferSize = numSamples;
-    }
-
 private:
     // Settings
     Params::FxSettings settings;

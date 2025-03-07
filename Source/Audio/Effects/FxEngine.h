@@ -32,6 +32,5 @@ private:
     int bufferSize {512};
 
     void updateTimingInfo(juce::AudioPlayHead* playHead);
-    void updateFxWithBufferSize(int numSamples);
     std::vector<juce::int64> checkForMidiTriggers(const juce::MidiBuffer& midiMessages);
 };

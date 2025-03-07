@@ -4,7 +4,6 @@
 #include <juce_dsp/juce_dsp.h>
 #include "../Params.h"
 #include "../Shared/TimingManager.h"
-#include "FDNReverb.h"
 #include <vector>
 
 class Reverb
@@ -16,8 +15,6 @@ public:
     void prepareToPlay(double sampleRate, int samplesPerBlock);
     void releaseResources();
     void setSettings(Params::FxSettings s);
-    void setBufferSize(int numSamples);
-    
     void applyReverbEffect(juce::AudioBuffer<float>& buffer, 
                           const std::vector<juce::int64>& triggerSamplePositions,
                           const std::vector<juce::int64>& noteDurations);
@@ -34,7 +31,6 @@ private:
     std::shared_ptr<TimingManager> timingManager;
     juce::Reverb juceReverb;
     juce::Reverb::Parameters juceReverbParams;
-    FDNReverb fdnReverb;
     Params::FxSettings settings;
     
     double sampleRate {44100.0};

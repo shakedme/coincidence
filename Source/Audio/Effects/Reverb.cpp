@@ -38,7 +38,6 @@ void Reverb::prepareToPlay(double sampleRate, int samplesPerBlock)
     
     // Prepare JUCE reverb
     juceReverb.setSampleRate(sampleRate);
-    fdnReverb.prepare(sampleRate, samplesPerBlock);
     
     // Reset active reverb state
     activeReverb = {0, 0, 0, false};
@@ -47,11 +46,6 @@ void Reverb::prepareToPlay(double sampleRate, int samplesPerBlock)
 void Reverb::releaseResources()
 {
     // Nothing to release for JUCE reverb
-}
-
-void Reverb::setBufferSize(int numSamples)
-{
-    currentBufferSize = numSamples;
 }
 
 void Reverb::applyReverbEffect(juce::AudioBuffer<float>& buffer, 
@@ -82,23 +76,20 @@ void Reverb::applyReverbEffect(juce::AudioBuffer<float>& buffer,
         
         if (settings.reverbProbability >= 99.9f)
         {
-            fdnReverb.processStereo(buffer.getWritePointer(0),
-                                    buffer.getWritePointer(1),
-                                    buffer.getNumSamples());
-//            // Apply to entire buffer with proper gain preservation
-//            for (int channel = 0; channel < buffer.getNumChannels(); ++channel)
-//            {
-//                auto* dry = buffer.getWritePointer(channel);
-//                auto* wet = reverbBuffer.getReadPointer(channel);
-//
-//                for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
-//                {
-//                    // Preserve gain by using equal-power crossfade
-//                    float dryGain = std::max(std::cos(wetMix * juce::MathConstants<float>::halfPi), 0.0f);
-//                    float wetGain = std::sin(wetMix * juce::MathConstants<float>::halfPi);
-//                    dry[sample] = dry[sample] * dryGain + wet[sample] * wetGain;
-//                }
-//            }
+            // Apply to entire buffer with proper gain preservation
+            for (int channel = 0; channel < buffer.getNumChannels(); ++channel)
+            {
+                auto* dry = buffer.getWritePointer(channel);
+                auto* wet = reverbBuffer.getReadPointer(channel);
+                
+                for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
+                {
+                    // Preserve gain by using equal-power crossfade
+                    float dryGain = std::max(std::cos(wetMix * juce::MathConstants<float>::halfPi), 0.0f);
+                    float wetGain = std::sin(wetMix * juce::MathConstants<float>::halfPi);
+                    dry[sample] = dry[sample] * dryGain + wet[sample] * wetGain;
+                }
+            }
         }
         else if (!triggerSamplePositions.empty() || activeReverb.isActive)
         {

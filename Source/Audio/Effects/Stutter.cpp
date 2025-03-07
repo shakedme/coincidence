@@ -13,6 +13,8 @@ Stutter::Stutter(std::shared_ptr<TimingManager> timingManager)
 
 void Stutter::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
+    currentBufferSize = samplesPerBlock;
+
     // Initialize stutter buffer with reasonable size (4 bars at 120BPM)
     int maxStutterSamples = static_cast<int>(sampleRate * 8.0);
     stutterBuffer.setSize(2, maxStutterSamples);
