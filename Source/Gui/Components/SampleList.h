@@ -60,6 +60,9 @@ public:
     // Toggle onset randomization for a sample
     void toggleOnsetRandomization(int sampleIndex);
 
+    // Toggle reverb enabled for a sample
+    void toggleReverbForSample(int sampleIndex);
+
 private:
     std::unique_ptr<juce::TableListBox> sampleListBox;
 
@@ -107,10 +110,12 @@ public:
         : ownerList(owner)
         , row(rowNumber)
     {
-        slider.setSliderStyle(juce::Slider::LinearHorizontal);
+        slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
         slider.setTextBoxStyle(juce::Slider::NoTextBox, true, 0, 0);
         slider.setRange(0.0, 1.0, 0.01);
         slider.setColour(juce::Slider::thumbColourId, juce::Colour(0xffbf52d9));
+        slider.setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(0xffbf52d9));
+        slider.setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour(0xff444444));
         slider.setColour(juce::Slider::trackColourId,
                          juce::Colour(0xff222222)); // Darker track color
         slider.setColour(juce::Slider::backgroundColourId,
@@ -118,18 +123,29 @@ public:
 
         // Use the slider listener pattern instead of onValueChange
         slider.addListener(this);
+        
+        // Set a property to identify the slider for event handling
+        slider.getProperties().set("slider", true);
 
         addAndMakeVisible(slider);
     }
 
+    // Update the row number when component is reused
+    void updateRow(int newRow)
+    {
+        row = newRow;
+    }
+
     void resized() override
     {
-        // Position the slider with fixed width (70% of container)
-        int sliderWidth =
-            juce::jlimit(50, getWidth() - 10, static_cast<int>(getWidth() * 0.7f));
-        int sliderX = (getWidth() - sliderWidth) / 2;
-
-        slider.setBounds(sliderX, 2, sliderWidth, getHeight() - 4);
+        // Center the knob vertically and place it at the right side of the cell
+        int knobSize = juce::jmin(getHeight() - 4, 32);
+        int rightPadding = 10;
+        
+        slider.setBounds(getWidth() - knobSize - rightPadding, 
+                         (getHeight() - knobSize) / 2, 
+                         knobSize, 
+                         knobSize);
     }
 
     void setValue(double value, juce::NotificationType notification)
@@ -142,6 +158,77 @@ public:
         if (sliderThatChanged == &slider && ownerList != nullptr)
         {
             ownerList->handleSliderValueChanged(row, slider.getValue());
+        }
+    }
+    
+    void mouseDown(const juce::MouseEvent& e) override
+    {
+        // Only forward mouse events if not interacting with the slider
+        if (!e.eventComponent->getProperties().contains("slider"))
+        {
+            // Forward the event to the parent component for selection handling
+            if (juce::Component* parent = getParentComponent())
+                parent->mouseDown(e.getEventRelativeTo(parent));
+        }
+    }
+    
+    void mouseUp(const juce::MouseEvent& e) override
+    {
+        // Only forward mouse events if not interacting with the slider
+        if (!e.eventComponent->getProperties().contains("slider"))
+        {
+            // Forward the event to the parent component
+            if (juce::Component* parent = getParentComponent())
+                parent->mouseUp(e.getEventRelativeTo(parent));
+        }
+    }
+
+    void mouseDrag(const juce::MouseEvent& e) override
+    {
+        // Only forward mouse events if not interacting with the slider
+        if (!e.eventComponent->getProperties().contains("slider"))
+        {
+            // For drag selection, we need to forward this to the table list box
+            if (juce::Component* parent = getParentComponent())
+            {
+                auto parentEvent = e.getEventRelativeTo(parent);
+                
+                // Find table list box parent component
+                auto* tableComp = dynamic_cast<juce::TableListBox*>(parent->getParentComponent());
+                if (tableComp != nullptr)
+                {
+                    // If using Shift or Ctrl/Cmd, extend selection to the row under mouse
+                    if (e.mods.isShiftDown() || e.mods.isCommandDown() || e.mods.isCtrlDown())
+                    {
+                        // Get row index under current mouse position
+                        auto relPos = parentEvent.getPosition();
+                        int rowUnderMouse = tableComp->getRowContainingPosition(relPos.x, relPos.y);
+                        
+                        if (rowUnderMouse >= 0)
+                        {
+                            // If shift is down, select range
+                            if (e.mods.isShiftDown())
+                            {
+                                // Get the anchor (first selected row)
+                                auto selectedRows = tableComp->getSelectedRows();
+                                int anchorRow = selectedRows.isEmpty() ? row : selectedRows[0];
+                                
+                                // Select range from anchor to current row
+                                tableComp->selectRangeOfRows(juce::jmin(anchorRow, rowUnderMouse), 
+                                                          juce::jmax(anchorRow, rowUnderMouse));
+                            }
+                            // If Ctrl/Cmd is down, add to selection
+                            else if (e.mods.isCommandDown() || e.mods.isCtrlDown())
+                            {
+                                tableComp->selectRow(rowUnderMouse, true); // Add to selection
+                            }
+                        }
+                    }
+                }
+                
+                // Forward the drag event
+                parent->mouseDrag(parentEvent);
+            }
         }
     }
 

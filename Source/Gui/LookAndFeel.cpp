@@ -1,6 +1,7 @@
 #include "LookAndFeel.h"
 #include "PluginEditor.h"
 #include "../Audio/PluginProcessor.h"
+#include "Sections/BaseSection.h"
 
 LookAndFeel::LookAndFeel()
 {
@@ -42,34 +43,22 @@ void LookAndFeel::drawRotarySlider(juce::Graphics& g,
                                                 float rotaryEndAngle,
                                                 juce::Slider& slider)
 {
-    // Determine which color to use based on the slider name
-    juce::Colour knobColor;
-    juce::Colour indicatorColor;
+    // Determine which color to use based on the section the slider belongs to
+    juce::Colour knobColor = juce::Colour(0xff303030);
+    juce::Colour indicatorColor = juce::Colour(0xff52d97d); // Default green
 
-    if (slider.getName().startsWith("rate"))
+    // Find the parent section component to use its color
+    juce::Component* parent = slider.getParentComponent();
+    while (parent != nullptr) 
     {
-        // Rate knobs - cyan/blue
-        knobColor = juce::Colour(0xff303030);
-        indicatorColor = juce::Colour(0xff52bfd9); // cyan/blue
-    }
-    else if (slider.getName().startsWith("gate"))
-    {
-        // Gate knobs - magenta
-        knobColor = juce::Colour(0xff303030);
-        indicatorColor = juce::Colour(0xffd952bf); // magenta
-    }
-    else if (slider.getName().startsWith("velocity")
-             || slider.getName().startsWith("density"))
-    {
-        // Velocity and density knobs - orange/amber
-        knobColor = juce::Colour(0xff303030);
-        indicatorColor = juce::Colour(0xffd9a652); // amber
-    }
-    else
-    {
-        // Default - green
-        knobColor = juce::Colour(0xff303030);
-        indicatorColor = juce::Colour(0xff52d97d); // green
+        auto* sectionComponent = dynamic_cast<BaseSectionComponent*>(parent);
+        if (sectionComponent != nullptr) 
+        {
+            // Use the section's color for the slider indicator
+            indicatorColor = sectionComponent->getSectionColour();
+            break;
+        }
+        parent = parent->getParentComponent();
     }
 
     // Define dimensions

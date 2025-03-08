@@ -19,6 +19,11 @@ public:
                           const std::vector<juce::int64>& triggerSamplePositions,
                           const std::vector<juce::int64>& noteDurations);
 
+    bool shouldApplyReverb();
+    
+    // Check if reverb should be applied for a specific sample
+    static bool shouldApplyReverbForSample(int sampleIndex);
+
 private:
     struct ActiveReverb
     {
@@ -38,6 +43,4 @@ private:
     
     // Track active reverb effects
     ActiveReverb activeReverb;
-    
-    bool shouldApplyReverb();
 };

@@ -207,7 +207,7 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     audioProcessor->processAudio(buffer, processedMidi, midiMessages);
 
     // Process audio effects
-    fxEngine->processAudio(buffer, playHead, midiMessages);
+    fxEngine->processAudio(buffer, playHead, processedMidi);
 
     timingManager->updateSamplePosition(buffer.getNumSamples());
 }

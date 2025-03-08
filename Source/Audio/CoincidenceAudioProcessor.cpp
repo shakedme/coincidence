@@ -118,10 +118,6 @@ void CoincidenceAudioProcessor::processAudio(juce::AudioBuffer<float>& buffer,
         // Use JUCE's synthesizer to render the audio with our modified MIDI
         sampleManager.getSampler().renderNextBlock(
             buffer, modifiedMidi, 0, buffer.getNumSamples());
-
-        // Now the buffer contains the synthesized audio
-        // We clear the MIDI buffer since the sampler has processed it
-        processedMidi.clear();
     }
     else
     {

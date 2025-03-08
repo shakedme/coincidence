@@ -53,6 +53,10 @@ public:
     bool isOnsetRandomizationEnabled() const { return useOnsetRandomization; }
     void setOnsetRandomizationEnabled(bool enabled) { useOnsetRandomization = enabled; }
 
+    // Reverb control
+    bool isReverbEnabled() const { return reverbEnabled; }
+    void setReverbEnabled(bool enabled) { reverbEnabled = enabled; }
+
 private:
     juce::String name;
     juce::AudioBuffer<float> audioData;
@@ -65,6 +69,7 @@ private:
     float endMarkerPosition = 1.0f;
     std::vector<float> onsetMarkers; // Onset marker positions (0.0-1.0)
     bool useOnsetRandomization = false;
+    bool reverbEnabled = false; // Whether reverb should be forcibly applied to this sample
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SamplerSound)
 };

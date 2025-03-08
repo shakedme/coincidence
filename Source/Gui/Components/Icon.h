@@ -14,6 +14,9 @@ public:
     {
         setInterceptsMouseClicks(true, false);
         setSize(size, size);
+        
+        // Set a property to identify this as an icon component
+        getProperties().set("icon", true);
 
         // Create Drawable directly from SVG data
         if (svgData != nullptr && svgDataSize > 0)
@@ -84,6 +87,86 @@ public:
 
 private:
     std::unique_ptr<juce::Drawable> drawable;
+    juce::Colour normalColour = juce::Colours::lightgrey;
+    juce::Colour activeColour = juce::Colour(0xff52bfd9);
+    bool isActive = false;
+};
+
+/**
+ * A text-based icon component that displays a letter or short text as an icon.
+ * Has the same interface as Icon.
+ */
+class TextIcon : public juce::Component, public juce::SettableTooltipClient
+{
+public:
+    TextIcon(const juce::String& text, float size = 16.0f)
+        : iconText(text), iconSize(size)
+    {
+        setInterceptsMouseClicks(true, false);
+        setSize(size, size);
+        
+        // Set a property to identify this as an icon component
+        getProperties().set("icon", true);
+    }
+
+    void paint(juce::Graphics& g) override
+    {
+        // Apply current color
+        juce::Colour currentColor = isEnabled() ?
+                                              (isActive ? activeColour : normalColour) :
+                                              juce::Colours::darkgrey;
+
+        if (isMouseOver())
+            currentColor = currentColor.brighter(0.2f);
+
+        if (isMouseButtonDown())
+            currentColor = currentColor.brighter(0.5f);
+
+        // Draw a background circle to match SVG icons
+        g.setColour(currentColor.withAlpha(0.2f));
+        g.fillEllipse(getLocalBounds().toFloat().reduced(2.0f));
+        
+        // Draw outline
+        g.setColour(currentColor);
+        g.drawEllipse(getLocalBounds().toFloat().reduced(2.0f), 1.0f);
+        
+        // Draw the text
+        g.setColour(currentColor);
+        g.setFont(juce::Font(iconSize * 0.75f).boldened());
+        g.drawText(iconText, getLocalBounds(), juce::Justification::centred);
+    }
+
+    // Mouse event handlers 
+    void mouseEnter(const juce::MouseEvent&) override { repaint(); }
+    void mouseExit(const juce::MouseEvent&) override { repaint(); }
+    void mouseDown(const juce::MouseEvent&) override { repaint(); }
+
+    void mouseUp(const juce::MouseEvent& e) override
+    {
+        if (e.getNumberOfClicks() > 0 && contains(e.getPosition()) && onClicked)
+            onClicked();
+        repaint();
+    }
+
+    void setActive(bool shouldBeActive, juce::Colour colour = juce::Colour(0xff52bfd9))
+    {
+        isActive = shouldBeActive;
+        activeColour = colour;
+        repaint();
+    }
+
+    void setNormalColour(juce::Colour colour)
+    {
+        normalColour = colour;
+        repaint();
+    }
+
+    // Callback for when icon is clicked
+    std::function<void()> onClicked;
+
+private:
+    juce::String iconText;
+    float iconSize;
     juce::Colour normalColour = juce::Colours::lightgrey;
     juce::Colour activeColour = juce::Colour(0xff52bfd9);
     bool isActive = false;
