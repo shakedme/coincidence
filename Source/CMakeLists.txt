@@ -1,6 +1,6 @@
-project(DummySynth VERSION 0.0.1)
+project(Coincidence VERSION 0.0.1)
 
-set (BaseTargetName Jammer)
+set (BaseTargetName Coincidence)
 
 juce_add_plugin("${BaseTargetName}"
         # VERSION ...                               # Set this if the plugin version is different to the project version
@@ -14,9 +14,9 @@ juce_add_plugin("${BaseTargetName}"
         EDITOR_WANTS_KEYBOARD_FOCUS FALSE
         COPY_PLUGIN_AFTER_BUILD TRUE
         PLUGIN_MANUFACTURER_CODE Juce
-        PLUGIN_CODE Jamm
+        PLUGIN_CODE COIN
         FORMATS AU VST3 Standalone
-        PRODUCT_NAME "Jammer")
+        PRODUCT_NAME "Coincidence")
 
 target_sources(${BaseTargetName} PRIVATE
         Gui/LookAndFeel.cpp
@@ -41,12 +41,11 @@ target_sources(${BaseTargetName} PRIVATE
         Audio/Shared/TimingManager.cpp
         Audio/Midi/ScaleManager.cpp
         Audio/Midi/NoteGenerator.cpp
-        Audio/JammerAudioProcessor.cpp
+        Audio/CoincidenceAudioProcessor.cpp
         Audio/FileLogger.cpp
         Audio/Effects/FxEngine.cpp
         Audio/Effects/Stutter.cpp
         Audio/Effects/Reverb.cpp
-        Audio/Effects/FDNReverb.h
         )
 
 target_compile_definitions(${BaseTargetName}
@@ -56,7 +55,7 @@ target_compile_definitions(${BaseTargetName}
         JUCE_VST3_CAN_REPLACE_VST2=0)
 
 
-juce_add_binary_data(JammerAssets
+juce_add_binary_data(CoincidenceAssets
         SOURCES
         ../Assets/Icons/pencil.svg
         ../Assets/Icons/three-lines.svg
@@ -64,7 +63,7 @@ juce_add_binary_data(JammerAssets
         )
 
 target_link_libraries(${BaseTargetName} PRIVATE
-        JammerAssets
+        CoincidenceAssets
         juce_audio_utils
         juce_dsp
         juce_recommended_config_flags

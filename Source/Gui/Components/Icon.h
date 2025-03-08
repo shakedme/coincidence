@@ -11,7 +11,6 @@ class Icon : public juce::Component, public juce::SettableTooltipClient
 {
 public:
     Icon(const char* svgData, int svgDataSize, float size = 16.0f)
-        : iconSize(size)
     {
         setInterceptsMouseClicks(true, false);
         setSize(size, size);
@@ -84,7 +83,6 @@ public:
     std::function<void()> onClicked;
 
 private:
-    float iconSize;
     std::unique_ptr<juce::Drawable> drawable;
     juce::Colour normalColour = juce::Colours::lightgrey;
     juce::Colour activeColour = juce::Colour(0xff52bfd9);

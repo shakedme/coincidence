@@ -8,11 +8,11 @@ class PluginProcessor;
 /**
  * Class to handle audio processing functionality
  */
-class JammerAudioProcessor
+class CoincidenceAudioProcessor
 {
 public:
-    JammerAudioProcessor(PluginProcessor& processor);
-    ~JammerAudioProcessor() = default;
+    CoincidenceAudioProcessor(PluginProcessor& processor);
+    ~CoincidenceAudioProcessor() = default;
     
     // Initialize with sample rate
     void prepareToPlay(double sampleRate, int samplesPerBlock);

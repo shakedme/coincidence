@@ -90,6 +90,10 @@ void SampleManager::removeSamples(int startIdx, int endIdx)
         return;
     }
 
+    // Ensure no sounds are playing that might reference these samples
+    sampler.allNotesOff(0, true);
+    
+    // Clear the sound registrations first to avoid dangling pointers
     SamplerVoice::clearSoundRegistrations();
 
     // Remove samples from back to front to avoid index shifting problems
@@ -97,6 +101,12 @@ void SampleManager::removeSamples(int startIdx, int endIdx)
     {
         if (i < sampleList.size())  // Extra safety check
         {
+            // Remove from any groups before deleting
+            if (sampleList[i]->groupIndex >= 0) {
+                removeSampleFromGroup(i);
+            }
+            
+            // Clear the sound and release memory
             sampleList[i]->sound.release();
             sampleList.erase(sampleList.begin() + i);
         }
@@ -142,12 +152,24 @@ void SampleManager::rebuildSounds()
 
 void SampleManager::clearAllSamples()
 {
+    // Stop all playing notes first to avoid references to deleted samples
+    sampler.allNotesOff(0, true);
+    
+    // Clear the sounds from the sampler - this will delete the SamplerSound objects
     sampler.clearSounds();
+    
+    // Clear our sound registration map before clearing the sample list
+    // to avoid any dangling pointers
+    SamplerVoice::clearSoundRegistrations();
+    
+    // Clear all groups
+    groups.clear();
+    
+    // Finally clear the sample list
     sampleList.clear();
     currentSelectedSample = -1;
-
-    // Clear our sound registration map as well
-    SamplerVoice::clearSoundRegistrations();
+    currentPlayIndex = -1;
+    isAscending = true;
 }
 
 int SampleManager::getNextSampleIndex(Params::DirectionType direction)

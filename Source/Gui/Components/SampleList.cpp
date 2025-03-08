@@ -377,8 +377,9 @@ void SampleList::toggleOnsetRandomization(int sampleIndex)
                 bool newState = !sound->isOnsetRandomizationEnabled();
                 sound->setOnsetRandomizationEnabled(newState);
 
-                // Repaint this row
-                sampleListBox->repaintRow(sampleIndex);
+                // Use updateContent instead of just repainting the row
+                // This ensures the SampleNameCellComponent gets recreated with the correct icon state
+                updateContent();
             }
         }
     }

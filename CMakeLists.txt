@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 
-project(Jammer)
+project(Coincidence)
 
 #First, we'll add the CMake folder, in case we'll need to find_package later:
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake")
@@ -38,7 +38,6 @@ option(BUILD_JUCE_PROTOTYPE_EXAMPLES "Build JUCE prototype examples" ON)
 
 # add source code
 add_subdirectory(Source)
-
 
 #optionally, we're also adding the unit tests:
 option(BUILD_UNIT_TESTS "Build JUCE prototype examples" OFF)

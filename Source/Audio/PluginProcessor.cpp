@@ -12,7 +12,7 @@ PluginProcessor::PluginProcessor()
     , parameters(*this, nullptr, "PARAMETERS", createParameterLayout())
 {
     // Create specialized components
-    audioProcessor = std::make_unique<::JammerAudioProcessor>(*this);
+    audioProcessor = std::make_unique<::CoincidenceAudioProcessor>(*this);
     timingManager = std::make_shared<TimingManager>();
     noteGenerator = std::make_unique<NoteGenerator>(*this, timingManager);
     fxEngine = std::make_unique<FxEngine>(timingManager, *this);

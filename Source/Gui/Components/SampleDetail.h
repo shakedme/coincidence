@@ -8,6 +8,7 @@
 class SampleDetailComponent
     : public juce::Component
     , private juce::ChangeListener
+    , public juce::KeyListener
 {
 public:
     SampleDetailComponent(SampleManager& manager)
@@ -34,9 +35,27 @@ public:
 
         // Define clickable area for back arrow
         backArrowBounds = juce::Rectangle<int>(0, 0, 30, 20);
+        
+        // Add a button to clear all onset markers
+        clearMarkersButton = std::make_unique<juce::TextButton>("Clear Markers");
+        clearMarkersButton->onClick = [this]() { 
+            if (auto* sound = sampleManager.getSampleSound(currentSampleIndex))
+            {
+                sound->clearOnsetMarkers();
+                repaint();
+            }
+        };
+        addAndMakeVisible(clearMarkersButton.get());
+        
+        // Enable keyboard focus for this component to receive key presses
+        setWantsKeyboardFocus(true);
+        addKeyListener(this);
     }
 
-    ~SampleDetailComponent() override { thumbnail->removeChangeListener(this); }
+    ~SampleDetailComponent() override { 
+        thumbnail->removeChangeListener(this); 
+        removeKeyListener(this);
+    }
 
     int getSampleIndex() { return currentSampleIndex; }
 
@@ -104,6 +123,8 @@ public:
                    true);
 
         auto bounds = getLocalBounds().reduced(10).withTrimmedTop(30);
+        // Reserve space for clearMarkersButton
+        bounds.removeFromBottom(40);
 
         // Draw waveform background
         g.setColour(juce::Colour(0xff3a3a3a));
@@ -152,22 +173,30 @@ public:
             {
                 const auto& onsetMarkers = sound->getOnsetMarkers();
 
-                g.setColour(juce::Colour(0xff52bfd9)); // Blue color for onset markers
-
-                for (auto onsetPosition: onsetMarkers)
+                for (int i = 0; i < onsetMarkers.size(); ++i)
                 {
+                    float onsetPosition = onsetMarkers[i];
                     float onsetPixel = bounds.getX() + bounds.getWidth() * onsetPosition;
+
+                    // Use a different color if this marker is selected
+                    if (i == selectedMarkerIndex) {
+                        g.setColour(juce::Colours::red); // Selected marker is red
+                    } else {
+                        g.setColour(juce::Colour(0xff52bfd9)); // Blue color for onset markers
+                    }
 
                     // Draw a thinner line for onset markers
                     g.drawLine(
                         onsetPixel, bounds.getY(), onsetPixel, bounds.getBottom(), 1.0f);
 
-                    // Draw a small circle at the top of the marker for better visibility
-                    float circleSize = 4.0f;
-                    g.fillEllipse(onsetPixel - circleSize / 2,
-                                  bounds.getY() - circleSize / 2,
-                                  circleSize,
-                                  circleSize);
+                    // Draw a downward-facing triangle at the top of the marker
+                    float triangleSize = 8.0f; // Slightly larger than the circle
+                    juce::Path trianglePath;
+                    trianglePath.startNewSubPath(onsetPixel, bounds.getY() + triangleSize);
+                    trianglePath.lineTo(onsetPixel - triangleSize/2, bounds.getY());
+                    trianglePath.lineTo(onsetPixel + triangleSize/2, bounds.getY());
+                    trianglePath.closeSubPath();
+                    g.fillPath(trianglePath);
                 }
             }
         }
@@ -207,11 +236,13 @@ public:
         if (std::abs(e.x - startPixel) < markerTolerance)
         {
             draggingStartMarker = true;
+            selectedMarkerIndex = -1; // Deselect any selected onset marker
         }
         // Check if clicked near end marker
         else if (std::abs(e.x - endPixel) < markerTolerance)
         {
             draggingEndMarker = true;
+            selectedMarkerIndex = -1; // Deselect any selected onset marker
         }
         // Check if clicked near an onset marker
         else if (auto* sound = sampleManager.getSampleSound(currentSampleIndex))
@@ -230,9 +261,26 @@ public:
 
                 if (std::abs(e.x - onsetPixel) < markerTolerance)
                 {
-                    draggingOnsetMarker = true;
+                    if (e.mods.isShiftDown() || e.mods.isAltDown()) {
+                        // Allow changing selected marker without dragging
+                        selectedMarkerIndex = currentOnsetMarkerIndex;
+                        repaint();
+                    } else {
+                        // Normal behavior: allow dragging and select the marker
+                        draggingOnsetMarker = true;
+                        selectedMarkerIndex = currentOnsetMarkerIndex;
+                    }
+                }
+                else {
+                    // Clicked away from markers, clear selection
+                    selectedMarkerIndex = -1;
                 }
             }
+            else {
+                // Clicked away from markers, clear selection
+                selectedMarkerIndex = -1;
+            }
+            repaint();
         }
 
         // Double-click to add a new onset marker
@@ -254,9 +302,18 @@ public:
                 // Update the sound
                 sound->setOnsetMarkers(markers);
 
+                // Find and select the newly added marker
+                auto it = std::find(markers.begin(), markers.end(), newMarkerPos);
+                if (it != markers.end()) {
+                    selectedMarkerIndex = std::distance(markers.begin(), it);
+                }
+
                 repaint();
             }
         }
+        
+        // Make sure this component gets keyboard focus when clicked
+        grabKeyboardFocus();
     }
 
     void clearSampleData()
@@ -267,6 +324,7 @@ public:
         sampleName = "No Sample";
         startMarkerPosition = 0.0;
         endMarkerPosition = 1.0;
+        selectedMarkerIndex = -1;
         repaint();
     }
 
@@ -335,6 +393,7 @@ public:
                     if (it != markers.end())
                     {
                         currentOnsetMarkerIndex = std::distance(markers.begin(), it);
+                        selectedMarkerIndex = currentOnsetMarkerIndex; // Keep the marker selected
                     }
 
                     // Update markers
@@ -396,6 +455,16 @@ public:
                                                 markers.erase(markers.begin()
                                                               + closestIndex);
                                                 sound->setOnsetMarkers(markers);
+                                                
+                                                // Clear selection if the deleted marker was selected
+                                                if (selectedMarkerIndex == closestIndex) {
+                                                    selectedMarkerIndex = -1;
+                                                }
+                                                // Adjust selection index if a marker before the selection was deleted
+                                                else if (selectedMarkerIndex > closestIndex) {
+                                                    selectedMarkerIndex--;
+                                                }
+                                                
                                                 repaint();
                                             }
                                         }
@@ -412,6 +481,33 @@ public:
         draggingOnsetMarker = false;
         currentOnsetMarkerIndex = -1;
     }
+    
+    // Implementation for KeyListener
+    bool keyPressed(const juce::KeyPress& key, juce::Component* originatingComponent) override
+    {
+        // Handle Backspace key to delete the selected marker
+        if (key.isKeyCode(juce::KeyPress::backspaceKey) && selectedMarkerIndex >= 0)
+        {
+            if (auto* sound = sampleManager.getSampleSound(currentSampleIndex))
+            {
+                std::vector<float> markers = sound->getOnsetMarkers();
+                if (selectedMarkerIndex < markers.size())
+                {
+                    markers.erase(markers.begin() + selectedMarkerIndex);
+                    sound->setOnsetMarkers(markers);
+                    selectedMarkerIndex = -1; // Clear selection after deletion
+                    repaint();
+                    return true; // Key was handled
+                }
+            }
+        }
+        return false; // Key wasn't handled
+    }
+    
+    bool keyStateChanged(bool isKeyDown, juce::Component* originatingComponent) override
+    {
+        return false; // We only care about keyPressed
+    }
 
     void changeListenerCallback(juce::ChangeBroadcaster*) override
     {
@@ -419,7 +515,13 @@ public:
         repaint();
     }
 
-    void resized() override { repaint(); }
+    void resized() override
+    { 
+        auto bounds = getLocalBounds();
+        bounds.removeFromTop(bounds.getHeight() - 30); // Position at bottom
+        clearMarkersButton->setBounds(bounds.reduced(10, 0));
+        repaint(); 
+    }
 
     float getStartMarkerPosition() const { return startMarkerPosition; }
     float getEndMarkerPosition() const { return endMarkerPosition; }
@@ -456,9 +558,12 @@ private:
 
     bool draggingOnsetMarker = false;
     int currentOnsetMarkerIndex = -1;
+    int selectedMarkerIndex = -1; // Track which marker is currently selected
 
     juce::Path backArrowPath;
     juce::Rectangle<int> backArrowBounds;
+    
+    std::unique_ptr<juce::TextButton> clearMarkersButton;
 
     float pixelToPosition(int x, const juce::Rectangle<int>& bounds)
     {

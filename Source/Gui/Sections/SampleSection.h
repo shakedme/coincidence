@@ -38,6 +38,7 @@ private:
     std::unique_ptr<SampleList> sampleList;
     std::unique_ptr<SampleDetailComponent> sampleDetailView;
     std::unique_ptr<juce::TextButton> removeSampleButton;
+    std::unique_ptr<juce::TextButton> clearAllButton;
     std::unique_ptr<Toggle> pitchFollowToggle;
     std::unique_ptr<juce::Label> pitchFollowLabel;
 

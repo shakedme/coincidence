@@ -58,7 +58,7 @@ void PluginEditor::paint(juce::Graphics& g)
     //    g.setColour(juce::Colours::white);
     //    g.setFont(juce::Font(20.0f, juce::Font::bold));
     //    g.drawText(
-    //        "Jammer", getLocalBounds().removeFromTop(30), juce::Justification::centred, true);
+    //        "Coincidence", getLocalBounds().removeFromTop(30), juce::Justification::centred, true);
 }
 
 void PluginEditor::resized()

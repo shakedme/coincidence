@@ -40,6 +40,13 @@ void SampleSectionComponent::resized()
         80,
         25);
         
+    // Position the Clear All button in the bottom right
+    clearAllButton->setBounds(
+        listArea.getRight() - 80,
+        listArea.getBottom() + 5,
+        80,
+        25);
+        
     // Position the group list view below the direction selector
     groupListView->setBounds(
         controlsX,
@@ -72,6 +79,33 @@ void SampleSectionComponent::initComponents(PluginProcessor& processorRef)
 
     removeSampleButton = std::make_unique<juce::TextButton>("Remove");
     addAndMakeVisible(removeSampleButton.get());
+
+    // Create Clear All button
+    clearAllButton = std::make_unique<juce::TextButton>("Clear All");
+    clearAllButton->setColour(juce::TextButton::buttonColourId, juce::Colour(0xffbf52d9));
+    clearAllButton->setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+    clearAllButton->onClick = [this]() {
+        // If in detail view, switch back to list view first to avoid dangling references
+        if (showingDetailView) {
+            showListView();
+        }
+        
+        // Make sure we clear any sample data in the detail view to avoid dangling references
+        sampleDetailView->clearSampleData();
+        
+        // Reset active sample state
+        lastActiveSampleIndex = -1;
+        
+        // Clear all samples using the SampleManager
+        processor.getSampleManager().clearAllSamples();
+        
+        // Update the sample list display
+        sampleList->updateContent();
+        
+        // Repaint to show empty state UI
+        repaint();
+    };
+    addAndMakeVisible(clearAllButton.get());
 
     // Sample direction selector
     sampleDirectionSelector = std::make_unique<DirectionSelector>(juce::Colour(0xffbf52d9));
@@ -154,15 +188,17 @@ void SampleSectionComponent::paint(juce::Graphics& g)
         g.setFont(juce::Font(juce::FontOptions(14.0f)));
         g.drawText("Drag & Drop Samples Here", contentArea, juce::Justification::centred, true);
 
-        // Hide the sample direction selector and group list when no samples are loaded
+        // Hide the sample direction selector, group list, and clear all button when no samples are loaded
         sampleDirectionSelector->setVisible(false);
         groupListView->setVisible(false);
+        clearAllButton->setVisible(false);
     }
     else
     {
-        // Show the sample direction selector and group list when samples are loaded
+        // Show the sample direction selector, group list, and clear all button when samples are loaded
         sampleDirectionSelector->setVisible(true);
         groupListView->setVisible(true);
+        clearAllButton->setVisible(true);
     }
 }
 

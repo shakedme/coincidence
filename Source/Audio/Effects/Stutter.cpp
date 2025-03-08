@@ -4,8 +4,8 @@
 
 #include "Stutter.h"
 
-Stutter::Stutter(std::shared_ptr<TimingManager> timingManager)
-    : timingManager(timingManager)
+Stutter::Stutter(std::shared_ptr<TimingManager> tm)
+    : timingManager(tm)
 {
     // Initialize random generator
     random.setSeedRandomly();

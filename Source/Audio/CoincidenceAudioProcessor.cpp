@@ -1,13 +1,13 @@
-#include "JammerAudioProcessor.h"
+#include "CoincidenceAudioProcessor.h"
 #include "PluginProcessor.h"
 #include "Sampler/Sampler.h"
 
-JammerAudioProcessor::JammerAudioProcessor(PluginProcessor& p)
+CoincidenceAudioProcessor::CoincidenceAudioProcessor(PluginProcessor& p)
     : processor(p)
 {
 }
 
-void JammerAudioProcessor::prepareToPlay(double sampleRate, int)
+void CoincidenceAudioProcessor::prepareToPlay(double sampleRate, int)
 {
     sampleManager.prepareToPlay(sampleRate);
     
@@ -15,13 +15,13 @@ void JammerAudioProcessor::prepareToPlay(double sampleRate, int)
     bufferCounter = 0;
 }
 
-void JammerAudioProcessor::releaseResources()
+void CoincidenceAudioProcessor::releaseResources()
 {
     // Make sure to clean up all notes when resources are released
     sampleManager.getSampler().allNotesOff(0, true);
 }
 
-void JammerAudioProcessor::processAudio(juce::AudioBuffer<float>& buffer,
+void CoincidenceAudioProcessor::processAudio(juce::AudioBuffer<float>& buffer,
                                  juce::MidiBuffer& processedMidi,
                                  juce::MidiBuffer& midiMessages)
 {

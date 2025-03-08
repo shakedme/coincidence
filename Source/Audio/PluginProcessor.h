@@ -5,7 +5,7 @@
 #include "Shared/TimingManager.h"
 #include "Midi/ScaleManager.h"
 #include "Midi/NoteGenerator.h"
-#include "JammerAudioProcessor.h"
+#include "CoincidenceAudioProcessor.h"
 #include "Sampler/Sampler.h"
 
 // Forward declarations
@@ -85,7 +85,7 @@ private:
 
     // Specialized components for handling different aspects of the plugin
     std::unique_ptr<NoteGenerator> noteGenerator;
-    std::unique_ptr<JammerAudioProcessor> audioProcessor;
+    std::unique_ptr<CoincidenceAudioProcessor> audioProcessor;
     std::unique_ptr<FxEngine> fxEngine;
     std::shared_ptr<TimingManager> timingManager;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginProcessor)
