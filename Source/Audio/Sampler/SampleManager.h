@@ -21,6 +21,12 @@ public:
         std::unique_ptr<SamplerSound> sound;
         float probability = 1.0f; // Default probability value (1.0 = 100%)
         int groupIndex = -1;      // -1 means not part of any group, 0-3 for groups
+        
+        // Rate flags - all enabled by default
+        bool rate_1_2_enabled = true;
+        bool rate_1_4_enabled = true;
+        bool rate_1_8_enabled = true;
+        bool rate_1_16_enabled = true;
 
         SampleInfo(const juce::String& n, const juce::File& f, int idx);
     };
@@ -41,7 +47,7 @@ public:
     void removeSamples(int startIdx, int endIdx);
     void clearAllSamples();
     juce::File getSampleFilePath(int index) const;
-    int getNextSampleIndex(Params::DirectionType direction);
+    int getNextSampleIndex(Params::DirectionType direction, Params::RateOption currentRate);
     void rebuildSounds();
     void createGroup(const juce::Array<int>& sampleIndices);
     void removeGroup(int groupIndex);
@@ -65,6 +71,10 @@ public:
     // Setup
     void prepareToPlay(double sampleRate);
 
+    // Add these declarations in the public section
+    void setSampleRateEnabled(int sampleIndex, Params::RateOption rate, bool enabled);
+    bool isSampleRateEnabled(int sampleIndex, Params::RateOption rate) const;
+
 private:
     // Current sample state (for playback)
     int currentSelectedSample = -1;
@@ -73,6 +83,16 @@ private:
 
     // Loaded samples
     std::vector<std::unique_ptr<SampleInfo>> sampleList;
+    
+    // Pre-filtered lists of valid samples for each rate
+    std::vector<int> validSamples_1_2;
+    std::vector<int> validSamples_1_4;
+    std::vector<int> validSamples_1_8;
+    std::vector<int> validSamples_1_16;
+    
+    // Helper methods for managing valid sample lists
+    void updateValidSamplesForRate(Params::RateOption rate);
+    const std::vector<int>& getValidSamplesForRate(Params::RateOption rate) const;
     
     // Sample groups (max 4 groups)
     std::vector<std::unique_ptr<Group>> groups;

@@ -211,7 +211,7 @@ void Stutter::startStutterAtPosition(juce::AudioBuffer<float>& buffer,
     isStuttering = true;
     stutterLength = captureLength;
     stutterPosition = 0;
-    stutterRepeatsTotal = 2 + random.nextInt(2); // 2-4 repeats
+    stutterRepeatsTotal = 2 + random.nextInt(1); // 2-4 repeats
     stutterRepeatCount = 0;
 
 //    // Apply stutter effect immediately for the rest of this buffer
@@ -353,32 +353,22 @@ void Stutter::handleTransportLoopDetection()
 
 Params::RateOption Stutter::selectRandomRate()
 {
-    Params::RateOption rates[] = {Params::RATE_1_4,
-                                  Params::RATE_1_8,
+    Params::RateOption rates[] = {Params::RATE_1_8,
                                   Params::RATE_1_16,
-                                  Params::RATE_1_32,
-                                  Params::RATE_1_64};
+                                  Params::RATE_1_32};
 
     float randomValue = random.nextFloat();
 
-    if (randomValue < 0.1f)
+    if (randomValue < 0.33f)
     {
-        return rates[0]; // 1/4 note
+        return rates[0]; // 1/8 note
     }
-    else if (randomValue < 0.35f)
+    else if (randomValue < 0.66f)
     {
-        return rates[1]; // 1/8 note
-    }
-    else if (randomValue < 0.75f)
-    {
-        return rates[2]; // 1/16 note
-    }
-    else if (randomValue < 0.9f)
-    {
-        return rates[3]; // 1/32 note
+        return rates[1]; // 1/16 note
     }
     else
     {
-        return rates[4]; // 1/64 note
+        return rates[2]; // 1/32 note
     }
 }

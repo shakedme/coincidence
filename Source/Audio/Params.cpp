@@ -107,9 +107,6 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
         "reverb_time", "Reverb Time", 0.0f, 100.0f, 50.0f));
 
     layout.add(std::make_unique<juce::AudioParameterFloat>(
-        "reverb_damping", "Reverb Damping", 0.0f, 100.0f, 50.0f));
-
-    layout.add(std::make_unique<juce::AudioParameterFloat>(
         "reverb_width", "Reverb Width", 0.0f, 100.0f, 100.0f));
 
     return layout;

@@ -111,6 +111,12 @@ public:
         addAndMakeVisible(onsetIcon.get());
         addAndMakeVisible(deleteIcon.get());
         addAndMakeVisible(reverbIcon.get());
+        
+        // Setup rate icons
+        setupRateIcon(rate1_2Icon, "1/2", Params::RATE_1_2);
+        setupRateIcon(rate1_4Icon, "1/4", Params::RATE_1_4);
+        setupRateIcon(rate1_8Icon, "1/8", Params::RATE_1_8);
+        setupRateIcon(rate1_16Icon, "1/16", Params::RATE_1_16);
     }
 
     void paint(juce::Graphics& g) override
@@ -122,7 +128,7 @@ public:
         g.drawText(sampleName,
                    4,
                    0,
-                   getWidth() - 160, // More space for slider and icons
+                   getWidth() - 220, // More space for slider and icons
                    getHeight(),
                    juce::Justification::centredLeft);
     }
@@ -132,7 +138,7 @@ public:
         // Position slider first, followed by icons at the right side
         int iconSize = 16;
         int padding = 8;
-        int sliderSize = 24; // Slightly larger for usability
+        int sliderSize = 16; // Slightly larger for usability
         
         // Start position for right-aligned elements
         int x = getWidth() - iconSize - padding;
@@ -151,6 +157,19 @@ public:
         // Position slider before the icons
         x -= sliderSize + padding;
         slider->setBounds(x, (getHeight() - sliderSize) / 2, sliderSize, sliderSize);
+        
+        // Position rate icons before the slider
+        x -= iconSize + padding;
+        rate1_16Icon->setBounds(x, (getHeight() - iconSize) / 2, iconSize, iconSize);
+        
+        x -= iconSize + padding;
+        rate1_8Icon->setBounds(x, (getHeight() - iconSize) / 2, iconSize, iconSize);
+        
+        x -= iconSize + padding;
+        rate1_4Icon->setBounds(x, (getHeight() - iconSize) / 2, iconSize, iconSize);
+        
+        x -= iconSize + padding;
+        rate1_2Icon->setBounds(x, (getHeight() - iconSize) / 2, iconSize, iconSize);
     }
 
     void mouseDown(const juce::MouseEvent& e) override
@@ -234,4 +253,51 @@ private:
     std::unique_ptr<Icon> onsetIcon;
     std::unique_ptr<Icon> deleteIcon;
     std::unique_ptr<TextIcon> reverbIcon;
+    
+    // Rate icons
+    std::unique_ptr<TextIcon> rate1_2Icon;
+    std::unique_ptr<TextIcon> rate1_4Icon;
+    std::unique_ptr<TextIcon> rate1_8Icon;
+    std::unique_ptr<TextIcon> rate1_16Icon;
+
+    void setupRateIcon(std::unique_ptr<TextIcon>& icon, const juce::String& text, Params::RateOption rate)
+    {
+        icon = std::make_unique<TextIcon>(text, 16.0f);
+        icon->setNormalColour(juce::Colours::lightgrey);
+        icon->setTooltip("Toggle " + text + " rate");
+        
+        // Set initial state
+        bool isEnabled = ownerList->processor.getSampleManager().isSampleRateEnabled(rowNumber, rate);
+        if (isEnabled)
+            icon->setActive(true, juce::Colour(0xff52bfd9));
+            
+        // Add click handler
+        icon->onClicked = [this, rate]() {
+            bool currentState = ownerList->processor.getSampleManager().isSampleRateEnabled(rowNumber, rate);
+            ownerList->processor.getSampleManager().setSampleRateEnabled(rowNumber, rate, !currentState);
+            
+            // Update icon state
+            if (auto* icon = getRateIcon(rate))
+            {
+                if (!currentState)
+                    icon->setActive(true, juce::Colour(0xff52bfd9));
+                else
+                    icon->setActive(false);
+            }
+        };
+        
+        addAndMakeVisible(icon.get());
+    }
+    
+    TextIcon* getRateIcon(Params::RateOption rate)
+    {
+        switch (rate)
+        {
+            case Params::RATE_1_2:  return rate1_2Icon.get();
+            case Params::RATE_1_4:  return rate1_4Icon.get();
+            case Params::RATE_1_8:  return rate1_8Icon.get();
+            case Params::RATE_1_16: return rate1_16Icon.get();
+            default: return nullptr;
+        }
+    }
 };

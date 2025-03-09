@@ -25,7 +25,6 @@ void Reverb::setSettings(Params::FxSettings s) {
 
     // Update JUCE reverb parameters based on our settings
     juceReverbParams.roomSize = settings.reverbTime / 100.0f;
-    juceReverbParams.damping = settings.reverbDamping / 100.0f;
     juceReverbParams.width = settings.reverbWidth / 100.0f;
     juceReverb.setParameters(juceReverbParams);
 }

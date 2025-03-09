@@ -79,6 +79,12 @@ void SampleManager::addSample(const juce::File& file)
         // If it's the first sample, select it
         if (sampleList.size() == 1)
             currentSelectedSample = 0;
+            
+        // Update valid samples lists for all rates since we added a new sample
+        for (int i = 0; i < Params::NUM_RATE_OPTIONS; ++i)
+        {
+            updateValidSamplesForRate(static_cast<Params::RateOption>(i));
+        }
     }
 }
 
@@ -113,6 +119,12 @@ void SampleManager::removeSamples(int startIdx, int endIdx)
     }
 
     rebuildSounds();
+    
+    // Update valid samples lists for all rates since we removed samples
+    for (int i = 0; i < Params::NUM_RATE_OPTIONS; ++i)
+    {
+        updateValidSamplesForRate(static_cast<Params::RateOption>(i));
+    }
 }
 
 void SampleManager::rebuildSounds()
@@ -170,252 +182,116 @@ void SampleManager::clearAllSamples()
     currentSelectedSample = -1;
     currentPlayIndex = -1;
     isAscending = true;
+    
+    // Clear all valid samples lists
+    validSamples_1_2.clear();
+    validSamples_1_4.clear();
+    validSamples_1_8.clear();
+    validSamples_1_16.clear();
 }
 
-int SampleManager::getNextSampleIndex(Params::DirectionType direction)
+int SampleManager::getNextSampleIndex(Params::DirectionType direction, Params::RateOption currentRate)
 {
-    if (sampleList.empty())
+    const auto& validSamples = getValidSamplesForRate(currentRate);
+    
+    if (validSamples.empty())
         return -1;
 
-    // If only one sample, always return it
-    if (sampleList.size() == 1)
-        return 0;
+    // If only one valid sample, always return it
+    if (validSamples.size() == 1)
+        return validSamples[0];
 
-    int nextIndex = 0;
+    // Find the current play index in the valid samples list
+    int currentValidIndex = -1;
+    if (currentPlayIndex >= 0)
+    {
+        for (size_t i = 0; i < validSamples.size(); ++i)
+        {
+            if (validSamples[i] == currentPlayIndex)
+            {
+                currentValidIndex = i;
+                break;
+            }
+        }
+    }
+    
+    // If current index not found, start from beginning
+    if (currentValidIndex < 0)
+    {
+        currentValidIndex = 0;
+    }
 
+    int nextValidIndex = currentValidIndex;
     switch (direction)
     {
         case Params::LEFT: // Sequential backward
         {
-            if (currentPlayIndex < 0)
-                currentPlayIndex = currentSelectedSample >= 0 ? currentSelectedSample : 0;
-
-            // Move backward (left)
-            currentPlayIndex--;
-            if (currentPlayIndex < 0)
-                currentPlayIndex = sampleList.size() - 1;
-
-            nextIndex = currentPlayIndex;
+            nextValidIndex = (currentValidIndex - 1 + validSamples.size()) % validSamples.size();
             break;
         }
 
         case Params::BIDIRECTIONAL: // Ping-pong between samples
         {
-            if (currentPlayIndex < 0)
-                currentPlayIndex = currentSelectedSample >= 0 ? currentSelectedSample : 0;
-
             if (isAscending)
             {
-                currentPlayIndex++;
-                if (currentPlayIndex >= sampleList.size())
+                nextValidIndex = currentValidIndex + 1;
+                if (nextValidIndex >= validSamples.size())
                 {
-                    currentPlayIndex = sampleList.size() - 2;
+                    nextValidIndex = validSamples.size() - 2;
                     isAscending = false;
-
-                    // Special case for just 2 samples
-                    if (currentPlayIndex < 0)
-                        currentPlayIndex = 0;
+                    if (nextValidIndex < 0)
+                        nextValidIndex = 0;
                 }
             }
             else
             {
-                currentPlayIndex--;
-                if (currentPlayIndex < 0)
+                nextValidIndex = currentValidIndex - 1;
+                if (nextValidIndex < 0)
                 {
-                    currentPlayIndex = 1;
+                    nextValidIndex = 1;
                     isAscending = true;
-
-                    // Special case for just 2 samples
-                    if (currentPlayIndex >= sampleList.size())
-                        currentPlayIndex = 0;
+                    if (nextValidIndex >= validSamples.size())
+                        nextValidIndex = 0;
                 }
             }
-
-            nextIndex = currentPlayIndex;
             break;
         }
 
         case Params::RIGHT: // Sequential forward
         {
-            if (currentPlayIndex < 0)
-                currentPlayIndex = currentSelectedSample >= 0 ? currentSelectedSample : 0;
-
-            // Move forward (right)
-            currentPlayIndex++;
-            if (currentPlayIndex >= sampleList.size())
-                currentPlayIndex = 0;
-
-            nextIndex = currentPlayIndex;
+            nextValidIndex = (currentValidIndex + 1) % validSamples.size();
             break;
         }
 
-        case Params::RANDOM: // Random selection
-        default:
+        case Params::RANDOM: // Random selection with probability
         {
-            // Collect all ungrouped samples
-            std::vector<int> ungroupedIndices;
-            for (size_t i = 0; i < sampleList.size(); ++i)
+            // Calculate total probability for valid samples
+            float totalProbability = 0.0f;
+            for (int idx : validSamples)
             {
-                if (sampleList[i]->groupIndex == -1)
-                {
-                    ungroupedIndices.push_back(i);
-                }
+                totalProbability += sampleList[idx]->probability;
             }
-            
-            // If groups exist, consider both groups and ungrouped samples
-            if (!groups.empty())
+
+            // Select based on probability
+            float randomValue = juce::Random::getSystemRandom().nextFloat() * totalProbability;
+            float runningTotal = 0.0f;
+
+            for (size_t i = 0; i < validSamples.size(); ++i)
             {
-                // Calculate total probability across all groups and the "ungrouped" group
-                float totalGroupProbability = 0.0f;
-                
-                // Add probability for each real group
-                for (const auto& group : groups)
+                runningTotal += sampleList[validSamples[i]]->probability;
+                if (randomValue <= runningTotal)
                 {
-                    if (!group->sampleIndices.empty())
-                        totalGroupProbability += group->probability;
-                }
-                
-                // Add a default probability for ungrouped samples
-                // Use 1.0 as the default probability for the "ungrouped group"
-                float ungroupedProbability = 1.0f;
-                
-                // Only include ungrouped probability if we have ungrouped samples
-                if (!ungroupedIndices.empty())
-                    totalGroupProbability += ungroupedProbability;
-                
-                // If we have no total probability, just pick a random sample
-                if (totalGroupProbability <= 0.0f)
-                {
-                    nextIndex = juce::Random::getSystemRandom().nextInt(sampleList.size());
-                    currentPlayIndex = nextIndex;
+                    nextValidIndex = i;
                     break;
                 }
-                
-                // Randomly select a group or ungrouped samples
-                float randomValue = juce::Random::getSystemRandom().nextFloat() * totalGroupProbability;
-                
-                float runningTotal = 0.0f;
-                
-                // Check if we should select from real groups
-                for (const auto& group : groups)
-                {
-                    if (group->sampleIndices.empty())
-                        continue;
-                        
-                    runningTotal += group->probability;
-                    
-                    if (randomValue <= runningTotal)
-                    {
-                        // We've selected this group, now pick a sample from within it
-                        if (group->sampleIndices.size() == 1)
-                            return group->sampleIndices[0];
-                            
-                        // Calculate total probability for samples in this group
-                        float totalSampleProbability = 0.0f;
-                        for (int idx : group->sampleIndices)
-                        {
-                            if (idx >= 0 && idx < sampleList.size())
-                                totalSampleProbability += sampleList[idx]->probability;
-                        }
-                        
-                        // Select a sample based on probability
-                        float sampleRandomValue = juce::Random::getSystemRandom().nextFloat() * totalSampleProbability;
-                        float sampleRunningTotal = 0.0f;
-                        
-                        for (int idx : group->sampleIndices)
-                        {
-                            if (idx >= 0 && idx < sampleList.size())
-                            {
-                                sampleRunningTotal += sampleList[idx]->probability;
-                                if (sampleRandomValue <= sampleRunningTotal)
-                                    return idx;
-                            }
-                        }
-                        
-                        // Fallback - shouldn't reach here
-                        return group->sampleIndices[0];
-                    }
-                }
-                
-                // If we got here, we should select from ungrouped samples
-                // This happens when randomValue > sum of all real group probabilities
-                if (!ungroupedIndices.empty())
-                {
-                    if (ungroupedIndices.size() == 1)
-                        return ungroupedIndices[0];
-                        
-                    // Calculate total probability for ungrouped samples
-                    float totalUngroupedProbability = 0.0f;
-                    for (int idx : ungroupedIndices)
-                    {
-                        totalUngroupedProbability += sampleList[idx]->probability;
-                    }
-                    
-                    // Select a sample based on probability
-                    float sampleRandomValue = juce::Random::getSystemRandom().nextFloat() * totalUngroupedProbability;
-                    float sampleRunningTotal = 0.0f;
-                    
-                    for (int idx : ungroupedIndices)
-                    {
-                        sampleRunningTotal += sampleList[idx]->probability;
-                        if (sampleRandomValue <= sampleRunningTotal)
-                        {
-                            nextIndex = idx;
-                            break;
-                        }
-                    }
-                    
-                    // Fallback
-                    if (nextIndex == 0 && !ungroupedIndices.empty())
-                        nextIndex = ungroupedIndices[0];
-                }
-                else
-                {
-                    // No ungrouped samples, so pick from a random group
-                    if (!groups.empty() && !groups[0]->sampleIndices.empty())
-                        nextIndex = groups[0]->sampleIndices[0];
-                    else
-                        nextIndex = 0;
-                }
             }
-            else
-            {
-                // No groups, just do normal random selection across all samples
-                if (sampleList.size() > 1)
-                {
-                    // Calculate total probability
-                    float totalProbability = 0.0f;
-                    for (size_t i = 0; i < sampleList.size(); ++i)
-                    {
-                        totalProbability += sampleList[i]->probability;
-                    }
-                    
-                    // Select based on probability
-                    float randomValue = juce::Random::getSystemRandom().nextFloat() * totalProbability;
-                    float runningTotal = 0.0f;
-                    
-                    for (size_t i = 0; i < sampleList.size(); ++i)
-                    {
-                        runningTotal += sampleList[i]->probability;
-                        if (randomValue <= runningTotal)
-                        {
-                            nextIndex = i;
-                            break;
-                        }
-                    }
-                }
-                else
-                {
-                    nextIndex = 0;
-                }
-            }
-            
-            currentPlayIndex = nextIndex;
             break;
         }
     }
 
-    return nextIndex;
+    // Update current play index and return the actual sample index
+    currentPlayIndex = validSamples[nextValidIndex];
+    return currentPlayIndex;
 }
 
 juce::String SampleManager::getSampleName(int index) const
@@ -581,4 +457,74 @@ void SampleManager::removeSampleFromGroup(int sampleIndex)
     // If the group is now empty, remove it
     if (sampleIndices.empty())
         removeGroup(groupIndex);
+}
+
+void SampleManager::setSampleRateEnabled(int sampleIndex, Params::RateOption rate, bool enabled)
+{
+    if (sampleIndex >= 0 && sampleIndex < sampleList.size())
+    {
+        auto& sample = sampleList[sampleIndex];
+        switch (rate)
+        {
+            case Params::RATE_1_2:  sample->rate_1_2_enabled = enabled; break;
+            case Params::RATE_1_4:  sample->rate_1_4_enabled = enabled; break;
+            case Params::RATE_1_8:  sample->rate_1_8_enabled = enabled; break;
+            case Params::RATE_1_16: sample->rate_1_16_enabled = enabled; break;
+            default: break;
+        }
+        
+        // Update the valid samples list for this rate
+        updateValidSamplesForRate(rate);
+    }
+}
+
+bool SampleManager::isSampleRateEnabled(int sampleIndex, Params::RateOption rate) const
+{
+    if (sampleIndex >= 0 && sampleIndex < sampleList.size())
+    {
+        const auto& sample = sampleList[sampleIndex];
+        switch (rate)
+        {
+            case Params::RATE_1_2:  return sample->rate_1_2_enabled;
+            case Params::RATE_1_4:  return sample->rate_1_4_enabled;
+            case Params::RATE_1_8:  return sample->rate_1_8_enabled;
+            case Params::RATE_1_16: return sample->rate_1_16_enabled;
+            default: break;
+        }
+    }
+    return false;
+}
+
+void SampleManager::updateValidSamplesForRate(Params::RateOption rate)
+{
+    std::vector<int>* targetList = nullptr;
+    switch (rate)
+    {
+        case Params::RATE_1_2:  targetList = &validSamples_1_2; break;
+        case Params::RATE_1_4:  targetList = &validSamples_1_4; break;
+        case Params::RATE_1_8:  targetList = &validSamples_1_8; break;
+        case Params::RATE_1_16: targetList = &validSamples_1_16; break;
+        default: return;
+    }
+    
+    targetList->clear();
+    for (size_t i = 0; i < sampleList.size(); ++i)
+    {
+        if (isSampleRateEnabled(i, rate))
+        {
+            targetList->push_back(i);
+        }
+    }
+}
+
+const std::vector<int>& SampleManager::getValidSamplesForRate(Params::RateOption rate) const
+{
+    switch (rate)
+    {
+        case Params::RATE_1_2:  return validSamples_1_2;
+        case Params::RATE_1_4:  return validSamples_1_4;
+        case Params::RATE_1_8:  return validSamples_1_8;
+        case Params::RATE_1_16: return validSamples_1_16;
+        default: return validSamples_1_4; // Default to quarter notes
+    }
 }

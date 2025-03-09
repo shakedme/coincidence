@@ -43,10 +43,6 @@ EffectsSection::EffectsSection(PluginEditor& e, PluginProcessor& p)
     initKnob(reverbTimeKnob, "Reverb Time", "reverb_time", 0, 100, 0.1, "%");
     initLabel(reverbTimeLabel, "TIME");
 
-    // Damping knob
-    initKnob(reverbDampingKnob, "Reverb Damping", "reverb_damping", 0, 100, 0.1, "%");
-    initLabel(reverbDampingLabel, "DAMPING");
-
     // Width knob
     initKnob(reverbWidthKnob, "Reverb Width", "reverb_width", 0, 100, 0.1, "%");
     initLabel(reverbWidthLabel, "WIDTH");
@@ -63,10 +59,6 @@ EffectsSection::EffectsSection(PluginEditor& e, PluginProcessor& p)
     sliderAttachments.push_back(
         std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
             processor.parameters, "reverb_time", *reverbTimeKnob));
-
-    sliderAttachments.push_back(
-        std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-            processor.parameters, "reverb_damping", *reverbDampingKnob));
 
     sliderAttachments.push_back(
         std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
@@ -125,9 +117,9 @@ void EffectsSection::resized()
     const int reverbSectionWidth = divider2X - divider1X;
     
     // Calculate spacing to fit 5 knobs within the section
-    const int totalKnobWidth = 5 * knobSize;  // Width of all knobs combined
+    const int totalKnobWidth = 4 * knobSize;  // Width of all knobs combined
     const int remainingSpace = reverbSectionWidth - totalKnobWidth;  // Space left for gaps
-    const int gap = remainingSpace / 6;  // Divide remaining space into 6 gaps (including edges)
+    const int gap = remainingSpace / 5;  // Divide remaining space into 6 gaps (including edges)
 
     // Position stutter knob
     stutterKnob->setBounds(stutterX, rowY, knobSize, knobSize);
@@ -146,11 +138,7 @@ void EffectsSection::resized()
     currentX += knobSize + gap;
     reverbProbabilityKnob->setBounds(currentX, rowY, knobSize, knobSize);
     reverbProbabilityLabel->setBounds(currentX, rowY + knobSize, knobSize, labelHeight);
-    
-    currentX += knobSize + gap;
-    reverbDampingKnob->setBounds(currentX, rowY, knobSize, knobSize);
-    reverbDampingLabel->setBounds(currentX, rowY + knobSize, knobSize, labelHeight);
-    
+
     currentX += knobSize + gap;
     reverbWidthKnob->setBounds(currentX, rowY, knobSize, knobSize);
     reverbWidthLabel->setBounds(currentX, rowY + knobSize, knobSize, labelHeight);

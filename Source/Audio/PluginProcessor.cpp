@@ -90,7 +90,6 @@ void PluginProcessor::updateFxSettingsFromParameters()
     fxSettings.reverbMix = *parameters.getRawParameterValue("reverb_mix");
     fxSettings.reverbProbability = *parameters.getRawParameterValue("reverb_probability");
     fxSettings.reverbTime = *parameters.getRawParameterValue("reverb_time");
-    fxSettings.reverbDamping = *parameters.getRawParameterValue("reverb_damping");
     fxSettings.reverbWidth = *parameters.getRawParameterValue("reverb_width");
 
     fxEngine->setSettings(fxSettings);

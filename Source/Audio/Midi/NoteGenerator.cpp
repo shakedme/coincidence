@@ -212,7 +212,7 @@ void NoteGenerator::playNewNote(Params::RateOption selectedRate,
     if (processor.getSampleManager().isSampleLoaded())
     {
         Params::DirectionType sampleDirection = processor.getSampleDirectionType();
-        sampleIndex = processor.getSampleManager().getNextSampleIndex(sampleDirection);
+        sampleIndex = processor.getSampleManager().getNextSampleIndex(sampleDirection, selectedRate);
     }
 
     int bufferSize = processor.getBlockSize();
