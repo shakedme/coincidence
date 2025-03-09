@@ -43,4 +43,10 @@ private:
     
     // Track active reverb effects
     ActiveReverb activeReverb;
+    
+    // Minimum time between reverb triggers (3 seconds)
+    const double MIN_TIME_BETWEEN_TRIGGERS_SECONDS = 5.0;
+    
+    // Track the last time the reverb was triggered
+    juce::int64 lastTriggerSample = 0;
 };

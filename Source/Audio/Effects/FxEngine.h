@@ -4,6 +4,7 @@
 #include "../Shared/TimingManager.h"
 #include "Stutter.h"
 #include "Reverb.h"
+#include "Delay.h"
 
 // Forward declarations
 class PluginProcessor;
@@ -24,6 +25,7 @@ public:
 private:
     std::unique_ptr<Stutter> stutterEffect;
     std::unique_ptr<Reverb> reverbEffect;
+    std::unique_ptr<Delay> delayEffect;
     std::shared_ptr<TimingManager> timingManager;
     PluginProcessor& processor;
 
@@ -33,4 +35,5 @@ private:
 
     void updateTimingInfo(juce::AudioPlayHead* playHead);
     std::vector<juce::int64> checkForMidiTriggers(const juce::MidiBuffer& midiMessages);
+    std::vector<juce::int64> getNoteDurations(const std::vector<juce::int64>& triggerPositions);
 };

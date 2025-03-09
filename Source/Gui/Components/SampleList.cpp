@@ -10,7 +10,9 @@ SampleList::SampleList(PluginProcessor &p)
 
     // Disable automatic row selection toggling - we'll handle this manually
     sampleListBox->setClickingTogglesRowSelection(false);
-
+    
+    // Disable horizontal scrolling to prevent overflow
+    sampleListBox->getHorizontalScrollBar().setVisible(false);
 
     // Make the list box transparent
     sampleListBox->setColour(juce::ListBox::backgroundColourId,
@@ -39,8 +41,16 @@ void SampleList::resized() {
     // Sample list takes up the entire component
     sampleListBox->setBounds(getLocalBounds());
 
-    // Update the single column to full width
-    sampleListBox->getHeader().setColumnWidth(1, getWidth());
+    // Update the single column to exactly match the width of the viewport
+    // This prevents horizontal scrollbar from appearing
+    int viewportWidth = getWidth();
+    if (sampleListBox->getViewport() != nullptr) {
+        viewportWidth = sampleListBox->getViewport()->getViewWidth();
+    }
+    sampleListBox->getHeader().setColumnWidth(1, viewportWidth);
+
+    // Ensure the entire row width matches the column width
+    sampleListBox->setMinimumContentWidth(viewportWidth);
 }
 
 int SampleList::getNumRows() {

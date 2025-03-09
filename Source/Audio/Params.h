@@ -30,6 +30,12 @@ struct FxSettings
     float reverbTime = 50.0f;             // 0-100% (reverb decay time)
     float reverbDamping = 50.0f;          // 0-100% (high frequency damping)
     float reverbWidth = 100.0f;           // 0-100% (stereo width)
+    float delayMix = 50.0f;               // 0-100% (dry/wet mix)
+    float delayProbability = 0.0f;        // 0-100% (chance of applying delay)
+    float delayRate = 50.0f;              // 0-100% (delay time in milliseconds or BPM sync)
+    float delayFeedback = 50.0f;          // 0-100% (amount of feedback in the delay)
+    bool delayPingPong = false;           // Ping pong mode (true) or normal (false)
+    bool delayBpmSync = true;             // BPM sync mode (true) or milliseconds (false)
 };
 
 // Scale types

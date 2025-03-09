@@ -26,9 +26,6 @@ public:
             {
                 drawable = juce::Drawable::createFromSVG(*xml);
             }
-
-            // Debug output
-            DBG("SVG parsed: " + juce::String(drawable != nullptr ? "yes" : "no"));
         }
     }
 
@@ -99,11 +96,11 @@ private:
 class TextIcon : public juce::Component, public juce::SettableTooltipClient
 {
 public:
-    TextIcon(const juce::String& text, float size = 16.0f)
-        : iconText(text), iconSize(size)
+    TextIcon(const juce::String& text, float width = 16.0f, float height = 16.0f)
+        : iconText(text), iconWidth(width), iconHeight(height)
     {
         setInterceptsMouseClicks(true, false);
-        setSize(size, size);
+        setSize(width, height);
         
         // Set a property to identify this as an icon component
         getProperties().set("icon", true);
@@ -122,17 +119,9 @@ public:
         if (isMouseButtonDown())
             currentColor = currentColor.brighter(0.5f);
 
-        // Draw a background circle to match SVG icons
-        g.setColour(currentColor.withAlpha(0.2f));
-        g.fillEllipse(getLocalBounds().toFloat().reduced(2.0f));
-        
-        // Draw outline
-        g.setColour(currentColor);
-        g.drawEllipse(getLocalBounds().toFloat().reduced(2.0f), 1.0f);
-        
         // Draw the text
         g.setColour(currentColor);
-        g.setFont(juce::Font(iconSize * 0.75f).boldened());
+        g.setFont(juce::Font(juce::FontOptions(iconHeight * 0.8f)).boldened());
         g.drawText(iconText, getLocalBounds(), juce::Justification::centred);
     }
 
@@ -166,7 +155,8 @@ public:
 
 private:
     juce::String iconText;
-    float iconSize;
+    float iconWidth;
+    float iconHeight;
     juce::Colour normalColour = juce::Colours::lightgrey;
     juce::Colour activeColour = juce::Colour(0xff52bfd9);
     bool isActive = false;

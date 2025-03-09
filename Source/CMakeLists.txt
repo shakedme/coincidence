@@ -46,6 +46,7 @@ target_sources(${BaseTargetName} PRIVATE
         Audio/Effects/FxEngine.cpp
         Audio/Effects/Stutter.cpp
         Audio/Effects/Reverb.cpp
+        Audio/Effects/Delay.cpp
         )
 
 target_compile_definitions(${BaseTargetName}

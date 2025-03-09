@@ -6,6 +6,7 @@
 #define JUCECMAKEREPO_GLITCHSECTION_H
 
 #include "BaseSection.h"
+#include "../Components/Toggle.h"
 
 class EffectsSection : public BaseSectionComponent
 {
@@ -19,6 +20,7 @@ private:
     // UI Components
     std::unique_ptr<juce::Slider> stutterKnob;
     std::unique_ptr<juce::Label> stutterLabel;
+    std::unique_ptr<juce::Label> stutterSectionLabel;
     
     // Reverb UI Components
     std::unique_ptr<juce::Slider> reverbMixKnob;
@@ -34,6 +36,28 @@ private:
 
     std::unique_ptr<juce::Slider> reverbWidthKnob;
     std::unique_ptr<juce::Label> reverbWidthLabel;
+    
+    // Delay UI Components
+    std::unique_ptr<juce::Slider> delayMixKnob;
+    std::unique_ptr<juce::Slider> delayProbabilityKnob;
+    std::unique_ptr<juce::Slider> delayRateKnob;
+    std::unique_ptr<juce::Slider> delayFeedbackKnob;
+    std::unique_ptr<Toggle> delayPingPongToggle;
+    std::unique_ptr<Toggle> delayBpmSyncToggle;
+    std::unique_ptr<juce::Label> delayMixLabel;
+    std::unique_ptr<juce::Label> delayProbabilityLabel;
+    std::unique_ptr<juce::Label> delayRateLabel;
+    std::unique_ptr<juce::Label> delayFeedbackLabel;
+    
+    std::unique_ptr<juce::Label> delaySectionLabel;
+    
+    // Helper methods
+    void updateDelayRateKnobTooltip();
+    void updatePingPongTooltip();
+    void updateBpmSyncTooltip();
+    
+    // Parameter attachments for sliders
+    std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>> sliderAttachments;
 };
 
 #endif //JUCECMAKEREPO_GLITCHSECTION_H

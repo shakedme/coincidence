@@ -108,6 +108,25 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
 
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         "reverb_width", "Reverb Width", 0.0f, 100.0f, 100.0f));
+        
+    // Delay parameters
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "delay_mix", "Delay Mix", 0.0f, 100.0f, 50.0f));
+
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "delay_probability", "Delay Probability", 0.0f, 100.0f, 0.0f));
+
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "delay_rate", "Delay Rate", 0.0f, 100.0f, 50.0f));
+    
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "delay_feedback", "Delay Feedback", 0.0f, 100.0f, 50.0f));
+        
+    layout.add(std::make_unique<juce::AudioParameterBool>(
+        "delay_ping_pong", "Delay Ping Pong", false));
+
+    layout.add(std::make_unique<juce::AudioParameterBool>(
+        "delay_bpm_sync", "Delay BPM Sync", true));
 
     return layout;
 }

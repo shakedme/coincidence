@@ -120,14 +120,17 @@ void Reverb::applyReverbEffect(juce::AudioBuffer<float> &buffer,
                     }
                 }
             }
-                // Handle new trigger position (only the first one)
+            // Handle new trigger position (only the first one)
             else if (!triggerSamplePositions.empty()) {
                 int startSample = triggerSamplePositions[0];
                 if (startSample >= 0 && startSample < buffer.getNumSamples()) {
+                    // Update the last trigger time
+                    lastTriggerSample = timingManager->getSamplePosition() + startSample;
+                    
                     juce::int64 noteDuration = (!noteDurations.empty()) ? juce::jmax(noteDurations[0],
                                                                                      static_cast<juce::int64>(
                                                                                              sampleRate * 3)) :
-                                               static_cast<juce::int64>(sampleRate * 3);  // 1 second fallback
+                                               static_cast<juce::int64>(sampleRate * 3);  // 3 second fallback
 
                     // Start a new reverb effect
                     activeReverb = {
@@ -173,6 +176,13 @@ bool Reverb::shouldApplyReverb() {
 
     if (settings.reverbProbability <= 0.0f)
         return false;
+        
+    // Check if minimum time between triggers has passed
+    juce::int64 currentSample = timingManager->getSamplePosition();
+    juce::int64 minSamplesBetweenTriggers = static_cast<juce::int64>(MIN_TIME_BETWEEN_TRIGGERS_SECONDS * sampleRate);
+    
+    if (currentSample - lastTriggerSample < minSamplesBetweenTriggers)
+        return false;  // Not enough time has passed since last trigger
 
     // Use juce::Random instead of rand() for better randomization
     return juce::Random::getSystemRandom().nextFloat() * 100.0f <= settings.reverbProbability;

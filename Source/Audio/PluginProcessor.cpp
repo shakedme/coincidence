@@ -91,6 +91,14 @@ void PluginProcessor::updateFxSettingsFromParameters()
     fxSettings.reverbProbability = *parameters.getRawParameterValue("reverb_probability");
     fxSettings.reverbTime = *parameters.getRawParameterValue("reverb_time");
     fxSettings.reverbWidth = *parameters.getRawParameterValue("reverb_width");
+    
+    // Update delay settings from parameters
+    fxSettings.delayMix = *parameters.getRawParameterValue("delay_mix");
+    fxSettings.delayProbability = *parameters.getRawParameterValue("delay_probability");
+    fxSettings.delayRate = *parameters.getRawParameterValue("delay_rate");
+    fxSettings.delayFeedback = *parameters.getRawParameterValue("delay_feedback");
+    fxSettings.delayPingPong = *parameters.getRawParameterValue("delay_ping_pong") > 0.5f;
+    fxSettings.delayBpmSync = *parameters.getRawParameterValue("delay_bpm_sync") > 0.5f;
 
     fxEngine->setSettings(fxSettings);
 }
@@ -263,6 +271,12 @@ void PluginProcessor::getStateInformation(juce::MemoryBlock& destData)
         
         // Add sample probability
         sampleXml->setAttribute("probability", sampleManager.getSampleProbability(i));
+        
+        // Save rate toggle values
+        sampleXml->setAttribute("rate_1_2_enabled", sampleManager.isSampleRateEnabled(i, Params::RATE_1_2));
+        sampleXml->setAttribute("rate_1_4_enabled", sampleManager.isSampleRateEnabled(i, Params::RATE_1_4));
+        sampleXml->setAttribute("rate_1_8_enabled", sampleManager.isSampleRateEnabled(i, Params::RATE_1_8));
+        sampleXml->setAttribute("rate_1_16_enabled", sampleManager.isSampleRateEnabled(i, Params::RATE_1_16));
 
         samplesXml->addChildElement(sampleXml);
     }
@@ -385,6 +399,31 @@ void PluginProcessor::setStateInformation(const void* data, int sizeInBytes)
                                 {
                                     float probability = (float)sampleXml->getDoubleAttribute("probability", 1.0);
                                     sampleManager.setSampleProbability(newSampleIndex, probability);
+                                }
+                                
+                                // Restore rate toggle values if they exist
+                                if (sampleXml->hasAttribute("rate_1_2_enabled"))
+                                {
+                                    bool enabled = sampleXml->getBoolAttribute("rate_1_2_enabled", true);
+                                    sampleManager.setSampleRateEnabled(newSampleIndex, Params::RATE_1_2, enabled);
+                                }
+                                
+                                if (sampleXml->hasAttribute("rate_1_4_enabled"))
+                                {
+                                    bool enabled = sampleXml->getBoolAttribute("rate_1_4_enabled", true);
+                                    sampleManager.setSampleRateEnabled(newSampleIndex, Params::RATE_1_4, enabled);
+                                }
+                                
+                                if (sampleXml->hasAttribute("rate_1_8_enabled"))
+                                {
+                                    bool enabled = sampleXml->getBoolAttribute("rate_1_8_enabled", true);
+                                    sampleManager.setSampleRateEnabled(newSampleIndex, Params::RATE_1_8, enabled);
+                                }
+                                
+                                if (sampleXml->hasAttribute("rate_1_16_enabled"))
+                                {
+                                    bool enabled = sampleXml->getBoolAttribute("rate_1_16_enabled", true);
+                                    sampleManager.setSampleRateEnabled(newSampleIndex, Params::RATE_1_16, enabled);
                                 }
                                 
                                 // Store group index for later assignment (after all groups are loaded)
