@@ -4,8 +4,9 @@
 #include <cmath>
 #include <random>
 
-Reverb::Reverb(std::shared_ptr<TimingManager> t)
-        : timingManager(t) {
+Reverb::Reverb(std::shared_ptr<TimingManager> t, SampleManager& sm)
+        : BaseEffect(t, sm, 3.0) // 3.0 seconds between triggers
+{
     // Initialize JUCE reverb parameters with good default values
     juceReverbParams.roomSize = 0.8f;      // Large room size
     juceReverbParams.damping = 0.5f;       // Moderate damping
@@ -17,11 +18,11 @@ Reverb::Reverb(std::shared_ptr<TimingManager> t)
     juceReverb.setParameters(juceReverbParams);
 
     // Initialize active reverb state
-    activeReverb = {0, 0, 0, false};
+    activeReverb = {};
 }
 
 void Reverb::setSettings(Params::FxSettings s) {
-    settings = s;
+    BaseEffect::setSettings(s);
 
     // Update JUCE reverb parameters based on our settings
     juceReverbParams.roomSize = settings.reverbTime / 100.0f;
@@ -30,28 +31,26 @@ void Reverb::setSettings(Params::FxSettings s) {
 }
 
 void Reverb::prepareToPlay(double sampleRate, int samplesPerBlock) {
-    this->sampleRate = sampleRate;
-    this->currentBufferSize = samplesPerBlock;
+    BaseEffect::prepareToPlay(sampleRate, samplesPerBlock);
 
     // Prepare JUCE reverb
     juceReverb.setSampleRate(sampleRate);
 
     // Reset active reverb state
-    activeReverb = {0, 0, 0, false};
+    activeReverb = {};
 }
 
 void Reverb::releaseResources() {
+    BaseEffect::releaseResources();
     // Nothing to release for JUCE reverb
 }
 
 void Reverb::applyReverbEffect(juce::AudioBuffer<float> &buffer,
                                const std::vector<juce::int64> &triggerSamplePositions,
                                const std::vector<juce::int64> &noteDurations) {
-    // Get the current sample index 
-    int currentSampleIndex = SamplerVoice::getCurrentSampleIndex();
 
-    // Check if we should apply reverb based on probability or if the sample has reverb forcibly enabled
-    if (shouldApplyReverb() || shouldApplyReverbForSample(currentSampleIndex)) {
+    // Check if we should apply reverb based on probability
+    if (shouldApplyReverb()) {
         // Create a temporary buffer for the wet signal
         juce::AudioBuffer<float> reverbBuffer;
         reverbBuffer.makeCopyOf(buffer);
@@ -69,133 +68,115 @@ void Reverb::applyReverbEffect(juce::AudioBuffer<float> &buffer,
         float wetMix = settings.reverbMix / 100.0f;
 
         if (settings.reverbProbability >= 99.9f) {
-            // Apply to entire buffer with proper gain preservation
+            // Apply to entire buffer
             for (int channel = 0; channel < buffer.getNumChannels(); ++channel) {
-                auto *dry = buffer.getWritePointer(channel);
-                auto *wet = reverbBuffer.getReadPointer(channel);
-
-                for (int sample = 0; sample < buffer.getNumSamples(); ++sample) {
-                    // Preserve gain by using equal-power crossfade
-                    float dryGain = std::max(std::cos(wetMix * juce::MathConstants<float>::halfPi), 0.0f);
-                    float wetGain = std::sin(wetMix * juce::MathConstants<float>::halfPi);
-                    dry[sample] = dry[sample] * dryGain + wet[sample] * wetGain;
-                }
+                mixWetDrySignals(buffer.getWritePointer(channel), 
+                                 reverbBuffer.getReadPointer(channel), 
+                                 wetMix, 
+                                 buffer.getNumSamples());
             }
         } else if (!triggerSamplePositions.empty() || activeReverb.isActive) {
-            // Handle ongoing reverb from previous buffer
+            // Handle ongoing reverb
             if (activeReverb.isActive) {
-                // Calculate how much of the reverb is left in this buffer
-                juce::int64 remainingDuration = activeReverb.duration - activeReverb.currentPosition;
-
-                if (remainingDuration > 0) {
-                    // Apply reverb to the remaining duration
-                    int endSample = juce::jmin(buffer.getNumSamples(),
-                                               static_cast<int>(remainingDuration));
-
-                    // Apply reverb with proper gain preservation and fade-out
-                    for (int channel = 0; channel < buffer.getNumChannels(); ++channel) {
-                        auto *dry = buffer.getWritePointer(channel);
-                        auto *wet = reverbBuffer.getReadPointer(channel);
-
-                        for (int sample = 0; sample < endSample; ++sample) {
-                            // Calculate fade-out envelope - only apply to wet signal
-                            float fadeOut = 1.0f - (activeReverb.currentPosition + sample) /
-                                                   static_cast<float>(activeReverb.duration);
-                            fadeOut = juce::jlimit(0.0f, 1.0f, fadeOut);
-
-                            float dryGain = std::max(std::cos(wetMix * juce::MathConstants<float>::halfPi), 0.0f);
-                            float wetGain = std::sin(wetMix * juce::MathConstants<float>::halfPi) * fadeOut;
-
-                            // Properly mix signals to maintain overall volume
-                            dry[sample] = dry[sample] * dryGain + wet[sample] * wetGain;
-                        }
-                    }
-
-                    // Update position
-                    activeReverb.currentPosition += endSample;
-
-                    // Check if reverb is complete
-                    if (activeReverb.currentPosition >= activeReverb.duration) {
-                        activeReverb.isActive = false;
-                    }
-                }
+                processActiveReverb(buffer, reverbBuffer, wetMix);
             }
-            // Handle new trigger position (only the first one)
-            else if (!triggerSamplePositions.empty()) {
-                int startSample = triggerSamplePositions[0];
-                if (startSample >= 0 && startSample < buffer.getNumSamples()) {
-                    // Update the last trigger time
-                    lastTriggerSample = timingManager->getSamplePosition() + startSample;
-                    
-                    juce::int64 noteDuration = (!noteDurations.empty()) ? juce::jmax(noteDurations[0],
-                                                                                     static_cast<juce::int64>(
-                                                                                             sampleRate * 3)) :
-                                               static_cast<juce::int64>(sampleRate * 3);  // 3 second fallback
-
-                    // Start a new reverb effect
-                    activeReverb = {
-                            startSample,
-                            noteDuration,
-                            0,
-                            true
-                    };
-
-                    // Apply reverb to the note region
-                    int endSample = juce::jmin(buffer.getNumSamples(),
-                                               startSample + static_cast<int>(noteDuration));
-
-                    for (int channel = 0; channel < buffer.getNumChannels(); ++channel) {
-                        auto *dry = buffer.getWritePointer(channel);
-                        auto *wet = reverbBuffer.getReadPointer(channel);
-
-                        for (int sample = startSample; sample < endSample; ++sample) {
-                            // Calculate fade-out envelope - only for wet signal
-                            float fadeOut = 1.0f - (sample - startSample) /
-                                                   static_cast<float>(noteDuration);
-                            fadeOut = juce::jlimit(0.0f, 1.0f, fadeOut);
-
-                            float dryGain = std::max(std::cos(wetMix * juce::MathConstants<float>::halfPi), 0.0f);
-                            float wetGain = std::sin(wetMix * juce::MathConstants<float>::halfPi) * fadeOut;
-
-                            // Properly mix signals
-                            dry[sample] = dry[sample] * dryGain + wet[sample] * wetGain;
-                        }
-                    }
-
-                    // Update position
-                    activeReverb.currentPosition = endSample - startSample;
-                }
+            // Handle new trigger
+            else if (!triggerSamplePositions.empty() && !noteDurations.empty() && isReverbEnabledForSample() && hasMinTimePassed()) {
+                processNewReverbTrigger(buffer, reverbBuffer, triggerSamplePositions, noteDurations, wetMix);
             }
         }
     }
 }
 
-bool Reverb::shouldApplyReverb() {
-    if (activeReverb.isActive || settings.reverbProbability >= 100.0f)
-        return true;
+void Reverb::processActiveReverb(juce::AudioBuffer<float>& buffer, 
+                                const juce::AudioBuffer<float>& reverbBuffer, 
+                                float wetMix) {
+    // Calculate how much of the reverb is left in this buffer
+    juce::int64 remainingDuration = activeReverb.duration - activeReverb.currentPosition;
 
-    if (settings.reverbProbability <= 0.0f)
-        return false;
-        
-    // Check if minimum time between triggers has passed
-    juce::int64 currentSample = timingManager->getSamplePosition();
-    juce::int64 minSamplesBetweenTriggers = static_cast<juce::int64>(MIN_TIME_BETWEEN_TRIGGERS_SECONDS * sampleRate);
-    
-    if (currentSample - lastTriggerSample < minSamplesBetweenTriggers)
-        return false;  // Not enough time has passed since last trigger
+    if (remainingDuration > 0) {
+        // Apply reverb to the remaining duration
+        int endSample = juce::jmin(buffer.getNumSamples(), static_cast<int>(remainingDuration));
 
-    // Use juce::Random instead of rand() for better randomization
-    return juce::Random::getSystemRandom().nextFloat() * 100.0f <= settings.reverbProbability;
+        // Apply reverb with proper gain preservation
+        for (int channel = 0; channel < buffer.getNumChannels(); ++channel) {
+            auto *dry = buffer.getWritePointer(channel);
+            auto *wet = reverbBuffer.getReadPointer(channel);
+
+            for (int sample = 0; sample < endSample; ++sample) {
+                // Calculate fade-out envelope
+                float progress = (activeReverb.currentPosition + sample) / static_cast<float>(activeReverb.duration);
+                float fadeOut = 1.0f;
+                applyFadeOut(fadeOut, progress, 0.7f);
+
+                // Mix signals with the calculated fade
+                float dryGain = std::max(std::cos(wetMix * juce::MathConstants<float>::halfPi), 0.0f);
+                float wetGain = std::sin(wetMix * juce::MathConstants<float>::halfPi) * fadeOut;
+                dry[sample] = dry[sample] * dryGain + wet[sample] * wetGain;
+            }
+        }
+
+        // Update position
+        activeReverb.currentPosition += endSample;
+
+        // Check if reverb is complete
+        if (activeReverb.currentPosition >= activeReverb.duration) {
+            activeReverb.isActive = false;
+        }
+    }
 }
 
-bool Reverb::shouldApplyReverbForSample(int sampleIndex) {
-    // Get the currently selected sample
-    auto *sound = SamplerVoice::getCorrectSoundForIndex(sampleIndex);
+void Reverb::processNewReverbTrigger(juce::AudioBuffer<float>& buffer,
+                                    const juce::AudioBuffer<float>& reverbBuffer,
+                                    const std::vector<juce::int64>& triggerSamplePositions,
+                                    const std::vector<juce::int64>& noteDurations,
+                                    float wetMix) {
+    int startSample = triggerSamplePositions[0];
+    if (startSample >= 0 && startSample < buffer.getNumSamples()) {
+        // Update the last trigger time
+        lastTriggerSample = timingManager->getSamplePosition() + startSample;
+        
+        juce::int64 noteDuration = noteDurations[0];
 
-    // Check if the sample exists and has reverb enabled
-    if (sound != nullptr && sound->isReverbEnabled()) {
+        // Start a new reverb effect
+        activeReverb = {
+                startSample,
+                noteDuration,
+                0,
+                true
+        };
+
+        // Apply reverb to the note region
+        int endSample = juce::jmin(buffer.getNumSamples(),
+                                   startSample + static_cast<int>(noteDuration));
+
+        for (int channel = 0; channel < buffer.getNumChannels(); ++channel) {
+            auto *dry = buffer.getWritePointer(channel);
+            auto *wet = reverbBuffer.getReadPointer(channel);
+
+            for (int sample = startSample; sample < endSample; ++sample) {
+                float dryGain = std::max(std::cos(wetMix * juce::MathConstants<float>::halfPi), 0.0f);
+                float wetGain = std::sin(wetMix * juce::MathConstants<float>::halfPi);
+
+                // Properly mix signals
+                dry[sample] = dry[sample] * dryGain + wet[sample] * wetGain;
+            }
+        }
+
+        // Update position
+        activeReverb.currentPosition = endSample - startSample;
+    }
+}
+
+bool Reverb::shouldApplyReverb() {
+    if (activeReverb.isActive) {
         return true;
     }
+    // Apply random probability using the base class method
+    return BaseEffect::shouldApplyEffect(settings.reverbProbability);
+}
 
-    return false;
+bool Reverb::isReverbEnabledForSample() {
+    // Use the base class method with reverb effect type (0)
+    return BaseEffect::isEffectEnabledForSample(0);
 }

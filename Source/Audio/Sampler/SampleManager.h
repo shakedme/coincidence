@@ -38,6 +38,17 @@ public:
         int index;
         float probability = 1.0f; // Default probability value (1.0 = 100%)
         std::vector<int> sampleIndices;
+        
+        // Rate flags - all enabled by default
+        bool rate_1_2_enabled = true;
+        bool rate_1_4_enabled = true;
+        bool rate_1_8_enabled = true;
+        bool rate_1_16_enabled = true;
+        
+        // Effect flags - all enabled by default
+        bool reverb_enabled = true;
+        bool stutter_enabled = true;
+        bool delay_enabled = true;
 
         Group(const juce::String& n, int idx) : name(n), index(idx) {}
     };
@@ -71,9 +82,17 @@ public:
     // Setup
     void prepareToPlay(double sampleRate);
 
-    // Add these declarations in the public section
+    // Sample rate methods
     void setSampleRateEnabled(int sampleIndex, Params::RateOption rate, bool enabled);
     bool isSampleRateEnabled(int sampleIndex, Params::RateOption rate) const;
+    
+    // Group rate methods
+    void setGroupRateEnabled(int groupIndex, Params::RateOption rate, bool enabled);
+    bool isGroupRateEnabled(int groupIndex, Params::RateOption rate) const;
+    
+    // Group effect methods (0=reverb, 1=stutter, 2=delay)
+    void setGroupEffectEnabled(int groupIndex, int effectType, bool enabled);
+    bool isGroupEffectEnabled(int groupIndex, int effectType) const;
 
 private:
     // Current sample state (for playback)

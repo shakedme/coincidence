@@ -5,9 +5,13 @@
 
 FxEngine::FxEngine(std::shared_ptr<TimingManager> t, PluginProcessor &processorRef)
         : timingManager(t), processor(processorRef) {
-    stutterEffect = std::make_unique<Stutter>(timingManager);
-    reverbEffect = std::make_unique<Reverb>(timingManager);
-    delayEffect = std::make_unique<Delay>(timingManager);
+    // Get a reference to the SampleManager
+    auto& sampleManager = processor.getSampleManager();
+    
+    // Create effects with the SampleManager reference
+    stutterEffect = std::make_unique<Stutter>(timingManager, sampleManager);
+    reverbEffect = std::make_unique<Reverb>(timingManager, sampleManager);
+    delayEffect = std::make_unique<Delay>(timingManager, sampleManager);
 }
 
 FxEngine::~FxEngine() {

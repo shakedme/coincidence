@@ -1,22 +1,16 @@
 #include "Delay.h"
+#include "../Sampler/Sampler.h"
 #include <random>
 
-Delay::Delay(std::shared_ptr<TimingManager> t)
-        : timingManager(t), delayTimeInSamples(0.0f) {
-    // Initialize all state
-    activeDelay.isActive = false;
-    activeDelay.startSample = 0;
-    activeDelay.duration = 0;
-    activeDelay.currentPosition = 0;
-
-    // Set a default delay time
-    sampleRate = 44100.0;
-    currentBufferSize = 512;
+Delay::Delay(std::shared_ptr<TimingManager> t, SampleManager &sm)
+        : BaseEffect(t, sm, 5.0) // 5.0 seconds between triggers
+{
+    // Initialize active delay state
+    activeDelay = {};
 }
 
 void Delay::prepareToPlay(double sampleRate, int samplesPerBlock) {
-    this->sampleRate = sampleRate;
-    this->currentBufferSize = samplesPerBlock;
+    BaseEffect::prepareToPlay(sampleRate, samplesPerBlock);
 
     // Maximum delay time of 2 seconds
     const int maxDelayInSamples = static_cast<int>(sampleRate * 2.0);
@@ -42,20 +36,18 @@ void Delay::prepareToPlay(double sampleRate, int samplesPerBlock) {
     delayLineLeft->setDelay(delayTimeInSamples);
     delayLineRight->setDelay(delayTimeInSamples);
 
-    // Initialize active delay state
-    activeDelay.isActive = false;
-    activeDelay.startSample = 0;
-    activeDelay.duration = 0;
-    activeDelay.currentPosition = 0;
+    // Reset active delay state
+    activeDelay = {};
 }
 
 void Delay::releaseResources() {
+    BaseEffect::releaseResources();
     delayLineLeft.reset();
     delayLineRight.reset();
 }
 
 void Delay::setSettings(Params::FxSettings s) {
-    settings = s;
+    BaseEffect::setSettings(s);
 
     // Calculate delay time based on rate parameter
     float delayTimeMs;
@@ -86,7 +78,7 @@ float Delay::calculateDelayTimeFromBPM(float rate) {
 
     // Map rate parameter 0-100 to different note values - use discrete steps
     // 0-10: whole note, 10-30: half note, 30-50: quarter note, 
-    // 50-70: eighth note, 70-90: sixteenth note, 90-100: thirtysecond note
+    // 50-70: eighth note, 70-90: sixteenth note, 90-100: thirty-two second note
     float delayTimeMs;
     const float secondsPerBeat = 60.0f / static_cast<float>(bpm);
 
@@ -110,27 +102,22 @@ float Delay::calculateDelayTimeFromBPM(float rate) {
 }
 
 bool Delay::shouldApplyDelay() {
-    // Check if the effect should be applied based on probability setting
-    if (settings.delayProbability >= 100.0f)
+    if (activeDelay.isActive) {
         return true;
+    }
 
-    if (settings.delayProbability <= 0.0f)
-        return false;
+    // Use base class method for probability check
+    return BaseEffect::shouldApplyEffect(settings.delayProbability);
+}
 
-    // Check if minimum time between triggers has passed
-    juce::int64 currentSample = timingManager->getSamplePosition();
-    juce::int64 minSamplesBetweenTriggers = static_cast<juce::int64>(MIN_TIME_BETWEEN_TRIGGERS_SECONDS * sampleRate);
-
-    if (currentSample - lastTriggerSample < minSamplesBetweenTriggers)
-        return false;  // Not enough time has passed since last trigger
-
-    return juce::Random::getSystemRandom().nextFloat() * 100.0f < settings.delayProbability;
+bool Delay::isDelayEnabledForSample() {
+    // Use the base class method with delay effect type (1)
+    return BaseEffect::isEffectEnabledForSample(1);
 }
 
 void Delay::applyDelayEffect(juce::AudioBuffer<float> &buffer,
                              const std::vector<juce::int64> &triggerSamplePositions,
                              const std::vector<juce::int64> &noteDurations) {
-    // Safety check: make sure delay lines are initialized and buffer has channels
     if (!delayLineLeft || !delayLineRight || buffer.getNumChannels() == 0 || settings.delayMix <= 0.0f)
         return;
 
@@ -172,107 +159,108 @@ void Delay::applyDelayEffect(juce::AudioBuffer<float> &buffer,
     float wetMix = settings.delayMix / 100.0f;
 
     if (settings.delayProbability >= 99.9f) {
-        // Apply to entire buffer with proper gain preservation
+        // Apply to entire buffer
+        for (int channel = 0; channel < buffer.getNumChannels(); ++channel) {
+            mixWetDrySignals(buffer.getWritePointer(channel),
+                             delayBuffer.getReadPointer(channel),
+                             wetMix,
+                             buffer.getNumSamples());
+        }
+    } else if (!triggerSamplePositions.empty() || activeDelay.isActive) {
+        // Handle ongoing delay
+        if (activeDelay.isActive) {
+            processActiveDelay(buffer, delayBuffer, wetMix);
+        }
+            // Handle new trigger position
+        else if (!triggerSamplePositions.empty() && isDelayEnabledForSample() && hasMinTimePassed()) {
+            processNewDelayTrigger(buffer, delayBuffer, triggerSamplePositions, noteDurations, wetMix);
+        }
+    }
+}
+
+void Delay::processActiveDelay(juce::AudioBuffer<float> &buffer,
+                               const juce::AudioBuffer<float> &delayBuffer,
+                               float wetMix) {
+    // Calculate how much of the delay is left in this buffer
+    juce::int64 remainingDuration = activeDelay.duration - activeDelay.currentPosition;
+
+    if (remainingDuration > 0) {
+        // Apply delay to the remaining duration
+        int endSample = juce::jmin(buffer.getNumSamples(), static_cast<int>(remainingDuration));
+
+        // Apply delay with proper gain preservation and fade-out
         for (int channel = 0; channel < buffer.getNumChannels(); ++channel) {
             float *dry = buffer.getWritePointer(channel);
             const float *wet = delayBuffer.getReadPointer(channel);
 
-            for (int sample = 0; sample < buffer.getNumSamples(); ++sample) {
-                // Preserve gain by using equal-power crossfade
+            for (int sample = 0; sample < endSample; ++sample) {
+                // Calculate fade-out envelope
+                float progress = (activeDelay.currentPosition + sample) / static_cast<float>(activeDelay.duration);
+                float fadeOut = 1.0f;
+                applyFadeOut(fadeOut, progress);
+
+                // Mix signals with fade
+                float dryGain = std::max(std::cos(wetMix * juce::MathConstants<float>::halfPi), 0.0f);
+                float wetGain = std::sin(wetMix * juce::MathConstants<float>::halfPi) * fadeOut;
+                dry[sample] = dry[sample] * dryGain + wet[sample] * wetGain;
+            }
+        }
+
+        // Update position
+        activeDelay.currentPosition += endSample;
+
+        // Check if delay is complete
+        if (activeDelay.currentPosition >= activeDelay.duration) {
+            activeDelay.isActive = false;
+        }
+    }
+}
+
+void Delay::processNewDelayTrigger(juce::AudioBuffer<float> &buffer,
+                                   const juce::AudioBuffer<float> &delayBuffer,
+                                   const std::vector<juce::int64> &triggerSamplePositions,
+                                   const std::vector<juce::int64> &noteDurations,
+                                   float wetMix) {
+    int startSample = triggerSamplePositions[0];
+    if (startSample >= 0 && startSample < buffer.getNumSamples()) {
+        // Update the last trigger time
+        lastTriggerSample = timingManager->getSamplePosition() + startSample;
+
+        juce::int64 noteDuration = (!noteDurations.empty()) ?
+                                   juce::jmax(noteDurations[0], static_cast<juce::int64>(sampleRate * 3)) :
+                                   static_cast<juce::int64>(sampleRate * 3);  // 3 second fallback
+
+        // Start a new delay effect
+        activeDelay = {
+                startSample,
+                noteDuration,
+                0,
+                true
+        };
+
+        // Apply delay to the note region
+        int endSample = juce::jmin(buffer.getNumSamples(),
+                                   startSample + static_cast<int>(noteDuration));
+
+        for (int channel = 0; channel < buffer.getNumChannels(); ++channel) {
+            float *dry = buffer.getWritePointer(channel);
+            const float *wet = delayBuffer.getReadPointer(channel);
+
+            for (int sample = startSample; sample < endSample; ++sample) {
                 float dryGain = std::max(std::cos(wetMix * juce::MathConstants<float>::halfPi), 0.0f);
                 float wetGain = std::sin(wetMix * juce::MathConstants<float>::halfPi);
                 dry[sample] = dry[sample] * dryGain + wet[sample] * wetGain;
             }
         }
-    } else if (!triggerSamplePositions.empty() || activeDelay.isActive) {
-        // Handle ongoing delay from previous buffer
-        if (activeDelay.isActive) {
-            // Calculate how much of the delay is left in this buffer
-            juce::int64 remainingDuration = activeDelay.duration - activeDelay.currentPosition;
 
-            if (remainingDuration > 0) {
-                // Apply delay to the remaining duration
-                int endSample = juce::jmin(buffer.getNumSamples(), static_cast<int>(remainingDuration));
-
-                // Apply delay with proper gain preservation and fade-out
-                for (int channel = 0; channel < buffer.getNumChannels(); ++channel) {
-                    float *dry = buffer.getWritePointer(channel);
-                    const float *wet = delayBuffer.getReadPointer(channel);
-
-                    for (int sample = 0; sample < endSample; ++sample) {
-                        // Calculate fade-out envelope - only apply to wet signal
-                        float fadeOut = 1.0f - (activeDelay.currentPosition + sample) /
-                                               static_cast<float>(activeDelay.duration);
-                        fadeOut = juce::jlimit(0.0f, 1.0f, fadeOut);
-
-                        float dryGain = std::max(std::cos(wetMix * juce::MathConstants<float>::halfPi), 0.0f);
-                        float wetGain = std::sin(wetMix * juce::MathConstants<float>::halfPi) * fadeOut;
-
-                        // Properly mix signals to maintain overall volume
-                        dry[sample] = dry[sample] * dryGain + wet[sample] * wetGain;
-                    }
-                }
-
-                // Update position
-                activeDelay.currentPosition += endSample;
-
-                // Check if delay is complete
-                if (activeDelay.currentPosition >= activeDelay.duration) {
-                    activeDelay.isActive = false;
-                }
-            }
-        }
-            // Handle new trigger position (only the first one)
-        else if (!triggerSamplePositions.empty()) {
-            int startSample = triggerSamplePositions[0];
-            if (startSample >= 0 && startSample < buffer.getNumSamples()) {
-                // Update the last trigger time
-                lastTriggerSample = timingManager->getSamplePosition() + startSample;
-
-                juce::int64 noteDuration = (!noteDurations.empty()) ?
-                                           juce::jmax(noteDurations[0], static_cast<juce::int64>(sampleRate * 3)) :
-                                           static_cast<juce::int64>(sampleRate * 3);  // 3 second fallback
-
-                // Start a new delay effect
-                activeDelay = {
-                        startSample,
-                        noteDuration,
-                        0,
-                        true
-                };
-
-                // Apply delay to the note region
-                int endSample = juce::jmin(buffer.getNumSamples(),
-                                           startSample + static_cast<int>(noteDuration));
-
-                for (int channel = 0; channel < buffer.getNumChannels(); ++channel) {
-                    float *dry = buffer.getWritePointer(channel);
-                    const float *wet = delayBuffer.getReadPointer(channel);
-
-                    for (int sample = startSample; sample < endSample; ++sample) {
-                        // Calculate fade-out envelope - only for wet signal
-                        float fadeOut = 1.0f - (sample - startSample) /
-                                               static_cast<float>(noteDuration);
-                        fadeOut = juce::jlimit(0.0f, 1.0f, fadeOut);
-
-                        float dryGain = std::max(std::cos(wetMix * juce::MathConstants<float>::halfPi), 0.0f);
-                        float wetGain = std::sin(wetMix * juce::MathConstants<float>::halfPi) * fadeOut;
-
-                        // Properly mix signals
-                        dry[sample] = dry[sample] * dryGain + wet[sample] * wetGain;
-                    }
-                }
-
-                // Update position
-                activeDelay.currentPosition = endSample - startSample;
-            }
-        }
+        // Update position
+        activeDelay.currentPosition = endSample - startSample;
     }
 }
 
-void Delay::processPingPongDelay(const juce::AudioBuffer<float> &buffer,
-                                 juce::AudioBuffer<float> &delayBuffer,
+void Delay::processPingPongDelay(const juce::AudioBuffer<float> &buffer, juce::AudioBuffer<float> &delayBuffer,
                                  float feedbackAmount, int sample) {
+    // Get current samples for processing
     // Mix left and right inputs to mono
     float monoInput = (buffer.getSample(0, sample) + buffer.getSample(1, sample)) * 0.5f;
 
@@ -291,24 +279,23 @@ void Delay::processPingPongDelay(const juce::AudioBuffer<float> &buffer,
     delayBuffer.setSample(1, sample, rightDelayed);
 }
 
-void Delay::processStereoDelay(const juce::AudioBuffer<float> &buffer, juce::AudioBuffer<float> &delayBuffer,
+void Delay::processStereoDelay(const juce::AudioBuffer<float> &buffer,
+                               juce::AudioBuffer<float> &delayBuffer,
                                float feedbackAmount,
                                int channel,
                                int sample) {
-    // Get input sample
+    // Get current sample for processing
     float inputSample = buffer.getSample(channel, sample);
 
-    // Get delayed sample
-    float delayedSample = (channel == 0) ?
-                          delayLineLeft->popSample(0) :
-                          delayLineRight->popSample(0);
+    // Get the appropriate delay line
+    auto &delayLine = (channel == 0) ? *delayLineLeft : *delayLineRight;
 
-    // Push to delay line with feedback
-    if (channel == 0)
-        delayLineLeft->pushSample(0, inputSample + delayedSample * feedbackAmount);
-    else
-        delayLineRight->pushSample(0, inputSample + delayedSample * feedbackAmount);
+    // Get delayed sample from the delay line
+    float delayedSample = delayLine.popSample(0);
 
-    // Store delayed sample in the delay buffer
+    // Push the input sample WITH feedback to the delay line
+    delayLine.pushSample(0, inputSample + delayedSample * feedbackAmount);
+
+    // Store only the delayed sample in the output buffer
     delayBuffer.setSample(channel, sample, delayedSample);
 }

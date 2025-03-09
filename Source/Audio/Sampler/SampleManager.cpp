@@ -528,3 +528,69 @@ const std::vector<int>& SampleManager::getValidSamplesForRate(Params::RateOption
         default: return validSamples_1_4; // Default to quarter notes
     }
 }
+
+// Group rate methods implementation
+void SampleManager::setGroupRateEnabled(int groupIndex, Params::RateOption rate, bool enabled)
+{
+    if (groupIndex >= 0 && groupIndex < groups.size())
+    {
+        auto& group = groups[groupIndex];
+        switch (rate)
+        {
+            case Params::RATE_1_2:  group->rate_1_2_enabled = enabled; break;
+            case Params::RATE_1_4:  group->rate_1_4_enabled = enabled; break;
+            case Params::RATE_1_8:  group->rate_1_8_enabled = enabled; break;
+            case Params::RATE_1_16: group->rate_1_16_enabled = enabled; break;
+            default: break;
+        }
+    }
+}
+
+bool SampleManager::isGroupRateEnabled(int groupIndex, Params::RateOption rate) const
+{
+    if (groupIndex >= 0 && groupIndex < groups.size())
+    {
+        const auto& group = groups[groupIndex];
+        switch (rate)
+        {
+            case Params::RATE_1_2:  return group->rate_1_2_enabled;
+            case Params::RATE_1_4:  return group->rate_1_4_enabled;
+            case Params::RATE_1_8:  return group->rate_1_8_enabled;
+            case Params::RATE_1_16: return group->rate_1_16_enabled;
+            default: break;
+        }
+    }
+    return false;
+}
+
+// Group effect methods implementation
+void SampleManager::setGroupEffectEnabled(int groupIndex, int effectType, bool enabled)
+{
+    if (groupIndex >= 0 && groupIndex < groups.size())
+    {
+        auto& group = groups[groupIndex];
+        switch (effectType)
+        {
+            case 0: group->reverb_enabled = enabled; break;  // Reverb
+            case 1: group->stutter_enabled = enabled; break; // Stutter
+            case 2: group->delay_enabled = enabled; break;   // Delay
+            default: break;
+        }
+    }
+}
+
+bool SampleManager::isGroupEffectEnabled(int groupIndex, int effectType) const
+{
+    if (groupIndex >= 0 && groupIndex < groups.size())
+    {
+        const auto& group = groups[groupIndex];
+        switch (effectType)
+        {
+            case 0: return group->reverb_enabled;  // Reverb
+            case 1: return group->stutter_enabled; // Stutter
+            case 2: return group->delay_enabled;   // Delay
+            default: break;
+        }
+    }
+    return false;
+}

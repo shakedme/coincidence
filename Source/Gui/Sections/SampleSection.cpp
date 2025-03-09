@@ -17,55 +17,53 @@ SampleSectionComponent::~SampleSectionComponent()
 void SampleSectionComponent::resized()
 {
     auto area = getLocalBounds();
+    
+    // Position the tabs in the header area
+    tabs->setBounds(10, 5, 200, HEADER_HEIGHT);
 
-    // Sample section layout
-    int controlsY = 40;
-
-    // Sample list area - takes up left side
-    int sampleListWidth = static_cast<int>(area.getWidth() * 0.6f);
-    int sampleListHeight = area.getHeight() - 70;
-    juce::Rectangle<int> listArea(area.getX() + 10, controlsY, sampleListWidth, sampleListHeight);
-
+    // Main content area starts after the header
+    int contentY = 40;
+    int contentHeight = area.getHeight() - 70; // Reduced by header and padding
+    juce::Rectangle<int> contentArea(area.getX() + 10, contentY, area.getWidth() - 20, contentHeight);
+    
     // Set both the list box and detail view to occupy the same space for seamless transition
-    sampleList->setBounds(listArea);
-    sampleDetailView->setBounds(listArea);
+    sampleList->setBounds(contentArea);
+    sampleDetailView->setBounds(contentArea);
+    
+    // Position the group list to occupy full content area
+    groupListView->setBounds(contentArea);
 
-    // Right side controls - direction selector and group list
-    int controlsX = area.getX() + sampleListWidth + 15;
-    int controlsWidth = area.getWidth() - sampleListWidth - 15;
-
+    // Position the Direction selector at the bottom
     sampleDirectionSelector->setBounds(
-        10 + sampleListWidth / 2 - 40,
+        10 + contentArea.getWidth() / 2 - 40,
         getHeight() - 27,
         80,
         25);
         
     // Position the Clear All button in the bottom right
     clearAllButton->setBounds(
-        listArea.getRight() - 80,
-        listArea.getBottom() + 5,
+        contentArea.getRight() - 80,
+        contentArea.getBottom() + 5,
         80,
         25);
-        
-    // Position the group list view below the direction selector
-    groupListView->setBounds(
-        controlsX,
-        40,
-        controlsWidth,
-        sampleListHeight - 50);
 
     const int toggleWidth = 60;
     const int toggleHeight = 20;
     const int toggleX = area.getRight() - toggleWidth - 25;
     const int toggleY = 7;
     pitchFollowToggle->setBounds(toggleX, toggleY, toggleWidth, toggleHeight);
+    
+    // Update component visibility based on current tab
+    updateTabVisibility();
 }
 
 void SampleSectionComponent::initComponents(PluginProcessor& processorRef)
 {
-
-    juce::Rectangle<int> area = getLocalBounds();
-    // Create the sample list component
+    // Create the group list view first (bottom layer)
+    groupListView = std::make_unique<GroupListView>(processorRef);
+    addChildComponent(groupListView.get()); // Add as child but not visible initially
+    
+    // Create the sample list component next
     sampleList = std::make_unique<SampleList>(processorRef);
     sampleList->onSampleDetailRequested = [this](int sampleIndex) {
         showDetailViewForSample(sampleIndex);
@@ -76,6 +74,18 @@ void SampleSectionComponent::initComponents(PluginProcessor& processorRef)
     sampleDetailView = std::make_unique<SampleDetailComponent>(processorRef.getSampleManager());
     sampleDetailView->onBackButtonClicked = [this]() { showListView(); };
     addChildComponent(sampleDetailView.get()); // Add as child but not visible
+    
+    // Now create our custom tab component with tabs at the top (top layer for tab bar only)
+    tabs = std::make_unique<SampleSectionTabs>(juce::TabbedButtonBar::TabsAtTop);
+    tabs->addTab("Samples", juce::Colour(0xffbf52d9), nullptr, false);
+    tabs->addTab("Groups", juce::Colour(0xffbf52d9), nullptr, false);
+    tabs->onTabChanged = [this](int newTabIndex) {
+        handleTabChange(newTabIndex);
+    };
+    tabs->setCurrentTabIndex(currentTabIndex);
+    tabs->setOutline(0); // Remove outline
+    tabs->setTabBarDepth(HEADER_HEIGHT);
+    addAndMakeVisible(tabs.get());
 
     removeSampleButton = std::make_unique<juce::TextButton>("Remove");
     addAndMakeVisible(removeSampleButton.get());
@@ -130,10 +140,6 @@ void SampleSectionComponent::initComponents(PluginProcessor& processorRef)
         }
     };
     addAndMakeVisible(sampleDirectionSelector.get());
-    
-    // Create the group list view
-    groupListView = std::make_unique<GroupListView>(processorRef);
-    addAndMakeVisible(groupListView.get());
 
     pitchFollowToggle = std::make_unique<Toggle>(juce::Colour(0xffbf52d9));
     pitchFollowToggle->setTooltip("Enable pitch following for sample playback");
@@ -148,18 +154,98 @@ void SampleSectionComponent::initComponents(PluginProcessor& processorRef)
         auto* param = processorRef.parameters.getParameter("sample_pitch_follow");
         if (param) {
             param->beginChangeGesture();
-            param->setValueNotifyingHost(followPitch ? 1.0f : 0.0f);
+            param->setValueNotifyingHost(param->convertTo0to1(followPitch));
             param->endChangeGesture();
         }
     };
     addAndMakeVisible(pitchFollowToggle.get());
 
-    // Create label
     pitchFollowLabel = std::make_unique<juce::Label>();
-    pitchFollowLabel->setText("ORIG | PITCH", juce::dontSendNotification);
-    pitchFollowLabel->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
-    pitchFollowLabel->setJustificationType(juce::Justification::centred);
+    pitchFollowLabel->setText("Pitch Follow", juce::dontSendNotification);
+    pitchFollowLabel->setFont(juce::Font(11.0f));
+    pitchFollowLabel->setColour(juce::Label::textColourId, juce::Colours::white);
+    pitchFollowLabel->setJustificationType(juce::Justification::centredRight);
     addAndMakeVisible(pitchFollowLabel.get());
+    
+    // Set initial tab visibility
+    updateTabVisibility();
+    
+    // Ensure proper z-ordering of components
+    if (currentTabIndex == SamplesTab) {
+        sampleList->toFront(false);
+    } else {
+        groupListView->toFront(false);
+    }
+    
+    // Tab bar and common controls should always be on top
+    tabs->toFront(false);
+    sampleDirectionSelector->toFront(false);
+    clearAllButton->toFront(false);
+    pitchFollowToggle->toFront(false);
+    pitchFollowLabel->toFront(false);
+}
+
+// Handle tab changes
+void SampleSectionComponent::handleTabChange(int newTabIndex)
+{
+    currentTabIndex = newTabIndex;
+    updateTabVisibility();
+    
+    // Ensure proper z-ordering when switching tabs
+    if (currentTabIndex == SamplesTab) {
+        if (showingDetailView) {
+            sampleDetailView->toFront(false);
+        } else {
+            sampleList->toFront(false);
+        }
+    } else {
+        groupListView->toFront(false);
+    }
+    
+    // Tab bar and common controls should always be on top
+    tabs->toFront(false);
+    sampleDirectionSelector->toFront(false);
+    clearAllButton->toFront(false);
+    pitchFollowToggle->toFront(false);
+    pitchFollowLabel->toFront(false);
+}
+
+// Update component visibility based on current tab
+void SampleSectionComponent::updateTabVisibility()
+{
+    // First, hide all content components
+    sampleList->setVisible(false);
+    sampleDetailView->setVisible(false);
+    groupListView->setVisible(false);
+    
+    // Then show only the components for the current tab
+    if (currentTabIndex == SamplesTab) {
+        // In Samples tab, show sample list (unless detail view is active)
+        if (!showingDetailView) {
+            sampleList->setVisible(true);
+        } else {
+            sampleDetailView->setVisible(true);
+        }
+        
+        // Hide the group title when in Samples tab
+        groupListView->setTitleVisible(false);
+    } else if (currentTabIndex == GroupsTab) {
+        // In Groups tab, show only the group list view
+        groupListView->setVisible(true);
+        
+        // Show the group title when in Groups tab
+        groupListView->setTitleVisible(true);
+    }
+
+    // Always show the direction selector and other common controls
+    sampleDirectionSelector->setVisible(true);
+    clearAllButton->setVisible(true);
+    
+    // Make sure our tab container doesn't capture mouse events intended for child components
+    tabs->setInterceptsMouseClicks(false, true);
+    
+    // Force a repaint to ensure clean display
+    repaint();
 }
 
 void SampleSectionComponent::paint(juce::Graphics& g)
@@ -275,14 +361,22 @@ void SampleSectionComponent::fileDragExit(const juce::StringArray&)
 
 void SampleSectionComponent::showListView()
 {
-    // Hide detail view, show list view
+    // Hide detail view
     sampleDetailView->setVisible(false);
-    sampleList->setVisible(true);
+    
+    // Determine which components should be visible based on current tab
+    if (currentTabIndex == SamplesTab) {
+        sampleList->setVisible(true);
+        groupListView->setVisible(false);
+    } else {
+        sampleList->setVisible(false);
+        groupListView->setVisible(true);
+    }
 
     // Update state
     showingDetailView = false;
 
-    // Force a full layout refresh
+    // Force a layout refresh
     resized();
     repaint();
 }
@@ -298,13 +392,17 @@ void SampleSectionComponent::showDetailViewForSample(int sampleIndex)
         // Set up detail view for this sample
         sampleDetailView->setSampleIndex(sampleIndex);
 
-        // Show detail view, hide list view
+        // Hide all other content components
         sampleList->setVisible(false);
+        groupListView->setVisible(false);
+        
+        // Show detail view
         sampleDetailView->setVisible(true);
 
         // Update state
         showingDetailView = true;
-
+        
+        // Force a repaint
         repaint();
     }
 }

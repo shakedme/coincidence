@@ -1,10 +1,13 @@
 #pragma once
 
 #include <juce_audio_utils/juce_audio_utils.h>
-#include "../Shared/TimingManager.h"
-#include "Stutter.h"
+#include <memory>
+#include <vector>
+#include "../Params.h"
 #include "Reverb.h"
 #include "Delay.h"
+#include "Stutter.h"
+#include "BaseEffect.h"
 
 // Forward declarations
 class PluginProcessor;
@@ -23,17 +26,20 @@ public:
     void setSettings(Params::FxSettings s);
 
 private:
-    std::unique_ptr<Stutter> stutterEffect;
-    std::unique_ptr<Reverb> reverbEffect;
-    std::unique_ptr<Delay> delayEffect;
-    std::shared_ptr<TimingManager> timingManager;
-    PluginProcessor& processor;
-
-    Params::FxSettings settings;
-    double sampleRate {44100.0};
-    int bufferSize {512};
-
+    std::vector<juce::int64> getNoteDurations(const std::vector<juce::int64>& triggerPositions);
     void updateTimingInfo(juce::AudioPlayHead* playHead);
     std::vector<juce::int64> checkForMidiTriggers(const juce::MidiBuffer& midiMessages);
-    std::vector<juce::int64> getNoteDurations(const std::vector<juce::int64>& triggerPositions);
+
+    std::shared_ptr<TimingManager> timingManager;
+    PluginProcessor& processor;
+    Params::FxSettings settings;
+    
+    // Audio effect objects
+    std::unique_ptr<Reverb> reverbEffect;
+    std::unique_ptr<Delay> delayEffect;
+    std::unique_ptr<Stutter> stutterEffect;
+    
+    // Audio settings
+    double sampleRate {44100.0};
+    int bufferSize {512};
 };

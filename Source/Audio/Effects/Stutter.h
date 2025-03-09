@@ -8,26 +8,40 @@
 #include "juce_audio_utils/juce_audio_utils.h"
 #include "../Params.h"
 #include "../Shared/TimingManager.h"
+#include "../Sampler/SampleManager.h"
+#include "BaseEffect.h"
 
-class Stutter
+class Stutter : public BaseEffect
 {
 public:
-    Stutter(std::shared_ptr<TimingManager> timingManager);
-    ~Stutter() = default;
+    Stutter(std::shared_ptr<TimingManager> tm, SampleManager& sm);
+    ~Stutter() override = default;
 
-    void prepareToPlay(double sampleRate, int samplesPerBlock);
-    void releaseResources();
+    void prepareToPlay(double sampleRate, int samplesPerBlock) override;
+    void releaseResources() override;
     void applyStutterEffect(juce::AudioBuffer<float>& buffer,
                             std::vector<juce::int64> triggerSamplePositions);
 
     // Setters
-    void setSettings(Params::FxSettings s) { settings = s; }
+    void setSettings(Params::FxSettings s) override;
 private:
-    // Settings
-    Params::FxSettings settings;
+    // Beat-repeat effect state
+    bool isStuttering {false};
+    int stutterPosition {0};
+    int stutterLength {0};
+    int stutterRepeatCount {0};
+    int stutterRepeatsTotal {2};
 
-    // Timing manager
-    std::shared_ptr<TimingManager> timingManager;
+    // Buffer for storing audio segments for beat-repeat effect
+    juce::AudioBuffer<float> stutterBuffer;
+
+    // History buffer to store recent audio for accurate beat repeating
+    juce::AudioBuffer<float> historyBuffer;
+    int historyWritePosition {0};
+    int historyBufferSize {0};
+
+    // Random number generator
+    juce::Random random;
 
     // Stutter effect methods
     bool shouldStutter();
@@ -59,29 +73,8 @@ private:
     void captureFromHistory(juce::int64 triggerSamplePosition, int lengthToCapture);
     void captureHistorySegment(int historyTriggerPos, int lengthToCapture);
 
-    // Beat-repeat effect state
-    bool isStuttering {false};
-    int stutterPosition {0};
-    int stutterLength {0};
-    int stutterRepeatCount {0};
-    int stutterRepeatsTotal {2};
-
     // Selects a random musical rate for repeat duration
     Params::RateOption selectRandomRate();
-
-    // Buffer for storing audio segments for beat-repeat effect
-    juce::AudioBuffer<float> stutterBuffer;
-
-    // History buffer to store recent audio for accurate beat repeating
-    juce::AudioBuffer<float> historyBuffer;
-    int historyWritePosition {0};
-    int historyBufferSize {0};
-
-    // Most recent buffer size for reference
-    int currentBufferSize {0};
-
-    // Random number generator
-    juce::Random random;
 };
 
 #endif //JAMMER_STUTTER_H

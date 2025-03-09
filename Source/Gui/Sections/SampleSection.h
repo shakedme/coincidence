@@ -11,6 +11,25 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_audio_utils/juce_audio_utils.h>
 
+// Custom tabbed component that allows us to handle tab changes
+class SampleSectionTabs : public juce::TabbedComponent
+{
+public:
+    explicit SampleSectionTabs(juce::TabbedButtonBar::Orientation orientation)
+        : juce::TabbedComponent(orientation)
+    {
+        // Make sure we're not intercepting mouse events that should go to our content components
+        setInterceptsMouseClicks(false, true);
+    }
+    
+    std::function<void(int)> onTabChanged;
+    
+    void currentTabChanged(int newCurrentTabIndex, const juce::String& /*newCurrentTabName*/) override
+    {
+        if (onTabChanged)
+            onTabChanged(newCurrentTabIndex);
+    }
+};
 
 class SampleSectionComponent : public BaseSectionComponent,
                                public juce::FileDragAndDropTarget,
@@ -42,6 +61,10 @@ private:
     std::unique_ptr<Toggle> pitchFollowToggle;
     std::unique_ptr<juce::Label> pitchFollowLabel;
 
+    // Tab components
+    std::unique_ptr<SampleSectionTabs> tabs;
+    enum TabIDs { SamplesTab = 0, GroupsTab = 1 };
+    
     // Direction selector
     std::unique_ptr<DirectionSelector> sampleDirectionSelector;
     
@@ -50,6 +73,7 @@ private:
 
     // View state
     bool showingDetailView = false;
+    int currentTabIndex = SamplesTab;
 
     // Track the currently active sample for highlighting
     int lastActiveSampleIndex = -1;
@@ -60,5 +84,10 @@ private:
 
     void showDetailViewForSample(int sampleIndex);
     void showListView();
-
+    
+    // Handle tab changes
+    void handleTabChange(int newTabIndex);
+    
+    // Updates the visibility of components based on the current tab
+    void updateTabVisibility();
 };

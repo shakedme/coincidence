@@ -3,44 +3,42 @@
 //
 
 #include "Stutter.h"
+#include "../Sampler/Sampler.h"
 
-Stutter::Stutter(std::shared_ptr<TimingManager> tm)
-    : timingManager(tm)
+Stutter::Stutter(std::shared_ptr<TimingManager> tm, SampleManager& sm)
+    : BaseEffect(tm, sm, 4.0) // 2.0 seconds between triggers
 {
-    // Initialize random generator
-    random.setSeedRandomly();
-}
-
-void Stutter::prepareToPlay(double sampleRate, int samplesPerBlock)
-{
-    currentBufferSize = samplesPerBlock;
-
-    // Initialize stutter buffer with reasonable size (4 bars at 120BPM)
-    int maxStutterSamples = static_cast<int>(sampleRate * 8.0);
-    stutterBuffer.setSize(2, maxStutterSamples);
-    stutterBuffer.clear();
-
-    // Initialize history buffer to store 2 seconds of audio
-    historyBufferSize = static_cast<int>(sampleRate * 2.0);
-    historyBuffer.setSize(2, historyBufferSize);
-    historyBuffer.clear();
-    historyWritePosition = 0;
-
-    // Reset processing state
+    // Initialize stutter state
     isStuttering = false;
     stutterPosition = 0;
     stutterLength = 0;
     stutterRepeatCount = 0;
+    stutterRepeatsTotal = 2;
+}
+
+void Stutter::prepareToPlay(double sampleRate, int samplesPerBlock)
+{
+    BaseEffect::prepareToPlay(sampleRate, samplesPerBlock);
+    
+    // Initialize buffers
+    stutterBuffer.setSize(2, samplesPerBlock);
+    stutterBuffer.clear();
+    
+    // History buffer should be large enough to capture several beats
+    historyBufferSize = static_cast<int>(sampleRate * 5.0); // 5 seconds of history
+    historyBuffer.setSize(2, historyBufferSize);
+    historyBuffer.clear();
+    historyWritePosition = 0;
+    
+    // Reset stutter state
+    resetStutterState();
 }
 
 void Stutter::releaseResources()
 {
-    // Reset state
-    isStuttering = false;
-
-    // Clear buffers
-    stutterBuffer.clear();
-    historyBuffer.clear();
+    BaseEffect::releaseResources();
+    stutterBuffer.setSize(0, 0);
+    historyBuffer.setSize(0, 0);
 }
 
 void Stutter::applyStutterEffect(juce::AudioBuffer<float>& buffer,
@@ -58,7 +56,7 @@ void Stutter::applyStutterEffect(juce::AudioBuffer<float>& buffer,
     {
         processActiveStutter(buffer, numSamples, numChannels);
     }
-    else if (shouldStutter() && !triggerSamplePositions.empty())
+    else if (shouldStutter() && !triggerSamplePositions.empty() && hasMinTimePassed())
     {
         startStutterAtPosition(
             buffer, triggerSamplePositions[0], numSamples, numChannels);
@@ -67,8 +65,8 @@ void Stutter::applyStutterEffect(juce::AudioBuffer<float>& buffer,
 
 bool Stutter::shouldStutter()
 {
-    return settings.stutterProbability > 0.0f
-           && random.nextFloat() < (settings.stutterProbability / 100.0f);
+    // Use the base class method with stutter probability
+    return BaseEffect::shouldApplyEffect(settings.stutterProbability);
 }
 
 void Stutter::processActiveStutter(juce::AudioBuffer<float>& buffer,
@@ -371,4 +369,8 @@ Params::RateOption Stutter::selectRandomRate()
     {
         return rates[2]; // 1/32 note
     }
+}
+
+void Stutter::setSettings(Params::FxSettings s) {
+    BaseEffect::setSettings(s);
 }

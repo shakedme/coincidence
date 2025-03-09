@@ -59,7 +59,7 @@ public:
         onsetIcon->setTooltip(
                 "Toggle onset randomization - each trigger will randomize the start position based on onset in the edit view.");
         deleteIcon->setTooltip("Delete sample");
-        reverbIcon->setTooltip("Force reverb for this sample.");
+        reverbIcon->setTooltip("Allow reverb for this sample.");
         slider->setTooltip("Sample probability");
 
         editIcon->onClicked = [owner, row]() {
@@ -145,7 +145,7 @@ public:
         // Position slider first, followed by icons on the right
         int iconSize = 16;
         int rateIconWidth = 27; // Wider width for rate icons
-        int padding = 8;
+        int padding = 4; // Reduced padding to ensure everything fits
         int sliderSize = 16; // Slightly larger for usability
 
         // Calculate total available width
@@ -183,7 +183,7 @@ public:
         x -= sliderSize + padding;
         slider->setBounds(x, (getHeight() - sliderSize) / 2, sliderSize, sliderSize);
 
-        // Position rate icons before the slider
+        // Position rate icons before the slider, ensuring each is fully visible
         x -= rateIconWidth + padding;
         rate1_16Icon->setBounds(x, (getHeight() - iconSize) / 2, rateIconWidth, iconSize);
 

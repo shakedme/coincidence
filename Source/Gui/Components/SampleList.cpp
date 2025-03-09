@@ -37,6 +37,11 @@ SampleList::SampleList(PluginProcessor &p)
     addAndMakeVisible(sampleListBox.get());
 }
 
+void SampleList::paint(juce::Graphics &g) {
+    // Fill the background with a dark grey
+    g.fillAll(juce::Colour(0xff222222));
+}
+
 void SampleList::resized() {
     // Sample list takes up the entire component
     sampleListBox->setBounds(getLocalBounds());

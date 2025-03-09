@@ -16,6 +16,7 @@ public:
     PluginProcessor& processor;
 
     // TableListBoxModel overrides
+    void paint(juce::Graphics& g) override;
     int getNumRows() override;
     void paintRowBackground(juce::Graphics& g,
                             int rowNumber,
