@@ -274,50 +274,11 @@ int SampleManager::selectRandomSampleWithProbability(const std::vector<int> &val
     // Organize valid samples by group and calculate total group probability
     organizeValidSamplesByGroup(samplesWithProbability, groupedValidSamples, totalGroupProbability);
 
-    // Check if we have any ungrouped samples
-    bool hasUngroupedSamples = groupedValidSamples.count(-1) > 0;
-
-    // Variables to store the result
-    int selectedSampleIndex = -1;
-
-    // Case 1: Only ungrouped samples
-    if (hasUngroupedSamples && totalGroupProbability <= 0.0f) {
-        selectedSampleIndex = selectFromUngroupedSamples(groupedValidSamples[-1], samplesWithProbability);
-    }
-        // Case 2: Mix of grouped and ungrouped samples
-    else if (hasUngroupedSamples && totalGroupProbability > 0.0f) {
-        selectedSampleIndex = selectFromMixedSamples(groupedValidSamples, totalGroupProbability,
-                                                     samplesWithProbability);
-    }
-        // Case 3: Only grouped samples
-    else if (totalGroupProbability > 0.0f) {
-        selectedSampleIndex = selectFromGroupedSamples(groupedValidSamples, totalGroupProbability,
-                                                       samplesWithProbability);
-    }
-        // Case 4: This should rarely happen since we already filtered zero probability samples
-    else {
-        // If we somehow get here with total probability = 0, select randomly from samples with probability
-        selectedSampleIndex = juce::Random::getSystemRandom().nextInt(samplesWithProbability.size());
+    if (totalGroupProbability > 0.0f) {
+        return selectFromGroupedSamples(groupedValidSamples, totalGroupProbability,
+                                        samplesWithProbability);
     }
 
-    // If we didn't get a valid selection, return -1
-    if (selectedSampleIndex == -1) {
-        return -1;
-    }
-
-    // Now convert from position in samplesWithProbability to position in validSamples
-    if (selectedSampleIndex >= 0 && selectedSampleIndex < samplesWithProbability.size()) {
-        int actualSampleIndex = samplesWithProbability[selectedSampleIndex];
-
-        // Find this sample's position in the original validSamples array
-        for (int i = 0; i < validSamples.size(); ++i) {
-            if (validSamples[i] == actualSampleIndex) {
-                return i; // Return position in original validSamples
-            }
-        }
-    }
-
-    // If something went wrong with the mapping, return -1
     return -1;
 }
 
@@ -330,111 +291,22 @@ void SampleManager::organizeValidSamplesByGroup(const std::vector<int> &validSam
         // Add to appropriate group (including ungrouped samples which have groupIndex = -1)
         groupedValidSamples[groupIdx].push_back(idx);
 
-        // For samples in groups, add the group probability once per group
-        if (groupIdx >= 0 && groupedValidSamples[groupIdx].size() == 1) {
-            // Only add group probability once for the first sample in each group
+        // Add the group probability once per group
+        if (groupedValidSamples[groupIdx].size() == 1) {
             totalGroupProbability += getGroupProbability(groupIdx);
         }
     }
-}
-
-int SampleManager::selectFromUngroupedSamples(const std::vector<int> &ungroupedSamples,
-                                              const std::vector<int> &validSamples) {
-    // Calculate total probability for ungrouped samples
-    float totalUngroupedProbability = 0.0f;
-    for (int idx: ungroupedSamples) {
-        totalUngroupedProbability += getSampleProbability(idx);
-    }
-
-    // All samples should have probability > 0 at this point
-    // but as a safety check:
-    if (totalUngroupedProbability <= 0.0f || ungroupedSamples.empty()) {
-        return -1;
-    }
-
-    // Select based on probability
-    float randomValue = juce::Random::getSystemRandom().nextFloat() * totalUngroupedProbability;
-    float runningTotal = 0.0f;
-
-    for (int i = 0; i < ungroupedSamples.size(); ++i) {
-        int idx = ungroupedSamples[i];
-        runningTotal += getSampleProbability(idx);
-        if (randomValue <= runningTotal) {
-            return i; // Return position in samplesWithProbability
-        }
-    }
-
-    // Fallback in case of rounding errors
-    return ungroupedSamples.size() - 1;
-}
-
-int SampleManager::selectFromMixedSamples(const std::map<int, std::vector<int>> &groupedValidSamples,
-                                          float totalGroupProbability,
-                                          const std::vector<int> &validSamples) {
-    // We need to choose between grouped and ungrouped samples
-    float totalProb = totalGroupProbability + 1.0f; // Add 100% for ungrouped samples
-    float randomValue = juce::Random::getSystemRandom().nextFloat() * totalProb;
-
-    // Decide if we're selecting from ungrouped (virtual group) or real groups
-    if (randomValue <= 1.0f) {
-        // Select from ungrouped samples
-        int result = selectFromUngroupedSamples(groupedValidSamples.at(-1), validSamples);
-        if (result != -1) {
-            return result;
-        }
-
-        // If ungrouped selection failed, try groups instead
-        float adjustedRandomValue = 0.0f; // Start at beginning of group probability range
-        int selectedGroupIdx = selectGroup(groupedValidSamples, adjustedRandomValue, totalGroupProbability);
-
-        if (selectedGroupIdx >= 0 && !groupedValidSamples.at(selectedGroupIdx).empty()) {
-            return selectSampleFromGroup(groupedValidSamples.at(selectedGroupIdx), validSamples);
-        }
-    } else {
-        // Select from real groups
-        float adjustedRandomValue = randomValue - 1.0f; // Adjust the random value
-        int selectedGroupIdx = selectGroup(groupedValidSamples, adjustedRandomValue, totalGroupProbability);
-
-        if (selectedGroupIdx >= 0 && !groupedValidSamples.at(selectedGroupIdx).empty()) {
-            int result = selectSampleFromGroup(groupedValidSamples.at(selectedGroupIdx), validSamples);
-            if (result != -1) {
-                return result;
-            }
-        }
-
-        // If group selection failed, try ungrouped samples
-        if (groupedValidSamples.count(-1) > 0) {
-            return selectFromUngroupedSamples(groupedValidSamples.at(-1), validSamples);
-        }
-    }
-
-    // If all attempts failed, return -1
-    return -1;
 }
 
 int SampleManager::selectFromGroupedSamples(const std::map<int, std::vector<int>> &groupedValidSamples,
                                             float totalGroupProbability,
                                             const std::vector<int> &validSamples) {
     // STEP 1: Select a group based on group probability
-    float randomGroupValue = juce::Random::getSystemRandom().nextFloat() * totalGroupProbability;
-    int selectedGroupIdx = selectGroup(groupedValidSamples, randomGroupValue, totalGroupProbability);
+    int selectedGroupIdx = selectGroup(groupedValidSamples, totalGroupProbability);
 
     // STEP 2: Select a sample from the chosen group
-    if (selectedGroupIdx >= 0 && !groupedValidSamples.at(selectedGroupIdx).empty()) {
-        int result = selectSampleFromGroup(groupedValidSamples.at(selectedGroupIdx), validSamples);
-        if (result != -1) {
-            return result;
-        }
-    }
-
-    // Try other groups if the first selection failed
-    for (const auto &[groupIdx, samples]: groupedValidSamples) {
-        if (groupIdx >= 0 && groupIdx != selectedGroupIdx && !samples.empty()) {
-            int result = selectSampleFromGroup(samples, validSamples);
-            if (result != -1) {
-                return result;
-            }
-        }
+    if (!groupedValidSamples.at(selectedGroupIdx).empty()) {
+        return selectSampleFromGroup(groupedValidSamples.at(selectedGroupIdx));
     }
 
     // If all attempts failed, return -1
@@ -442,17 +314,21 @@ int SampleManager::selectFromGroupedSamples(const std::map<int, std::vector<int>
 }
 
 int SampleManager::selectGroup(const std::map<int, std::vector<int>> &groupedValidSamples,
-                               float randomValue,
                                float totalGroupProbability) {
-    float runningGroupTotal = 0.0f;
 
+    if (groupedValidSamples.size() == 1) {
+        // Only one group, return it
+        return groupedValidSamples.begin()->first;
+    }
+
+    float randomValue = juce::Random::getSystemRandom().nextFloat() * totalGroupProbability;
+
+    float runningGroupTotal = 0.0f;
     // Iterate through all real groups
     for (const auto &[groupIdx, samples]: groupedValidSamples) {
-        if (groupIdx >= 0) { // Only consider real groups
-            runningGroupTotal += getGroupProbability(groupIdx);
-            if (randomValue <= runningGroupTotal) {
-                return groupIdx;
-            }
+        runningGroupTotal += getGroupProbability(groupIdx);
+        if (randomValue <= runningGroupTotal) {
+            return groupIdx;
         }
     }
 
@@ -466,45 +342,26 @@ int SampleManager::selectGroup(const std::map<int, std::vector<int>> &groupedVal
     return -1;
 }
 
-int SampleManager::selectSampleFromGroup(const std::vector<int> &samplesInGroup,
-                                         const std::vector<int> &validSamples) {
+int SampleManager::selectSampleFromGroup(const std::vector<int> &samplesInGroup) {
     // Calculate total probability for samples in this group
     float totalSampleProbability = 0.0f;
     for (int idx: samplesInGroup) {
         totalSampleProbability += getSampleProbability(idx);
     }
 
-    // All samples should have probability > 0 at this point
-    // but as a safety check:
-    if (totalSampleProbability <= 0.0f || samplesInGroup.empty()) {
-        return -1;
-    }
-
     // Select based on sample probability
     float randomSampleValue = juce::Random::getSystemRandom().nextFloat() * totalSampleProbability;
     float runningSampleTotal = 0.0f;
 
-    for (int i = 0; i < samplesInGroup.size(); ++i) {
-        int idx = samplesInGroup[i];
+    for (int idx: samplesInGroup) {
         runningSampleTotal += getSampleProbability(idx);
         if (randomSampleValue <= runningSampleTotal) {
-            return i; // Return position in samplesWithProbability
+            return idx;
         }
     }
 
     // Fallback in case of rounding errors
     return samplesInGroup.size() - 1;
-}
-
-int SampleManager::findPositionInValidSamples(int sampleIndex, const std::vector<int> &validSamples) {
-    for (size_t j = 0; j < validSamples.size(); ++j) {
-        if (validSamples[j] == sampleIndex) {
-            return j;
-        }
-    }
-
-    // Fallback if sample not found
-    return 0;
 }
 
 juce::String SampleManager::getSampleName(int index) const {
@@ -615,7 +472,7 @@ void SampleManager::setGroupProbability(int groupIndex, float probability) {
 float SampleManager::getGroupProbability(int groupIndex) const {
     if (groupIndex >= 0 && groupIndex < groups.size())
         return groups[groupIndex]->probability;
-    return 0.0f;
+    return 1.0f;
 }
 
 void SampleManager::removeSampleFromGroup(int sampleIndex) {
