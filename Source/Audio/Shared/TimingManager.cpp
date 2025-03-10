@@ -113,6 +113,9 @@ double TimingManager::getDurationInQuarters(Params::RateOption rate,
     double durationInQuarters;
     switch (rate)
     {
+        case Params::RATE_1_1:
+            durationInQuarters = 4.0;
+            break;
         case Params::RATE_1_2:
             durationInQuarters = 2.0;
             break;

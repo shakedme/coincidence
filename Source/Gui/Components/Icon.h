@@ -5,8 +5,7 @@
 /**
  * A generic icon component that loads and displays an image from a file.
  * Supports tooltips and click handling.
- */// Modify your Icon class like this:
-
+ */
 class Icon : public juce::Component, public juce::SettableTooltipClient
 {
 public:

@@ -18,8 +18,8 @@ void SampleSectionComponent::resized()
 {
     auto area = getLocalBounds();
     
-    // Position the tabs in the header area
-    tabs->setBounds(10, 5, 200, HEADER_HEIGHT);
+    // Position the tabs in the header area - moved further away from left edge and reduced height
+    tabs->setBounds(30, 5, 200, 25);
 
     // Main content area starts after the header
     int contentY = 40;
@@ -43,6 +43,13 @@ void SampleSectionComponent::resized()
     // Position the Clear All button in the bottom right
     clearAllButton->setBounds(
         contentArea.getRight() - 80,
+        contentArea.getBottom() + 5,
+        80,
+        25);
+    
+    // Position the Normalize button to the left of Clear All button
+    normalizeButton->setBounds(
+        contentArea.getRight() - 170, // 80 (Clear All width) + 10 (padding) + 80 (Normalize width)
         contentArea.getBottom() + 5,
         80,
         25);
@@ -84,7 +91,7 @@ void SampleSectionComponent::initComponents(PluginProcessor& processorRef)
     };
     tabs->setCurrentTabIndex(currentTabIndex);
     tabs->setOutline(0); // Remove outline
-    tabs->setTabBarDepth(HEADER_HEIGHT);
+    tabs->setTabBarDepth(25); // Reduced from HEADER_HEIGHT (30) to 25
     addAndMakeVisible(tabs.get());
 
     removeSampleButton = std::make_unique<juce::TextButton>("Remove");
@@ -116,6 +123,26 @@ void SampleSectionComponent::initComponents(PluginProcessor& processorRef)
         repaint();
     };
     addAndMakeVisible(clearAllButton.get());
+
+    // Create Normalize button
+    normalizeButton = std::make_unique<juce::TextButton>("Normalize");
+    normalizeButton->setColour(juce::TextButton::buttonColourId, juce::Colour(0xffbf52d9));
+    normalizeButton->setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+    normalizeButton->onClick = [this]() {
+        // If no samples, do nothing
+        if (processor.getSampleManager().getNumSamples() == 0) {
+            return;
+        }
+        
+        // Normalize all samples
+        processor.getSampleManager().normalizeSamples();
+        
+        // If in detail view, update waveform display
+        if (showingDetailView) {
+            sampleDetailView->rebuildWaveform();
+        }
+    };
+    addAndMakeVisible(normalizeButton.get());
 
     // Sample direction selector
     sampleDirectionSelector = std::make_unique<DirectionSelector>(juce::Colour(0xffbf52d9));
@@ -181,6 +208,7 @@ void SampleSectionComponent::initComponents(PluginProcessor& processorRef)
     tabs->toFront(false);
     sampleDirectionSelector->toFront(false);
     clearAllButton->toFront(false);
+    normalizeButton->toFront(false);
     pitchFollowToggle->toFront(false);
     pitchFollowLabel->toFront(false);
 }
@@ -206,6 +234,7 @@ void SampleSectionComponent::handleTabChange(int newTabIndex)
     tabs->toFront(false);
     sampleDirectionSelector->toFront(false);
     clearAllButton->toFront(false);
+    normalizeButton->toFront(false);
     pitchFollowToggle->toFront(false);
     pitchFollowLabel->toFront(false);
 }
@@ -240,6 +269,7 @@ void SampleSectionComponent::updateTabVisibility()
     // Always show the direction selector and other common controls
     sampleDirectionSelector->setVisible(true);
     clearAllButton->setVisible(true);
+    normalizeButton->setVisible(true);
     
     // Make sure our tab container doesn't capture mouse events intended for child components
     tabs->setInterceptsMouseClicks(false, true);

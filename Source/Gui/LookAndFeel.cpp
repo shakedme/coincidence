@@ -11,6 +11,10 @@ LookAndFeel::LookAndFeel()
     setColour(juce::TabbedComponent::outlineColourId, juce::Colour(0xff3a3a3a));
     setColour(juce::TabbedButtonBar::tabOutlineColourId, juce::Colour(0xff3a3a3a));
     setColour(juce::TabbedButtonBar::frontOutlineColourId, juce::Colour(0xff3a3a3a));
+    
+    // Tab text colors - white for better visibility
+    setColour(juce::TabbedButtonBar::tabTextColourId, juce::Colours::white);
+    setColour(juce::TabbedButtonBar::frontTextColourId, juce::Colours::white);
 
     // Slider colors
     setColour(juce::Slider::rotarySliderFillColourId, juce::Colours::darkgrey);
@@ -493,4 +497,52 @@ void LookAndFeel::drawButtonBackground(juce::Graphics& g,
             false));
         g.fillRoundedRectangle(shadowArea, cornerSize - 1.0f);
     }
+}
+
+// Custom tab button drawing
+void LookAndFeel::drawTabButton(juce::TabBarButton& button, juce::Graphics& g, bool isMouseOver, bool isMouseDown)
+{
+    auto area = button.getActiveArea();
+    
+    // Make buttons slightly smaller vertically
+    area = area.reduced(0, 2);
+    
+    const bool isActive = button.getToggleState();
+    
+    // Create a slightly larger area for the active tab
+    if (isActive)
+    {
+        area = area.expanded(0, 1);
+    }
+    
+    juce::Colour tabColor = button.getTabBackgroundColour();
+    
+    if (isActive)
+    {
+        // Brighter color for active tab
+        g.setColour(tabColor.brighter(0.2f));
+        g.fillRoundedRectangle(area.toFloat(), 3.0f);
+        
+        // Add bottom line to indicate active tab
+        g.setColour(tabColor.brighter(0.4f));
+        g.fillRect(area.getX(), area.getBottom() - 2, area.getWidth(), 2);
+    }
+    else if (isMouseOver)
+    {
+        // Slightly highlighted when hovered
+        g.setColour(tabColor.withAlpha(0.7f));
+        g.fillRoundedRectangle(area.toFloat(), 3.0f);
+    }
+    else
+    {
+        // Default state - slightly transparent
+        g.setColour(tabColor.withAlpha(0.5f));
+        g.fillRoundedRectangle(area.toFloat(), 3.0f);
+    }
+    
+    // Draw tab text
+    auto textArea = area;
+    g.setColour(juce::Colours::white);
+    g.setFont(juce::Font(11.0f, juce::Font::bold)); // Reduced font size
+    g.drawText(button.getButtonText(), textArea, juce::Justification::centred, false);
 }

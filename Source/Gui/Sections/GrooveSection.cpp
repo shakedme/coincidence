@@ -26,10 +26,6 @@ GrooveSectionComponent::~GrooveSectionComponent()
 void GrooveSectionComponent::resized()
 {
     auto area = getLocalBounds();
-
-    // Set up header
-    // sectionLabel->setBounds(area.getX(), 5, area.getWidth(), 25);
-
     const int knobSize = 45; // Reduced from 60
     const int labelHeight = 18; // Reduced from 20
 
@@ -93,15 +89,11 @@ void GrooveSectionComponent::resized()
 
 void GrooveSectionComponent::setupRateControls()
 {
-    // Rate labels - Base names without rhythm mode suffix for now
-    const char* rateBaseNames[Params::NUM_RATE_OPTIONS] = {
-        "1/2", "1/4", "1/8", "1/16", "1/32"};
-
     for (size_t i = 0; i < Params::NUM_RATE_OPTIONS; ++i)
     {
         // Create rate knob
         rateKnobs[i] = std::unique_ptr<juce::Slider>(
-            createRotarySlider("Rate " + juce::String(rateBaseNames[i]) + " intensity"));
+            createRotarySlider("Rate " + juce::String(Params::rateBaseNames[i]) + " intensity"));
         rateKnobs[i]->setName("rate_" + juce::String(i));
         rateKnobs[i]->setRange(0.0, 100.0, 0.1);
         rateKnobs[i]->setTextValueSuffix("%");
@@ -109,7 +101,7 @@ void GrooveSectionComponent::setupRateControls()
 
         // Create rate label
         rateLabels[i] = std::unique_ptr<juce::Label>(
-            createLabel(rateBaseNames[i], juce::Justification::centred));
+            createLabel(Params::rateBaseNames[i], juce::Justification::centred));
         rateLabels[i]->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
         addAndMakeVisible(rateLabels[i].get());
 
@@ -272,15 +264,13 @@ void GrooveSectionComponent::updateRateLabelsForRhythmMode()
     }
 
     // Update the rate labels with the appropriate suffix
-    const char* rateBaseNames[Params::NUM_RATE_OPTIONS] = {
-        "1/2", "1/4", "1/8", "1/16", "1/32"};
 
     for (int i = 0; i < Params::NUM_RATE_OPTIONS; ++i)
     {
         // Check if the label exists
         if (rateLabels[i] != nullptr)
         {
-            juce::String labelText = rateBaseNames[i];
+            juce::String labelText = Params::rateBaseNames[i];
 
             // Only append suffix if it's not empty (i.e., not NORMAL mode)
             if (rhythmSuffix.isNotEmpty())

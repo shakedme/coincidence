@@ -251,10 +251,12 @@ int SampleManager::getNextSampleIndex(Params::DirectionType direction, Params::R
                 }
             }
 
-            // If there are no samples in groups, we need to account for ungrouped samples (-1)
-            if (groupedValidSamples.count(-1) > 0 && (groupedValidSamples.size() == 1 || totalGroupProbability == 0)) {
-                // Only ungrouped samples or no group probability
-                std::vector<int> &ungroupedSamples = groupedValidSamples[-1];
+            // Check if we have any ungrouped samples
+            bool hasUngroupedSamples = groupedValidSamples.count(-1) > 0;
+
+            // If there are only ungrouped samples, handle them directly
+            if (hasUngroupedSamples && totalGroupProbability <= 0.0f) {
+                const std::vector<int> &ungroupedSamples = groupedValidSamples[-1];
 
                 // Calculate total probability for ungrouped samples
                 float totalUngroupedProbability = 0.0f;
@@ -279,39 +281,62 @@ int SampleManager::getNextSampleIndex(Params::DirectionType direction, Params::R
                         break;
                     }
                 }
-            } else if (totalGroupProbability > 0) {
-                // STEP 1: Select a group based on group probability
-                float randomGroupValue = juce::Random::getSystemRandom().nextFloat() * totalGroupProbability;
-                float runningGroupTotal = 0.0f;
-                int selectedGroupIdx = -1;
+            }
+                // If there's a mix of grouped and ungrouped samples
+            else if (hasUngroupedSamples && totalGroupProbability > 0.0f) {
+                // We need to choose between grouped and ungrouped samples
+                float totalProb = totalGroupProbability + 1.0f; // Add 100% for ungrouped samples
+                float randomValue = juce::Random::getSystemRandom().nextFloat() * totalProb;
 
-                // Iterate through all groups, skipping the -1 (ungrouped) key
-                for (const auto &[groupIdx, samples]: groupedValidSamples) {
-                    if (groupIdx >= 0) { // Skip ungrouped samples (-1)
-                        runningGroupTotal += groups[groupIdx]->probability;
-                        if (randomGroupValue <= runningGroupTotal) {
-                            selectedGroupIdx = groupIdx;
+                // Decide if we're selecting from ungrouped (virtual group) or real groups
+                if (randomValue <= 1.0f) {
+                    // Select from ungrouped samples
+                    const std::vector<int> &ungroupedSamples = groupedValidSamples[-1];
+
+                    // Calculate total probability for samples in this virtual group
+                    float totalSampleProbability = 0.0f;
+                    for (int idx: ungroupedSamples) {
+                        totalSampleProbability += sampleList[idx]->probability;
+                    }
+
+                    // Select based on sample probability
+                    float randomSampleValue = juce::Random::getSystemRandom().nextFloat() * totalSampleProbability;
+                    float runningSampleTotal = 0.0f;
+
+                    for (size_t i = 0; i < ungroupedSamples.size(); ++i) {
+                        runningSampleTotal += sampleList[ungroupedSamples[i]]->probability;
+                        if (randomSampleValue <= runningSampleTotal) {
+                            // Find the position in the original validSamples array
+                            for (size_t j = 0; j < validSamples.size(); ++j) {
+                                if (validSamples[j] == ungroupedSamples[i]) {
+                                    nextValidIndex = j;
+                                    break;
+                                }
+                            }
                             break;
                         }
                     }
-                }
+                } else {
+                    // Select from real groups
+                    float adjustedRandomValue = randomValue - 1.0f; // Adjust the random value
+                    float runningGroupTotal = 0.0f;
+                    int selectedGroupIdx = -1;
 
-                // Fallback if no group was selected - should not happen but just in case
-                if (selectedGroupIdx == -1 && !groupedValidSamples.empty()) {
-                    // Pick first non-empty group
+                    // Iterate through all real groups
                     for (const auto &[groupIdx, samples]: groupedValidSamples) {
-                        if (!samples.empty() && groupIdx >= 0) {
-                            selectedGroupIdx = groupIdx;
-                            break;
+                        if (groupIdx >= 0) { // Only consider real groups
+                            runningGroupTotal += groups[groupIdx]->probability;
+                            if (adjustedRandomValue <= runningGroupTotal) {
+                                selectedGroupIdx = groupIdx;
+                                break;
+                            }
                         }
                     }
-                }
 
-                // STEP 2: Select a sample from the chosen group based on sample probability
-                if (selectedGroupIdx >= 0 && groupedValidSamples.count(selectedGroupIdx) > 0) {
-                    const std::vector<int> &samplesInGroup = groupedValidSamples[selectedGroupIdx];
+                    // Select a sample from the chosen group
+                    if (selectedGroupIdx >= 0 && !groupedValidSamples[selectedGroupIdx].empty()) {
+                        const std::vector<int> &samplesInGroup = groupedValidSamples[selectedGroupIdx];
 
-                    if (!samplesInGroup.empty()) {
                         // Calculate total probability for samples in this group
                         float totalSampleProbability = 0.0f;
                         for (int idx: samplesInGroup) {
@@ -337,6 +362,56 @@ int SampleManager::getNextSampleIndex(Params::DirectionType direction, Params::R
                         }
                     }
                 }
+            }
+                // Only grouped samples
+            else if (totalGroupProbability > 0.0f) {
+                // STEP 1: Select a group based on group probability
+                float randomGroupValue = juce::Random::getSystemRandom().nextFloat() * totalGroupProbability;
+                float runningGroupTotal = 0.0f;
+                int selectedGroupIdx = -1;
+
+                // Iterate through all real groups
+                for (const auto &[groupIdx, samples]: groupedValidSamples) {
+                    if (groupIdx >= 0) { // Only consider real groups
+                        runningGroupTotal += groups[groupIdx]->probability;
+                        if (randomGroupValue <= runningGroupTotal) {
+                            selectedGroupIdx = groupIdx;
+                            break;
+                        }
+                    }
+                }
+
+                // Select a sample from the chosen group
+                if (selectedGroupIdx >= 0 && !groupedValidSamples[selectedGroupIdx].empty()) {
+                    const std::vector<int> &samplesInGroup = groupedValidSamples[selectedGroupIdx];
+
+                    // Calculate total probability for samples in this group
+                    float totalSampleProbability = 0.0f;
+                    for (int idx: samplesInGroup) {
+                        totalSampleProbability += sampleList[idx]->probability;
+                    }
+
+                    // Select based on sample probability
+                    float randomSampleValue = juce::Random::getSystemRandom().nextFloat() * totalSampleProbability;
+                    float runningSampleTotal = 0.0f;
+
+                    for (size_t i = 0; i < samplesInGroup.size(); ++i) {
+                        runningSampleTotal += sampleList[samplesInGroup[i]]->probability;
+                        if (randomSampleValue <= runningSampleTotal) {
+                            // Find the position in the original validSamples array
+                            for (size_t j = 0; j < validSamples.size(); ++j) {
+                                if (validSamples[j] == samplesInGroup[i]) {
+                                    nextValidIndex = j;
+                                    break;
+                                }
+                            }
+                            break;
+                        }
+                    }
+                }
+            } else {
+                // No valid groups or samples with probability, just use random selection
+                nextValidIndex = juce::Random::getSystemRandom().nextInt(validSamples.size());
             }
             break;
         }
@@ -494,6 +569,9 @@ void SampleManager::setSampleRateEnabled(int sampleIndex, Params::RateOption rat
     if (sampleIndex >= 0 && sampleIndex < sampleList.size()) {
         auto &sample = sampleList[sampleIndex];
         switch (rate) {
+            case Params::RATE_1_1:
+                sample->rate_1_1_enabled = enabled;
+                break;
             case Params::RATE_1_2:
                 sample->rate_1_2_enabled = enabled;
                 break;
@@ -505,6 +583,9 @@ void SampleManager::setSampleRateEnabled(int sampleIndex, Params::RateOption rat
                 break;
             case Params::RATE_1_16:
                 sample->rate_1_16_enabled = enabled;
+                break;
+            case Params::RATE_1_32:
+                sample->rate_1_32_enabled = enabled;
                 break;
             default:
                 break;
@@ -518,25 +599,41 @@ void SampleManager::setSampleRateEnabled(int sampleIndex, Params::RateOption rat
 bool SampleManager::isSampleRateEnabled(int sampleIndex, Params::RateOption rate) const {
     if (sampleIndex >= 0 && sampleIndex < sampleList.size()) {
         const auto &sample = sampleList[sampleIndex];
-        
+
         // Get the sample's rate state
         bool sampleRateEnabled = false;
         switch (rate) {
-            case Params::RATE_1_2: sampleRateEnabled = sample->rate_1_2_enabled; break;
-            case Params::RATE_1_4: sampleRateEnabled = sample->rate_1_4_enabled; break;
-            case Params::RATE_1_8: sampleRateEnabled = sample->rate_1_8_enabled; break;
-            case Params::RATE_1_16: sampleRateEnabled = sample->rate_1_16_enabled; break;
-            default: return false;
+            case Params::RATE_1_1:
+                sampleRateEnabled = sample->rate_1_1_enabled;
+                break;
+            case Params::RATE_1_2:
+                sampleRateEnabled = sample->rate_1_2_enabled;
+                break;
+            case Params::RATE_1_4:
+                sampleRateEnabled = sample->rate_1_4_enabled;
+                break;
+            case Params::RATE_1_8:
+                sampleRateEnabled = sample->rate_1_8_enabled;
+                break;
+            case Params::RATE_1_16:
+                sampleRateEnabled = sample->rate_1_16_enabled;
+                break;
+            case Params::RATE_1_32:
+                sampleRateEnabled = sample->rate_1_32_enabled;
+                break;
+
+            default:
+                return false;
         }
-        
+
         // Return false early if sample itself has the rate disabled
         if (!sampleRateEnabled) return false;
-        
+
         // Check if sample is in a valid group
         if (sample->groupIndex >= 0 && sample->groupIndex < groups.size()) {
             return isGroupRateEnabled(sample->groupIndex, rate);
         }
-        
+
         // If no group or invalid group, and the sample has the rate enabled
         return true;
     }
@@ -546,6 +643,9 @@ bool SampleManager::isSampleRateEnabled(int sampleIndex, Params::RateOption rate
 void SampleManager::updateValidSamplesForRate(Params::RateOption rate) {
     std::vector<int> *targetList = nullptr;
     switch (rate) {
+        case Params::RATE_1_1:
+            targetList = &validSamples_1_1;
+            break;
         case Params::RATE_1_2:
             targetList = &validSamples_1_2;
             break;
@@ -557,6 +657,9 @@ void SampleManager::updateValidSamplesForRate(Params::RateOption rate) {
             break;
         case Params::RATE_1_16:
             targetList = &validSamples_1_16;
+            break;
+        case Params::RATE_1_32:
+            targetList = &validSamples_1_32;
             break;
         default:
             return;
@@ -572,6 +675,8 @@ void SampleManager::updateValidSamplesForRate(Params::RateOption rate) {
 
 const std::vector<int> &SampleManager::getValidSamplesForRate(Params::RateOption rate) const {
     switch (rate) {
+        case Params::RATE_1_1:
+            return validSamples_1_1;
         case Params::RATE_1_2:
             return validSamples_1_2;
         case Params::RATE_1_4:
@@ -580,6 +685,8 @@ const std::vector<int> &SampleManager::getValidSamplesForRate(Params::RateOption
             return validSamples_1_8;
         case Params::RATE_1_16:
             return validSamples_1_16;
+        case Params::RATE_1_32:
+            return validSamples_1_32;
         default:
             return validSamples_1_4; // Default to quarter notes
     }
@@ -590,6 +697,9 @@ void SampleManager::setGroupRateEnabled(int groupIndex, Params::RateOption rate,
     if (groupIndex >= 0 && groupIndex < groups.size()) {
         auto &group = groups[groupIndex];
         switch (rate) {
+            case Params::RATE_1_1:
+                group->rate_1_1_enabled = enabled;
+                break;
             case Params::RATE_1_2:
                 group->rate_1_2_enabled = enabled;
                 break;
@@ -601,6 +711,9 @@ void SampleManager::setGroupRateEnabled(int groupIndex, Params::RateOption rate,
                 break;
             case Params::RATE_1_16:
                 group->rate_1_16_enabled = enabled;
+                break;
+            case Params::RATE_1_32:
+                group->rate_1_32_enabled = enabled;
                 break;
             default:
                 break;
@@ -614,6 +727,8 @@ bool SampleManager::isGroupRateEnabled(int groupIndex, Params::RateOption rate) 
     if (groupIndex >= 0 && groupIndex < groups.size()) {
         const auto &group = groups[groupIndex];
         switch (rate) {
+            case Params::RATE_1_1:
+                return group->rate_1_1_enabled;
             case Params::RATE_1_2:
                 return group->rate_1_2_enabled;
             case Params::RATE_1_4:
@@ -622,6 +737,8 @@ bool SampleManager::isGroupRateEnabled(int groupIndex, Params::RateOption rate) 
                 return group->rate_1_8_enabled;
             case Params::RATE_1_16:
                 return group->rate_1_16_enabled;
+            case Params::RATE_1_32:
+                return group->rate_1_32_enabled;
             default:
                 break;
         }
@@ -664,4 +781,70 @@ bool SampleManager::isGroupEffectEnabled(int groupIndex, int effectType) const {
         }
     }
     return false;
+}
+
+void SampleManager::normalizeSamples() {
+    // If no samples loaded, nothing to normalize
+    if (sampleList.empty()) {
+        return;
+    }
+
+    // First, find the peak amplitude across all samples
+    float globalPeak = 0.0f;
+
+    // Find peak level for each sample
+    for (const auto &sample: sampleList) {
+        if (sample->sound) {
+            juce::AudioBuffer<float> *audioData = sample->sound->getAudioData();
+            if (audioData) {
+                // Find the peak for this sample
+                float samplePeak = 0.0f;
+
+                // Check all channels
+                for (int channel = 0; channel < audioData->getNumChannels(); ++channel) {
+                    // Get peak for this channel
+                    float channelPeak = audioData->getMagnitude(channel, 0, audioData->getNumSamples());
+                    samplePeak = std::max(samplePeak, channelPeak);
+                }
+
+                // Update global peak if this sample has a higher peak
+                globalPeak = std::max(globalPeak, samplePeak);
+            }
+        }
+    }
+
+    // If no audio data or all samples are silent, nothing to normalize
+    if (globalPeak <= 0.0f) {
+        return;
+    }
+
+    // Target level - typically 0.95 (-0.5dB) is a good value to prevent clipping
+    const float targetLevel = 0.95f;
+
+    // Normalize each sample to the target level
+    for (auto &sample: sampleList) {
+        if (sample->sound) {
+            juce::AudioBuffer<float> *audioData = sample->sound->getAudioData();
+            if (audioData) {
+                // Find the peak for this sample
+                float samplePeak = 0.0f;
+
+                // Check all channels
+                for (int channel = 0; channel < audioData->getNumChannels(); ++channel) {
+                    // Get peak for this channel
+                    float channelPeak = audioData->getMagnitude(channel, 0, audioData->getNumSamples());
+                    samplePeak = std::max(samplePeak, channelPeak);
+                }
+
+                // Calculate gain to apply for normalization
+                // We want the target level to equal the ratio of this sample's peak to the global peak
+                float normalizationGain = (samplePeak > 0.0f) ? (targetLevel / globalPeak) : 1.0f;
+
+                // Apply the gain to all channels
+                for (int channel = 0; channel < audioData->getNumChannels(); ++channel) {
+                    audioData->applyGain(channel, 0, audioData->getNumSamples(), normalizationGain);
+                }
+            }
+        }
+    }
 }

@@ -41,4 +41,10 @@ public:
                               const juce::Colour& backgroundColour,
                               bool shouldDrawButtonAsHighlighted,
                               bool shouldDrawButtonAsDown) override;
+                              
+    // Custom tab button drawing
+    void drawTabButton(juce::TabBarButton& button, 
+                       juce::Graphics& g, 
+                       bool isMouseOver, 
+                       bool isMouseDown) override;
 };

@@ -105,6 +105,34 @@ public:
         }
     }
 
+    // Method to rebuild the waveform without changing the current sample
+    void rebuildWaveform()
+    {
+        if (currentSampleIndex >= 0 && currentSampleIndex < sampleManager.getNumSamples())
+        {
+            // Get the sample sound
+            if (auto* sound = sampleManager.getSampleSound(currentSampleIndex))
+            {
+                // Clear previous thumbnail
+                thumbnail->clear();
+
+                // Create a reader for the sample data
+                auto& audioData = *sound->getAudioData();
+                double sampleRate = sound->getSourceSampleRate();
+
+                // Set the sample data to the thumbnail
+                thumbnail->reset(audioData.getNumChannels(),
+                                 sampleRate,
+                                 audioData.getNumSamples());
+
+                // Add the sample data to the thumbnail
+                thumbnail->addBlock(0, audioData, 0, audioData.getNumSamples());
+
+                repaint();
+            }
+        }
+    }
+
     void paint(juce::Graphics& g) override
     {
         // Fill background

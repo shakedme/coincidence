@@ -226,7 +226,7 @@ void Delay::processNewDelayTrigger(juce::AudioBuffer<float> &buffer,
         // Update the last trigger time
         lastTriggerSample = timingManager->getSamplePosition() + startSample;
 
-        juce::int64 noteDuration = noteDurations[0] * 2;
+        juce::int64 noteDuration = noteDurations[0] * 3;
 
         // Start a new delay effect
         activeDelay = {

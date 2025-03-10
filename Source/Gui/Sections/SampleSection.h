@@ -20,6 +20,10 @@ public:
     {
         // Make sure we're not intercepting mouse events that should go to our content components
         setInterceptsMouseClicks(false, true);
+        
+        // Make container transparent
+        setColour(juce::TabbedComponent::backgroundColourId, juce::Colours::transparentBlack);
+        setColour(juce::TabbedComponent::outlineColourId, juce::Colours::transparentBlack);
     }
     
     std::function<void(int)> onTabChanged;
@@ -58,6 +62,7 @@ private:
     std::unique_ptr<SampleDetailComponent> sampleDetailView;
     std::unique_ptr<juce::TextButton> removeSampleButton;
     std::unique_ptr<juce::TextButton> clearAllButton;
+    std::unique_ptr<juce::TextButton> normalizeButton;
     std::unique_ptr<Toggle> pitchFollowToggle;
     std::unique_ptr<juce::Label> pitchFollowLabel;
 

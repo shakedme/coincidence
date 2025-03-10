@@ -1,5 +1,5 @@
 #include "SampleList.h"
-#include "SampleNameCell.h"
+#include "SampleRow.h"
 
 SampleList::SampleList(PluginProcessor &p)
         : processor(p) {
@@ -218,13 +218,13 @@ SampleList::refreshComponentForCell(int rowNumber,
 
         // Create new component or reuse existing
         auto *cellComponent =
-                dynamic_cast<SampleNameCellComponent *>(existingComponentToUpdate);
+                dynamic_cast<SampleRow *>(existingComponentToUpdate);
         if (cellComponent == nullptr) {
-            cellComponent = new SampleNameCellComponent(this, rowNumber, sound);
+            cellComponent = new SampleRow(this, rowNumber, sound);
         } else {
             // If we're reusing, it's better to recreate to ensure state is fresh
             delete cellComponent;
-            cellComponent = new SampleNameCellComponent(this, rowNumber, sound);
+            cellComponent = new SampleRow(this, rowNumber, sound);
         }
 
         return cellComponent;

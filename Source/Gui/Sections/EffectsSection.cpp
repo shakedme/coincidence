@@ -113,9 +113,6 @@ EffectsSection::EffectsSection(PluginEditor& e, PluginProcessor& p)
         updateDelayRateKnobTooltip();
     };
     
-    // Special treatment for rate knob when in BPM sync mode
-    delayRateKnob->setTextBoxStyle(juce::Slider::NoTextBox, true, 0, 0);
-    
     // Create the toggle components first, before accessing their state
     // Ping Pong toggle
     delayPingPongToggle = std::make_unique<Toggle>(sectionColour);
