@@ -255,15 +255,9 @@ void SampleSectionComponent::updateTabVisibility()
         } else {
             sampleDetailView->setVisible(true);
         }
-        
-        // Hide the group title when in Samples tab
-        groupListView->setTitleVisible(false);
     } else if (currentTabIndex == GroupsTab) {
         // In Groups tab, show only the group list view
         groupListView->setVisible(true);
-        
-        // Show the group title when in Groups tab
-        groupListView->setTitleVisible(true);
     }
 
     // Always show the direction selector and other common controls

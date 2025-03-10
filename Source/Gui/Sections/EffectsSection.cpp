@@ -285,12 +285,12 @@ void EffectsSection::paint(juce::Graphics& g)
     // First vertical line - after stutter, before reverb
     const int divider1X = static_cast<int>(sectionWidth);
     g.setColour(sectionColour.withAlpha(0.3f));
-    g.drawLine(divider1X, rowY - 30, divider1X, rowY + 60, 1.0f);
+    g.drawLine(divider1X, rowY - 30 + 5, divider1X, rowY + 60, 1.0f);
 
     // Second vertical line - after reverb section, before delay
     const int divider2X = static_cast<int>(sectionWidth * 2);
     g.setColour(sectionColour.withAlpha(0.3f));
-    g.drawLine(divider2X, rowY - 30, divider2X, rowY + 60, 1.0f);
+    g.drawLine(divider2X, rowY - 30 + 5, divider2X, rowY + 60, 1.0f);
 }
 
 void EffectsSection::resized()

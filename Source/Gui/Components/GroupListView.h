@@ -10,49 +10,24 @@ class GroupListView
 public:
     explicit GroupListView(PluginProcessor &p)
             : processor(p) {
-        // Group title
-        titleLabel.setText("SAMPLE GROUPS", juce::dontSendNotification);
-        titleLabel.setFont(juce::Font(juce::FontOptions(TITLE_FONT_SIZE, juce::Font::bold)));
-        titleLabel.setColour(juce::Label::textColourId, juce::Colour(0xff999999));
-        titleLabel.setJustificationType(juce::Justification::centred);
-        addAndMakeVisible(titleLabel);
-
-        // Set title visibility - we'll control this externally
-        titleLabel.setVisible(false);
 
         // Make the sliders and controls for each group
         for (int i = 0; i < MAX_GROUPS; ++i) {
-            // Create the probability label
-            auto &probLabel = probabilityLabels[i];
-            probLabel = std::make_unique<juce::Label>();
-            probLabel->setText("PROB", juce::dontSendNotification);
-            probLabel->setFont(juce::Font(11.0f));
-            probLabel->setColour(juce::Label::textColourId, juce::Colours::white);
-            probLabel->setJustificationType(juce::Justification::centred);
-            probLabel->setEnabled(false); // Initially disabled
-            addAndMakeVisible(probLabel.get());
-
             auto &slider = probabilitySliders[i];
             slider = std::make_unique<juce::Slider>(juce::Slider::RotaryHorizontalVerticalDrag,
                                                     juce::Slider::TextBoxBelow);
-            slider->setRange(0.0, 100.0, 1.0); // Range 0-100 instead of 0-1
-            slider->setValue(100.0); // Default to 100%
+            slider->setRange(0.0, 100.0, 1.0);
+            slider->setValue(100.0);
             slider->setDoubleClickReturnValue(true, 100.0);
-            slider->setColour(juce::Slider::rotarySliderFillColourId, getGroupColor(i));
-            slider->setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour(0xff333333));
-            slider->setColour(juce::Slider::thumbColourId, juce::Colours::white);
-            slider->setColour(juce::Slider::textBoxTextColourId, juce::Colours::white);
-            slider->setColour(juce::Slider::textBoxBackgroundColourId,
-                              juce::Colours::transparentBlack); // Transparent background
-            slider->setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack); // Remove outline
-            slider->setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 18);
-            slider->setNumDecimalPlacesToDisplay(0); // No decimal places for 0-100 range
-            slider->setEnabled(false); // Initially disabled
+            slider->setNumDecimalPlacesToDisplay(0);
+            slider->setTextBoxStyle(juce::Slider::NoTextBox, false, 50, 6);
             slider->addListener(this);
             slider->setTooltip("Group probability (0-100%)");
-            slider->setLookAndFeel(&customLookAndFeel); // Use custom look and feel
+            slider->setColour(juce::Slider::rotarySliderFillColourId, getGroupColor(i));
+            slider->setColour(juce::Slider::thumbColourId, getGroupColor(i));
             addAndMakeVisible(slider.get());
 
+            // Group title label
             auto &label = groupLabels[i];
             label = std::make_unique<juce::Label>();
             label->setText("GROUP " + juce::String(i + 1), juce::dontSendNotification);
@@ -62,16 +37,53 @@ public:
             label->setEnabled(false); // Initially disabled
             addAndMakeVisible(label.get());
 
+            // Create effect section labels
+            auto &effectLabel = effectLabels[i];
+            effectLabel = std::make_unique<juce::Label>();
+            effectLabel->setText("EFFECTS", juce::dontSendNotification);
+            effectLabel->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
+            effectLabel->setColour(juce::Label::textColourId, getGroupColor(i).withAlpha(0.8f));
+            effectLabel->setJustificationType(juce::Justification::centred);
+            effectLabel->setEnabled(false); // Initially disabled
+            addAndMakeVisible(effectLabel.get());
+
+            // Create rate section labels
+            auto &rateLabel = rateLabels[i];
+            rateLabel = std::make_unique<juce::Label>();
+            rateLabel->setText("RATES", juce::dontSendNotification);
+            rateLabel->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
+            rateLabel->setColour(juce::Label::textColourId, getGroupColor(i).withAlpha(0.8f));
+            rateLabel->setJustificationType(juce::Justification::centred);
+            rateLabel->setEnabled(false); // Initially disabled
+            addAndMakeVisible(rateLabel.get());
+
             // Create rate icons 
+            setupRateIcon(rateIcons1_1[i], "1/1", Params::RATE_1_1, i);
             setupRateIcon(rateIcons1_2[i], "1/2", Params::RATE_1_2, i);
             setupRateIcon(rateIcons1_4[i], "1/4", Params::RATE_1_4, i);
             setupRateIcon(rateIcons1_8[i], "1/8", Params::RATE_1_8, i);
             setupRateIcon(rateIcons1_16[i], "1/16", Params::RATE_1_16, i);
+            setupRateIcon(rateIcons1_32[i], "1/32", Params::RATE_1_32, i);
 
-            // Create effect icons
+            // Create effect icons with shorter names like in the screenshot
             setupEffectIcon(reverbIcons[i], "R", i, EffectType::Reverb);
             setupEffectIcon(stutterIcons[i], "S", i, EffectType::Stutter);
             setupEffectIcon(delayIcons[i], "D", i, EffectType::Delay);
+
+            // Initially hide components (will be shown in resized() if group is active)
+            label->setVisible(false);
+            slider->setVisible(false);
+            effectLabel->setVisible(false);
+            rateLabel->setVisible(false);
+            reverbIcons[i]->setVisible(false);
+            stutterIcons[i]->setVisible(false);
+            delayIcons[i]->setVisible(false);
+            rateIcons1_1[i]->setVisible(false);
+            rateIcons1_2[i]->setVisible(false);
+            rateIcons1_4[i]->setVisible(false);
+            rateIcons1_8[i]->setVisible(false);
+            rateIcons1_16[i]->setVisible(false);
+            rateIcons1_32[i]->setVisible(false);
         }
 
         // Set initial size
@@ -86,86 +98,156 @@ public:
     void resized() override {
         auto bounds = getLocalBounds();
 
-        // Title at the top (only takes space if visible)
-        if (titleLabel.isVisible()) {
-            titleLabel.setBounds(bounds.removeFromTop(24));
-        }
-
-        // Lay out the groups in a single row
+        // Get the number of active groups (but layout is still fixed for 8)
         const int numGroups = juce::jmin(static_cast<int>(processor.getSampleManager().getNumGroups()), MAX_GROUPS);
 
-        if (numGroups > 0) {
-            // Calculate group width based on all groups in a single row
-            const int groupWidth = bounds.getWidth() / numGroups;
+        // Calculate fixed group width (each group takes 1/8 of the total width)
+        const int groupWidth = bounds.getWidth() / MAX_GROUPS;
+        const int padding = 4; // Smaller padding to save space
+        const int sliderSize = 30;
+        const int labelHeight = 15;
 
-            for (int i = 0; i < numGroups; ++i) {
-                juce::Rectangle<int> groupBounds(
-                        bounds.getX() + i * groupWidth,
-                        bounds.getY(),
-                        groupWidth,
-                        bounds.getHeight()
+        // Layout all potential group slots
+        for (int i = 0; i < MAX_GROUPS; ++i) {
+            // Get bounds for this group position (whether active or not)
+            juce::Rectangle<int> workingBounds(
+                    bounds.getX() + i * groupWidth,
+                    bounds.getY(),
+                    groupWidth,
+                    bounds.getHeight()
+            );
+
+            // Only set up actual components for active groups
+            if (i < numGroups) {
+                // Group title
+                groupLabels[i]->setBounds(workingBounds.getX(), workingBounds.getY(), workingBounds.getWidth(),
+                                          labelHeight);
+
+                probabilitySliders[i]->setBounds(
+                        workingBounds.getX() + workingBounds.getWidth() / 2 - sliderSize / 2,
+                        workingBounds.getY() + labelHeight + padding,
+                        sliderSize,
+                        sliderSize
                 );
 
-                // Store background area
-                groupBackgrounds[i] = groupBounds.reduced(3);
+                effectLabels[i]->setBounds(
+                        workingBounds.getX(),
+                        workingBounds.getY() + labelHeight + padding + sliderSize + 5,
+                        workingBounds.getWidth(),
+                        labelHeight
+                );
 
-                // Group label at the top
-                groupLabels[i]->setBounds(groupBounds.removeFromTop(24));
+                // Position effects in a row
+                const int effectsY = effectLabels[i]->getY() + labelHeight;
+                const int effectsSpacing = effectLabels[i]->getWidth() / 3;
 
-                // Calculate space for all controls
-                const int sliderSize = 48;
-                const int rateIconWidth = 27;
-                const int iconSize = 24;
-                const int padding = 8;
+                reverbIcons[i]->setBounds(
+                        workingBounds.getX() + effectsSpacing / 2 - effectIconWidth / 2,
+                        effectsY,
+                        effectIconWidth,
+                        effectIconHeight
+                );
 
-                // Determine vertical positions
-                // Start with effect icons at the top
-                const int effectIconsY = groupLabels[i]->getBottom() + padding;
+                stutterIcons[i]->setBounds(
+                        workingBounds.getX() + effectsSpacing * 1.5f - effectIconWidth / 2,
+                        effectsY,
+                        effectIconWidth,
+                        effectIconHeight
+                );
 
-                // Position effect icons in a row
-                int effectX = groupBounds.getCentreX() - ((iconSize * 3 + padding * 2) / 2);
+                delayIcons[i]->setBounds(
+                        workingBounds.getX() + effectsSpacing * 2.5f - effectIconWidth / 2,
+                        effectsY,
+                        effectIconWidth,
+                        effectIconHeight
+                );
 
-                reverbIcons[i]->setBounds(effectX, effectIconsY, iconSize, iconSize);
-                effectX += iconSize + padding;
-                stutterIcons[i]->setBounds(effectX, effectIconsY, iconSize, iconSize);
-                effectX += iconSize + padding;
-                delayIcons[i]->setBounds(effectX, effectIconsY, iconSize, iconSize);
+                // Rate section label at the top
+                rateLabels[i]->setBounds(
+                        workingBounds.getX(),
+                        effectsY + effectIconHeight,
+                        workingBounds.getWidth(),
+                        labelHeight
+                );
 
-                // Position probability label below the effect icons
-                juce::Rectangle<int> probLabelArea = groupBounds.removeFromTop(18);
-                probLabelArea.setY(effectIconsY + iconSize + padding);
-                probabilityLabels[i]->setBounds(probLabelArea);
+                // Position rate icons in a grid layout - 2 rows of 3 icons
+                const int ratesY1 = rateLabels[i]->getY() + labelHeight;
+                const int ratesY2 = ratesY1 + effectIconHeight;
+                const int ratesSpacing = workingBounds.getWidth() / 3;
 
-                // Position the slider below the probability label
-                juce::Rectangle<int> sliderArea = groupBounds.withSizeKeepingCentre(sliderSize, sliderSize);
-                sliderArea.setY(probLabelArea.getBottom() + padding);
-                probabilitySliders[i]->setBounds(sliderArea);
+                // First row
+                rateIcons1_1[i]->setBounds(
+                        workingBounds.getX() + ratesSpacing / 2 - rateIconWidth / 2,
+                        ratesY1,
+                        rateIconWidth,
+                        rateIconHeight
+                );
 
-                // Add a "RATE" label above the rate icons to make them more obvious
-                auto &rateLabel = rateLabels[i];
-                if (!rateLabel) {
-                    rateLabel = std::make_unique<juce::Label>();
-                    rateLabel->setText("RATE", juce::dontSendNotification);
-                    rateLabel->setFont(juce::Font(11.0f));
-                    rateLabel->setColour(juce::Label::textColourId, juce::Colours::white);
-                    rateLabel->setJustificationType(juce::Justification::centred);
-                    addAndMakeVisible(rateLabel.get());
-                }
-                
-                int rateLabelY = sliderArea.getBottom() + padding;
-                rateLabel->setBounds(groupBounds.getX(), rateLabelY, groupBounds.getWidth(), 16);
+                rateIcons1_2[i]->setBounds(
+                        workingBounds.getX() + ratesSpacing * 1.5f - rateIconWidth / 2,
+                        ratesY1,
+                        rateIconWidth,
+                        rateIconHeight
+                );
 
-                // Position rate icons in a row below the label
-                int rateY = rateLabelY + 16 + 4; // Below the rate label with a small gap
-                int rateX = groupBounds.getCentreX() - ((rateIconWidth * 4 + padding * 3) / 2);
+                rateIcons1_4[i]->setBounds(
+                        workingBounds.getX() + ratesSpacing * 2.5f - rateIconWidth / 2,
+                        ratesY1,
+                        rateIconWidth,
+                        rateIconHeight
+                );
 
-                rateIcons1_2[i]->setBounds(rateX, rateY, rateIconWidth, iconSize);
-                rateX += rateIconWidth + padding;
-                rateIcons1_4[i]->setBounds(rateX, rateY, rateIconWidth, iconSize);
-                rateX += rateIconWidth + padding;
-                rateIcons1_8[i]->setBounds(rateX, rateY, rateIconWidth, iconSize);
-                rateX += rateIconWidth + padding;
-                rateIcons1_16[i]->setBounds(rateX, rateY, rateIconWidth, iconSize);
+                // Second row
+                rateIcons1_8[i]->setBounds(
+                        workingBounds.getX() + ratesSpacing / 2 - rateIconWidth / 2,
+                        ratesY2,
+                        rateIconWidth,
+                        rateIconHeight
+                );
+
+                rateIcons1_16[i]->setBounds(
+                        workingBounds.getX() + ratesSpacing * 1.5f - rateIconWidth / 2,
+                        ratesY2,
+                        rateIconWidth,
+                        rateIconHeight
+                );
+
+                rateIcons1_32[i]->setBounds(
+                        workingBounds.getX() + ratesSpacing * 2.5f - rateIconWidth / 2,
+                        ratesY2,
+                        rateIconWidth,
+                        rateIconHeight
+                );
+
+                // Ensure the components are visible for active groups
+                groupLabels[i]->setVisible(true);
+                probabilitySliders[i]->setVisible(true);
+                effectLabels[i]->setVisible(true);
+                rateLabels[i]->setVisible(true);
+                reverbIcons[i]->setVisible(true);
+                stutterIcons[i]->setVisible(true);
+                delayIcons[i]->setVisible(true);
+                rateIcons1_1[i]->setVisible(true);
+                rateIcons1_2[i]->setVisible(true);
+                rateIcons1_4[i]->setVisible(true);
+                rateIcons1_8[i]->setVisible(true);
+                rateIcons1_16[i]->setVisible(true);
+                rateIcons1_32[i]->setVisible(true);
+            } else {
+                // Hide components for inactive groups
+                if (groupLabels[i]) groupLabels[i]->setVisible(false);
+                if (probabilitySliders[i]) probabilitySliders[i]->setVisible(false);
+                if (effectLabels[i]) effectLabels[i]->setVisible(false);
+                if (rateLabels[i]) rateLabels[i]->setVisible(false);
+                if (reverbIcons[i]) reverbIcons[i]->setVisible(false);
+                if (stutterIcons[i]) stutterIcons[i]->setVisible(false);
+                if (delayIcons[i]) delayIcons[i]->setVisible(false);
+                if (rateIcons1_1[i]) rateIcons1_1[i]->setVisible(false);
+                if (rateIcons1_2[i]) rateIcons1_2[i]->setVisible(false);
+                if (rateIcons1_4[i]) rateIcons1_4[i]->setVisible(false);
+                if (rateIcons1_8[i]) rateIcons1_8[i]->setVisible(false);
+                if (rateIcons1_16[i]) rateIcons1_16[i]->setVisible(false);
+                if (rateIcons1_32[i]) rateIcons1_32[i]->setVisible(false);
             }
         }
     }
@@ -184,33 +266,30 @@ public:
     }
 
     void timerCallback() override {
-        // Check if the number of groups has changed
+        // Get the current number of groups
         const int numGroups = processor.getSampleManager().getNumGroups();
 
+        // Check if the number of groups changed
         if (numGroups != lastNumGroups) {
             lastNumGroups = numGroups;
 
-            // Update the UI
+            // Enable/disable components based on how many groups exist
             for (int i = 0; i < MAX_GROUPS; ++i) {
-                bool groupExists = (i < numGroups);
-                probabilitySliders[i]->setEnabled(groupExists);
-                probabilityLabels[i]->setEnabled(groupExists);
-                groupLabels[i]->setEnabled(groupExists);
-                
-                // Also update the rate label visibility
-                if (rateLabels[i] != nullptr) {
-                    rateLabels[i]->setVisible(groupExists);
+                bool groupExists = i < numGroups;
+
+                // Components might not be created yet if processor is still initializing
+                if (groupLabels[i] && probabilitySliders[i]) {
+                    groupLabels[i]->setEnabled(groupExists);
+                    probabilitySliders[i]->setEnabled(groupExists);
                 }
+            }
+        }
 
-                // Enable/disable all rate and effect icons
-                rateIcons1_2[i]->setVisible(groupExists);
-                rateIcons1_4[i]->setVisible(groupExists);
-                rateIcons1_8[i]->setVisible(groupExists);
-                rateIcons1_16[i]->setVisible(groupExists);
-
-                reverbIcons[i]->setVisible(groupExists);
-                stutterIcons[i]->setVisible(groupExists);
-                delayIcons[i]->setVisible(groupExists);
+        // Update all active groups
+        for (int i = 0; i < numGroups && i < MAX_GROUPS; ++i) {
+            // Components might not be created yet if processor is still initializing
+            if (groupLabels[i] && probabilitySliders[i]) {
+                bool groupExists = i < numGroups;
 
                 if (groupExists) {
                     // Update group name and probability
@@ -220,10 +299,12 @@ public:
                         probabilitySliders[i]->setValue(group->probability * 100.0, juce::dontSendNotification);
 
                         // Update rate icon states
+                        updateRateIconState(rateIcons1_1[i].get(), i, Params::RATE_1_1);
                         updateRateIconState(rateIcons1_2[i].get(), i, Params::RATE_1_2);
                         updateRateIconState(rateIcons1_4[i].get(), i, Params::RATE_1_4);
                         updateRateIconState(rateIcons1_8[i].get(), i, Params::RATE_1_8);
                         updateRateIconState(rateIcons1_16[i].get(), i, Params::RATE_1_16);
+                        updateRateIconState(rateIcons1_32[i].get(), i, Params::RATE_1_32);
 
                         // Update effect icon states
                         updateEffectIconState(reverbIcons[i].get(), i, EffectType::Reverb);
@@ -232,166 +313,51 @@ public:
                     }
                 }
             }
-
-            // Resize to update the layout
-            resized();
         }
-    }
 
-    // Add method to control title visibility
-    void setTitleVisible(bool shouldBeVisible) {
-        titleLabel.setVisible(shouldBeVisible);
+        // Resize to update the layout
+        resized();
     }
 
     void paint(juce::Graphics &g) override {
-        // Draw a metallic panel background like in the BaseSection
         auto bounds = getLocalBounds();
-        auto baseColor = juce::Colour(0xff2a2a2a);
-
-        // Draw the panel background
-        g.setGradientFill(juce::ColourGradient(baseColor.brighter(0.1f),
-                                               bounds.getX(),
-                                               bounds.getY(),
-                                               baseColor.darker(0.1f),
-                                               bounds.getX(),
-                                               bounds.getBottom(),
-                                               false));
-        g.fillRect(bounds);
-
-        // Draw a subtle inner shadow
-        g.setColour(juce::Colour(0x20000000));
-        g.drawRect(bounds.expanded(1, 1), 2);
-
-        // Draw a highlight on the top edge
-        g.setColour(juce::Colour(0x30ffffff));
-        g.drawLine(bounds.getX() + 2,
-                   bounds.getY() + 1,
-                   bounds.getRight() - 2,
-                   bounds.getY() + 1,
-                   1.0f);
-
-        // Draw accent line under title if visible
-        if (titleLabel.isVisible()) {
-            g.setColour(juce::Colour(0xff999999).withAlpha(0.5f));
-            g.drawLine(10, titleLabel.getBottom() + 5, getWidth() - 10, titleLabel.getBottom() + 5, 1.0f);
-        }
-
-        // Draw backgrounds for each active group
-        const int numGroups = processor.getSampleManager().getNumGroups();
-        
-        // Draw vertical divider lines between groups
-        if (numGroups > 1) {
-            g.setColour(juce::Colour(0x40999999));
-            const int groupWidth = bounds.getWidth() / numGroups;
-            
-            for (int i = 1; i < numGroups && i < MAX_GROUPS; ++i) {
-                int dividerX = i * groupWidth;
-                g.drawLine(dividerX, titleLabel.isVisible() ? titleLabel.getBottom() + 10 : bounds.getY() + 10, 
-                           dividerX, bounds.getBottom() - 10, 1.0f);
-            }
-        }
-        
-        // We no longer need to draw black backgrounds for groups, as we want the metallic panel to show through
-        for (int i = 0; i < numGroups && i < MAX_GROUPS; ++i) {
-            // Draw a subtle border with the group color
-            g.setColour(getGroupColor(i).withAlpha(0.7f));
-            g.drawRoundedRectangle(groupBackgrounds[i].toFloat(), 4.0f, 1.0f);
-            
-            // Draw a darker background for the rate icons section to make it stand out
-            // Only if the rate label exists and is visible
-            if (rateLabels[i] != nullptr && rateLabels[i]->isVisible()) {
-                int rateY = rateLabels[i]->getY() - 4; // Start slightly above the label
-                int rateHeight = 24 + 16 + 8; // Height of label + icons + padding
-                
-                juce::Rectangle<float> rateArea(
-                    groupBackgrounds[i].getX() + 4, 
-                    rateY,
-                    groupBackgrounds[i].getWidth() - 8, 
-                    rateHeight
-                );
-                
-                g.setColour(juce::Colour(0x20000000)); // Slightly darker than background
-                g.fillRoundedRectangle(rateArea, 3.0f);
-                
-                // Draw a subtle border around rate area with the group color
-                g.setColour(getGroupColor(i).withAlpha(0.3f));
-                g.drawRoundedRectangle(rateArea, 3.0f, 0.5f);
-            }
+        // Draw vertical divider lines between all 8 group slots, regardless of active groups
+        const int groupWidth = bounds.getWidth() / MAX_GROUPS;
+        g.setColour(juce::Colour(0xffbf52d9).withAlpha(0.5f));
+        for (int i = 1; i < MAX_GROUPS; ++i) {
+            int dividerX = i * groupWidth;
+            g.drawLine(dividerX,
+                       bounds.getY(),
+                       dividerX,
+                       bounds.getBottom() - 10,
+                       1.0f);
         }
     }
 
 private:
-    // Custom look and feel for the sliders to match the plugin style
-    class GroupSliderLookAndFeel : public juce::LookAndFeel_V4 {
-    public:
-        GroupSliderLookAndFeel() {
-            setColour(juce::Slider::thumbColourId, juce::Colours::white);
-        }
-
-        void drawRotarySlider(juce::Graphics &g, int x, int y, int width, int height,
-                              float sliderPos, float rotaryStartAngle, float rotaryEndAngle,
-                              juce::Slider &slider) override {
-            // Get fill color from the slider
-            juce::Colour fillColor = slider.findColour(juce::Slider::rotarySliderFillColourId);
-
-            float radius = juce::jmin(width / 2.0f, height / 2.0f) - 4.0f;
-            float centerX = x + width * 0.5f;
-            float centerY = y + height * 0.5f;
-            float rx = centerX - radius;
-            float ry = centerY - radius;
-            float rw = radius * 2.0f;
-
-            // Map slider value to angle
-            float angle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
-
-            // Background circle (black to match the screenshot)
-            g.setColour(juce::Colours::black);
-            g.fillEllipse(rx, ry, rw, rw);
-
-            // Outline (dark grey)
-            g.setColour(juce::Colour(0xff444444));
-            g.drawEllipse(rx, ry, rw, rw, 1.0f);
-
-            // Draw the filled arc
-            juce::Path filledArc;
-            filledArc.addPieSegment(rx, ry, rw, rw, rotaryStartAngle, angle, 0.0f);
-            g.setColour(fillColor);
-            g.fillPath(filledArc);
-
-            // Draw marker dot in center
-            float dotSize = radius * 0.2f;
-            g.setColour(fillColor);
-            g.fillEllipse(centerX - dotSize, centerY - dotSize, dotSize * 2.0f, dotSize * 2.0f);
-
-            // Draw line indicator
-            juce::Path markerLine;
-            float lineThickness = 2.0f;
-            markerLine.addRectangle(-lineThickness * 0.5f, -radius + 2.0f, lineThickness, radius * 0.6f);
-
-            g.setColour(juce::Colours::white);
-            g.fillPath(markerLine, juce::AffineTransform::rotation(angle).translated(centerX, centerY));
-        }
-    };
-
     enum class EffectType {
         Reverb, Stutter, Delay
     };
 
     PluginProcessor &processor;
     juce::Label titleLabel;
-    GroupSliderLookAndFeel customLookAndFeel;
 
-    static constexpr int MAX_GROUPS = 4;
+    static constexpr int rateIconWidth = 30;
+    static constexpr int rateIconHeight = 15;
+    static constexpr int effectIconHeight = 18;
+    static constexpr int effectIconWidth = 18;
+    static constexpr int MAX_GROUPS = 8;
+
     std::unique_ptr<juce::Slider> probabilitySliders[MAX_GROUPS];
     std::unique_ptr<juce::Label> groupLabels[MAX_GROUPS];
-    std::unique_ptr<juce::Label> probabilityLabels[MAX_GROUPS];
-    juce::Rectangle<int> groupBackgrounds[MAX_GROUPS];
 
     // Rate icons (1/2, 1/4, 1/8, 1/16) for each group
+    std::unique_ptr<TextIcon> rateIcons1_1[MAX_GROUPS];
     std::unique_ptr<TextIcon> rateIcons1_2[MAX_GROUPS];
     std::unique_ptr<TextIcon> rateIcons1_4[MAX_GROUPS];
     std::unique_ptr<TextIcon> rateIcons1_8[MAX_GROUPS];
     std::unique_ptr<TextIcon> rateIcons1_16[MAX_GROUPS];
+    std::unique_ptr<TextIcon> rateIcons1_32[MAX_GROUPS];
 
     // Effect icons (reverb, stutter, delay) for each group
     std::unique_ptr<TextIcon> reverbIcons[MAX_GROUPS];
@@ -401,6 +367,9 @@ private:
     // Add a rate label for each group to make the rate section more obvious
     std::unique_ptr<juce::Label> rateLabels[MAX_GROUPS];
 
+    // Add an effect label for each group
+    std::unique_ptr<juce::Label> effectLabels[MAX_GROUPS];
+
     int lastNumGroups = 0;
 
     juce::Colour getGroupColor(int index) const {
@@ -409,7 +378,11 @@ private:
                 juce::Colour(0xff5c9ce6), // Blue
                 juce::Colour(0xff52bf5d), // Green
                 juce::Colour(0xffbf5252), // Red
-                juce::Colour(0xffbf52d9)  // Purple
+                juce::Colour(0xffbf52d9),  // Purple
+                juce::Colour(0xff52bfbf),  // Cyan
+                juce::Colour(0xff52d9bf),  // Light Cyan
+                juce::Colour(0xffbf52bf),  // Magenta
+                juce::Colour(0xffd952bf)   // Light Magenta
         };
 
         // Make sure index is within range
@@ -422,8 +395,9 @@ private:
 
     void
     setupRateIcon(std::unique_ptr<TextIcon> &icon, const juce::String &text, Params::RateOption rate, int groupIndex) {
-        icon = std::make_unique<TextIcon>(text, 27.0f, 24.0f);
-        
+        // Increase width from 27.0f to 35.0f to ensure text fits
+        icon = std::make_unique<TextIcon>(text, rateIconWidth, rateIconHeight);
+
         // Make icons more visible with brighter initial color
         icon->setNormalColour(juce::Colour(0xffaaaaaa));
         icon->setTooltip("Toggle " + text + " rate for Group " + juce::String(groupIndex + 1));
@@ -442,10 +416,9 @@ private:
 
     void
     setupEffectIcon(std::unique_ptr<TextIcon> &icon, const juce::String &text, int groupIndex, EffectType effectType) {
-        icon = std::make_unique<TextIcon>(text, 24.0f, 24.0f);
+        icon = std::make_unique<TextIcon>(text, effectIconWidth, effectIconHeight);
         icon->setNormalColour(juce::Colour(0xff888888));
 
-        // Set tooltip based on effect type
         juce::String effectName;
         switch (effectType) {
             case EffectType::Reverb:
@@ -479,6 +452,8 @@ private:
         if (groupIndex < 0 || groupIndex >= MAX_GROUPS) return nullptr;
 
         switch (rate) {
+            case Params::RATE_1_1:
+                return rateIcons1_1[groupIndex].get();
             case Params::RATE_1_2:
                 return rateIcons1_2[groupIndex].get();
             case Params::RATE_1_4:
@@ -487,6 +462,8 @@ private:
                 return rateIcons1_8[groupIndex].get();
             case Params::RATE_1_16:
                 return rateIcons1_16[groupIndex].get();
+            case Params::RATE_1_32:
+                return rateIcons1_32[groupIndex].get();
             default:
                 return nullptr;
         }
@@ -511,7 +488,7 @@ private:
         if (icon == nullptr) return;
 
         bool isEnabled = processor.getSampleManager().isGroupRateEnabled(groupIndex, rate);
-        
+
         // Use group color for active state to make it more distinct
         if (isEnabled) {
             icon->setActive(true, getGroupColor(groupIndex));

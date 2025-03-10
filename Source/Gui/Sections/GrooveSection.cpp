@@ -4,10 +4,9 @@
 
 #include "GrooveSection.h"
 
-GrooveSectionComponent::GrooveSectionComponent(PluginEditor& e,
-                                               PluginProcessor& p)
-    : BaseSectionComponent(e, p, "GROOVE", juce::Colour(0xff52bfd9))
-{
+GrooveSectionComponent::GrooveSectionComponent(PluginEditor &e,
+                                               PluginProcessor &p)
+        : BaseSectionComponent(e, p, "GROOVE", juce::Colour(0xff52bfd9)) {
     setupRateControls();
     setupRhythmModeControls();
     setupDensityControls();
@@ -18,13 +17,11 @@ GrooveSectionComponent::GrooveSectionComponent(PluginEditor& e,
     updateRateLabelsForRhythmMode();
 }
 
-GrooveSectionComponent::~GrooveSectionComponent()
-{
+GrooveSectionComponent::~GrooveSectionComponent() {
     clearAttachments();
 }
 
-void GrooveSectionComponent::resized()
-{
+void GrooveSectionComponent::resized() {
     auto area = getLocalBounds();
     const int knobSize = 45; // Reduced from 60
     const int labelHeight = 18; // Reduced from 20
@@ -32,11 +29,10 @@ void GrooveSectionComponent::resized()
     // Top row - Rate knobs
     const int rateKnobY = firstRowY;
     const int knobPadding =
-        (area.getWidth() - (Params::NUM_RATE_OPTIONS * knobSize))
-        / (Params::NUM_RATE_OPTIONS + 1);
+            (area.getWidth() - (Params::NUM_RATE_OPTIONS * knobSize))
+            / (Params::NUM_RATE_OPTIONS + 1);
 
-    for (size_t i = 0; i < Params::NUM_RATE_OPTIONS; ++i)
-    {
+    for (size_t i = 0; i < Params::NUM_RATE_OPTIONS; ++i) {
         int xPos = area.getX() + knobPadding + i * (knobSize + knobPadding);
         rateKnobs[i]->setBounds(xPos, rateKnobY, knobSize, knobSize);
         rateLabels[i]->setBounds(xPos, rateKnobY + knobSize, knobSize, labelHeight);
@@ -46,7 +42,7 @@ void GrooveSectionComponent::resized()
     const int middleRowY = rateKnobY + knobSize + labelHeight + 25; // Reduced from 30
 
     const int gateGroupX = 30;
-    const int velocityGroupX = area.getWidth() - 140 ;
+    const int velocityGroupX = area.getWidth() - 140;
 
     // Gate knobs
     gateKnob->setBounds(gateGroupX, middleRowY, knobSize, knobSize);
@@ -72,7 +68,7 @@ void GrooveSectionComponent::resized()
                                          knobSize + 30,
                                          25);
 
-    densityKnob->setBounds(area.getCentreX() - knobSize / 2 , middleRowY, knobSize, knobSize);
+    densityKnob->setBounds(area.getCentreX() - knobSize / 2, middleRowY, knobSize, knobSize);
     densityLabel->setBounds(area.getCentreX() - knobSize / 2, middleRowY + knobSize, knobSize, labelHeight);
 
     const int rhythmComboWidth = 90;
@@ -87,13 +83,11 @@ void GrooveSectionComponent::resized()
                                labelHeight);
 }
 
-void GrooveSectionComponent::setupRateControls()
-{
-    for (size_t i = 0; i < Params::NUM_RATE_OPTIONS; ++i)
-    {
+void GrooveSectionComponent::setupRateControls() {
+    for (size_t i = 0; i < Params::NUM_RATE_OPTIONS; ++i) {
         // Create rate knob
         rateKnobs[i] = std::unique_ptr<juce::Slider>(
-            createRotarySlider("Rate " + juce::String(Params::rateBaseNames[i]) + " intensity"));
+                createRotarySlider("Rate " + juce::String(Params::rateBaseNames[i]) + " intensity"));
         rateKnobs[i]->setName("rate_" + juce::String(i));
         rateKnobs[i]->setRange(0.0, 100.0, 0.1);
         rateKnobs[i]->setTextValueSuffix("%");
@@ -101,21 +95,20 @@ void GrooveSectionComponent::setupRateControls()
 
         // Create rate label
         rateLabels[i] = std::unique_ptr<juce::Label>(
-            createLabel(Params::rateBaseNames[i], juce::Justification::centred));
+                createLabel(Params::rateBaseNames[i], juce::Justification::centred));
         rateLabels[i]->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
         addAndMakeVisible(rateLabels[i].get());
 
         // Create parameter attachment
         sliderAttachments.push_back(
-            std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-                processor.parameters,
-                "rate_" + juce::String(i) + "_value",
-                *rateKnobs[i]));
+                std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+                        processor.parameters,
+                        "rate_" + juce::String(i) + "_value",
+                        *rateKnobs[i]));
     }
 }
 
-void GrooveSectionComponent::setupRhythmModeControls()
-{
+void GrooveSectionComponent::setupRhythmModeControls() {
     // Create rhythm mode combo box
     rhythmModeComboBox = std::make_unique<juce::ComboBox>();
     rhythmModeComboBox->addItem("Normal", Params::RHYTHM_NORMAL + 1);
@@ -130,21 +123,20 @@ void GrooveSectionComponent::setupRhythmModeControls()
 
     // Create rhythm mode label
     rhythmModeLabel =
-        std::unique_ptr<juce::Label>(createLabel("MODE", juce::Justification::centred));
+            std::unique_ptr<juce::Label>(createLabel("MODE", juce::Justification::centred));
     rhythmModeLabel->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
     addAndMakeVisible(rhythmModeLabel.get());
 
     // Create parameter attachment
     comboBoxAttachments.push_back(
-        std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
-            processor.parameters, "rhythm_mode", *rhythmModeComboBox));
+            std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
+                    processor.parameters, "rhythm_mode", *rhythmModeComboBox));
 }
 
-void GrooveSectionComponent::setupDensityControls()
-{
+void GrooveSectionComponent::setupDensityControls() {
     // Create density knob
     densityKnob =
-        std::unique_ptr<juce::Slider>(createRotarySlider("Overall density/probability"));
+            std::unique_ptr<juce::Slider>(createRotarySlider("Overall density/probability"));
     densityKnob->setName("density");
     densityKnob->setRange(0.0, 100.0, 0.1);
     densityKnob->setTextValueSuffix("%");
@@ -152,18 +144,17 @@ void GrooveSectionComponent::setupDensityControls()
 
     // Create density label
     densityLabel = std::unique_ptr<juce::Label>(
-        createLabel("DENSITY", juce::Justification::centred));
+            createLabel("DENSITY", juce::Justification::centred));
     densityLabel->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
     addAndMakeVisible(densityLabel.get());
 
     // Create parameter attachment
     sliderAttachments.push_back(
-        std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-            processor.parameters, "density", *densityKnob));
+            std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+                    processor.parameters, "density", *densityKnob));
 }
 
-void GrooveSectionComponent::setupGateControls()
-{
+void GrooveSectionComponent::setupGateControls() {
     // Create gate knob
     gateKnob = std::unique_ptr<juce::Slider>(createRotarySlider("Gate length"));
     gateKnob->setName("gate");
@@ -173,13 +164,13 @@ void GrooveSectionComponent::setupGateControls()
 
     // Create gate label
     gateLabel =
-        std::unique_ptr<juce::Label>(createLabel("GATE", juce::Justification::centred));
+            std::unique_ptr<juce::Label>(createLabel("GATE", juce::Justification::centred));
     gateLabel->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
     addAndMakeVisible(gateLabel.get());
 
     // Create gate random knob
     gateRandomKnob =
-        std::unique_ptr<juce::Slider>(createRotarySlider("Gate randomization"));
+            std::unique_ptr<juce::Slider>(createRotarySlider("Gate randomization"));
     gateRandomKnob->setName("gate_random");
     gateRandomKnob->setRange(0.0, 100.0, 0.1);
     gateRandomKnob->setTextValueSuffix("%");
@@ -187,21 +178,20 @@ void GrooveSectionComponent::setupGateControls()
 
     // Create gate random label
     gateRandomLabel =
-        std::unique_ptr<juce::Label>(createLabel("RNDM", juce::Justification::centred));
+            std::unique_ptr<juce::Label>(createLabel("RNDM", juce::Justification::centred));
     gateRandomLabel->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
     addAndMakeVisible(gateRandomLabel.get());
 
     // Create parameter attachments
     sliderAttachments.push_back(
-        std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-            processor.parameters, "gate", *gateKnob));
+            std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+                    processor.parameters, "gate", *gateKnob));
     sliderAttachments.push_back(
-        std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-            processor.parameters, "gate_randomize", *gateRandomKnob));
+            std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+                    processor.parameters, "gate_randomize", *gateRandomKnob));
 }
 
-void GrooveSectionComponent::setupVelocityControls()
-{
+void GrooveSectionComponent::setupVelocityControls() {
     // Create velocity knob
     velocityKnob = std::unique_ptr<juce::Slider>(createRotarySlider("Velocity"));
     velocityKnob->setName("velocity");
@@ -211,13 +201,13 @@ void GrooveSectionComponent::setupVelocityControls()
 
     // Create velocity label
     velocityLabel =
-        std::unique_ptr<juce::Label>(createLabel("VELO", juce::Justification::centred));
+            std::unique_ptr<juce::Label>(createLabel("VELO", juce::Justification::centred));
     velocityLabel->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
     addAndMakeVisible(velocityLabel.get());
 
     // Create velocity random knob
     velocityRandomKnob =
-        std::unique_ptr<juce::Slider>(createRotarySlider("Velocity randomization"));
+            std::unique_ptr<juce::Slider>(createRotarySlider("Velocity randomization"));
     velocityRandomKnob->setName("velocity_random");
     velocityRandomKnob->setRange(0.0, 100.0, 0.1);
     velocityRandomKnob->setTextValueSuffix("%");
@@ -225,33 +215,31 @@ void GrooveSectionComponent::setupVelocityControls()
 
     // Create velocity random label
     velocityRandomLabel =
-        std::unique_ptr<juce::Label>(createLabel("RNDM", juce::Justification::centred));
+            std::unique_ptr<juce::Label>(createLabel("RNDM", juce::Justification::centred));
     velocityRandomLabel->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
     addAndMakeVisible(velocityRandomLabel.get());
 
     // Create parameter attachments
     sliderAttachments.push_back(
-        std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-            processor.parameters, "velocity", *velocityKnob));
+            std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+                    processor.parameters, "velocity", *velocityKnob));
     sliderAttachments.push_back(
-        std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-            processor.parameters, "velocity_randomize", *velocityRandomKnob));
+            std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+                    processor.parameters, "velocity_randomize", *velocityRandomKnob));
 }
 
-void GrooveSectionComponent::updateRateLabelsForRhythmMode()
-{
+void GrooveSectionComponent::updateRateLabelsForRhythmMode() {
     // Don't proceed if the combo box isn't initialized yet
     if (rhythmModeComboBox == nullptr)
         return;
 
     // Get the current rhythm mode
     auto rhythmMode = static_cast<Params::RhythmMode>(
-        rhythmModeComboBox->getSelectedItemIndex());
+            rhythmModeComboBox->getSelectedItemIndex());
 
     // Get the rhythm mode text suffix
     juce::String rhythmSuffix;
-    switch (rhythmMode)
-    {
+    switch (rhythmMode) {
         case Params::RHYTHM_DOTTED:
             rhythmSuffix = "D";
             break;
@@ -265,11 +253,9 @@ void GrooveSectionComponent::updateRateLabelsForRhythmMode()
 
     // Update the rate labels with the appropriate suffix
 
-    for (int i = 0; i < Params::NUM_RATE_OPTIONS; ++i)
-    {
+    for (int i = 0; i < Params::NUM_RATE_OPTIONS; ++i) {
         // Check if the label exists
-        if (rateLabels[i] != nullptr)
-        {
+        if (rateLabels[i] != nullptr) {
             juce::String labelText = Params::rateBaseNames[i];
 
             // Only append suffix if it's not empty (i.e., not NORMAL mode)
@@ -281,8 +267,7 @@ void GrooveSectionComponent::updateRateLabelsForRhythmMode()
     }
 }
 
-void GrooveSectionComponent::repaintRandomizationControls()
-{
+void GrooveSectionComponent::repaintRandomizationControls() {
     // Repaint knobs with randomization
     if (gateKnob != nullptr)
         gateKnob->repaint();
@@ -290,20 +275,19 @@ void GrooveSectionComponent::repaintRandomizationControls()
         velocityKnob->repaint();
 }
 
-void GrooveSectionComponent::setupDirectionControls()
-{
+void GrooveSectionComponent::setupDirectionControls() {
     // Create gate direction selector
     gateDirectionSelector = std::make_unique<DirectionSelector>(juce::Colour(0xff52bfd9));
 
     // Set initial value from parameter
-    auto* gateDirectionParam = dynamic_cast<juce::AudioParameterChoice*>(
-        processor.parameters.getParameter("gate_direction"));
+    auto *gateDirectionParam = dynamic_cast<juce::AudioParameterChoice *>(
+            processor.parameters.getParameter("gate_direction"));
 
     if (gateDirectionParam)
         gateDirectionSelector->setDirection(static_cast<Params::DirectionType>(gateDirectionParam->getIndex()));
 
     gateDirectionSelector->onDirectionChanged = [this](Params::DirectionType direction) {
-        auto* param = processor.parameters.getParameter("gate_direction");
+        auto *param = processor.parameters.getParameter("gate_direction");
         if (param)
             param->beginChangeGesture();
         param->setValueNotifyingHost(param->convertTo0to1(static_cast<int>(direction)));
@@ -314,17 +298,16 @@ void GrooveSectionComponent::setupDirectionControls()
 
     // Create velocity direction selector
     velocityDirectionSelector =
-        std::make_unique<DirectionSelector>(juce::Colour(0xff52bfd9));
+            std::make_unique<DirectionSelector>(juce::Colour(0xff52bfd9));
 
-    auto* velocityDirectionParam = dynamic_cast<juce::AudioParameterChoice*>(
-        processor.parameters.getParameter("velocity_direction"));
+    auto *velocityDirectionParam = dynamic_cast<juce::AudioParameterChoice *>(
+            processor.parameters.getParameter("velocity_direction"));
 
     if (velocityDirectionParam)
         velocityDirectionSelector->setDirection(static_cast<Params::DirectionType>(velocityDirectionParam->getIndex()));
 
-    velocityDirectionSelector->onDirectionChanged = [this](Params::DirectionType direction)
-    {
-        auto* param = processor.parameters.getParameter("velocity_direction");
+    velocityDirectionSelector->onDirectionChanged = [this](Params::DirectionType direction) {
+        auto *param = processor.parameters.getParameter("velocity_direction");
         if (param)
             param->beginChangeGesture();
         param->setValueNotifyingHost(param->convertTo0to1(static_cast<int>(direction)));
