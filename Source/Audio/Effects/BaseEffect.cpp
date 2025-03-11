@@ -73,12 +73,12 @@ bool BaseEffect::isEffectEnabledForSample(int effectTypeIndex) {
 
 void BaseEffect::mixWetDrySignals(float* dry, const float* wet, float wetMix, int numSamples, float fadeOut) {
     for (int sample = 0; sample < numSamples; ++sample) {
-        // Preserve gain by using equal-power crossfade
-        float dryGain = std::max(std::cos(wetMix * juce::MathConstants<float>::halfPi), 0.0f);
+        // Use equal-power crossfade to preserve perceived loudness
+        float dryGain = std::cos(wetMix * juce::MathConstants<float>::halfPi);
         float wetGain = std::sin(wetMix * juce::MathConstants<float>::halfPi) * fadeOut;
         
-        // Properly mix signals to maintain overall volume
-        dry[sample] = dry[sample] * dryGain + wet[sample] * wetGain;
+        // Mix signals while maintaining overall volume
+        dry[sample] = (dry[sample] * dryGain) + (wet[sample] * wetGain);
     }
 }
 

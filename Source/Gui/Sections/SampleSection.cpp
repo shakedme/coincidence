@@ -73,7 +73,10 @@ void SampleSectionComponent::initComponents(PluginProcessor& processorRef)
     // Create the sample list component next
     sampleList = std::make_unique<SampleList>(processorRef);
     sampleList->onSampleDetailRequested = [this](int sampleIndex) {
-        showDetailViewForSample(sampleIndex);
+        // Only show detail view if we're in the Samples tab
+        if (currentTabIndex == SamplesTab) {
+            showDetailViewForSample(sampleIndex);
+        }
     };
     addAndMakeVisible(sampleList.get());
 
@@ -216,17 +219,27 @@ void SampleSectionComponent::initComponents(PluginProcessor& processorRef)
 // Handle tab changes
 void SampleSectionComponent::handleTabChange(int newTabIndex)
 {
+    // Update tab index
     currentTabIndex = newTabIndex;
+    
+    // If switching to Groups tab while in detail view, exit detail view
+    if (currentTabIndex == GroupsTab && showingDetailView) {
+        showingDetailView = false;
+    }
+    
+    // Update component visibility based on new tab
     updateTabVisibility();
     
     // Ensure proper z-ordering when switching tabs
-    if (currentTabIndex == SamplesTab) {
-        if (showingDetailView) {
-            sampleDetailView->toFront(false);
-        } else {
-            sampleList->toFront(false);
-        }
+    // We want to maintain the detail view's visibility state when changing tabs
+    if (showingDetailView && currentTabIndex == SamplesTab) {
+        // Detail view should be on top if it's showing and we're in Samples tab
+        sampleDetailView->toFront(false);
+    } else if (currentTabIndex == SamplesTab) {
+        // Sample list on top for Samples tab
+        sampleList->toFront(false);
     } else {
+        // Group list on top for Groups tab
         groupListView->toFront(false);
     }
     
@@ -247,23 +260,27 @@ void SampleSectionComponent::updateTabVisibility()
     sampleDetailView->setVisible(false);
     groupListView->setVisible(false);
     
-    // Then show only the components for the current tab
+    // Then show only the appropriate component based on current tab and view state
     if (currentTabIndex == SamplesTab) {
-        // In Samples tab, show sample list (unless detail view is active)
-        if (!showingDetailView) {
-            sampleList->setVisible(true);
-        } else {
+        // In Samples tab, we can show either sample list or detail view
+        if (showingDetailView) {
             sampleDetailView->setVisible(true);
+        } else {
+            sampleList->setVisible(true);
         }
     } else if (currentTabIndex == GroupsTab) {
         // In Groups tab, show only the group list view
         groupListView->setVisible(true);
+        // Detail view is never visible in Groups tab
     }
 
-    // Always show the direction selector and other common controls
-    sampleDirectionSelector->setVisible(true);
-    clearAllButton->setVisible(true);
-    normalizeButton->setVisible(true);
+    // Always show the common controls unless we have no samples
+    bool noSamplesLoaded = processor.getSampleManager().getNumSamples() == 0;
+    bool showControls = !noSamplesLoaded;
+    
+    sampleDirectionSelector->setVisible(showControls);
+    clearAllButton->setVisible(showControls);
+    normalizeButton->setVisible(showControls);
     
     // Make sure our tab container doesn't capture mouse events intended for child components
     tabs->setInterceptsMouseClicks(false, true);
@@ -293,22 +310,42 @@ void SampleSectionComponent::paint(juce::Graphics& g)
             g.drawRect(contentArea.reduced(10), 2);
         }
 
-        // Draw the drag & drop text centered in the content area
-        g.setColour(juce::Colours::white.withAlpha(0.5f));
-        g.setFont(juce::Font(juce::FontOptions(14.0f)));
-        g.drawText("Drag & Drop Samples Here", contentArea, juce::Justification::centred, true);
+        // Only draw the drag & drop text if we're in the Samples tab
+        if (currentTabIndex == SamplesTab)
+        {
+            // Draw the drag & drop text centered in the content area
+            g.setColour(juce::Colours::white.withAlpha(0.5f));
+            g.setFont(juce::Font(juce::FontOptions(14.0f)));
+            g.drawText("Drag & Drop Samples Here", contentArea, juce::Justification::centred, true);
+        }
+        // Show instructional text for the Groups tab
+        else if (currentTabIndex == GroupsTab)
+        {
+            // Draw the groups info text centered in the content area
+            g.setColour(juce::Colours::white.withAlpha(0.5f));
+            g.setFont(juce::Font(juce::FontOptions(14.0f)));
+            g.drawText("Add samples first to create groups", contentArea, juce::Justification::centred, true);
+        }
 
-        // Hide the sample direction selector, group list, and clear all button when no samples are loaded
+        // Hide buttons when no samples are loaded
         sampleDirectionSelector->setVisible(false);
-        groupListView->setVisible(false);
         clearAllButton->setVisible(false);
+        normalizeButton->setVisible(false);
+        
+        // Ensure no views are visible in empty state
+        sampleList->setVisible(false);
+        groupListView->setVisible(false);
+        sampleDetailView->setVisible(false);
     }
     else
     {
-        // Show the sample direction selector, group list, and clear all button when samples are loaded
+        // Show controls when samples are loaded
         sampleDirectionSelector->setVisible(true);
-        groupListView->setVisible(true);
         clearAllButton->setVisible(true);
+        normalizeButton->setVisible(true);
+        
+        // The visibility of the views (sample list, detail view, group list)
+        // is managed by updateTabVisibility() and should not be overridden here
     }
 }
 
@@ -366,7 +403,17 @@ void SampleSectionComponent::filesDropped(const juce::StringArray& files, int, i
 
     if (needsUpdate)
     {
+        // Refresh the list content
         sampleList->updateContent();
+        
+        // Make sure we're showing the sample list (not the detail view)
+        showingDetailView = false;
+        
+        // Force update of component visibility
+        updateTabVisibility();
+        
+        // Ensure sample list is at the front and repaint
+        sampleList->toFront(false);
         repaint();
     }
 }
@@ -385,28 +432,23 @@ void SampleSectionComponent::fileDragExit(const juce::StringArray&)
 
 void SampleSectionComponent::showListView()
 {
-    // Hide detail view
-    sampleDetailView->setVisible(false);
-    
-    // Determine which components should be visible based on current tab
-    if (currentTabIndex == SamplesTab) {
-        sampleList->setVisible(true);
-        groupListView->setVisible(false);
-    } else {
-        sampleList->setVisible(false);
-        groupListView->setVisible(true);
-    }
-
     // Update state
     showingDetailView = false;
 
+    // Update component visibility based on current tab
+    updateTabVisibility();
+
     // Force a layout refresh
     resized();
-    repaint();
 }
 
 void SampleSectionComponent::showDetailViewForSample(int sampleIndex)
 {
+    // Only allow showing detail view in Samples tab
+    if (currentTabIndex != SamplesTab) {
+        return;
+    }
+    
     if (sampleDetailView->getSampleIndex() != sampleIndex) {
         sampleDetailView->clearSampleData();
     }
@@ -416,7 +458,7 @@ void SampleSectionComponent::showDetailViewForSample(int sampleIndex)
         // Set up detail view for this sample
         sampleDetailView->setSampleIndex(sampleIndex);
 
-        // Hide all other content components
+        // Hide all other content components to ensure only detail view is visible
         sampleList->setVisible(false);
         groupListView->setVisible(false);
         

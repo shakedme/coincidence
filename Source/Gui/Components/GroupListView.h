@@ -98,8 +98,13 @@ public:
     void resized() override {
         auto bounds = getLocalBounds();
 
-        // Get the number of active groups (but layout is still fixed for 8)
-        const int numGroups = juce::jmin(static_cast<int>(processor.getSampleManager().getNumGroups()), MAX_GROUPS);
+        // Get the number of active groups
+        const int numGroups = static_cast<int>(processor.getSampleManager().getNumGroups());
+        
+        // Skip layout if no groups exist
+        if (numGroups == 0) {
+            return;
+        }
 
         // Calculate fixed group width (each group takes 1/8 of the total width)
         const int groupWidth = bounds.getWidth() / MAX_GROUPS;
@@ -321,16 +326,30 @@ public:
 
     void paint(juce::Graphics &g) override {
         auto bounds = getLocalBounds();
-        // Draw vertical divider lines between all 8 group slots, regardless of active groups
-        const int groupWidth = bounds.getWidth() / MAX_GROUPS;
-        g.setColour(juce::Colour(0xffbf52d9).withAlpha(0.5f));
-        for (int i = 1; i < MAX_GROUPS; ++i) {
-            int dividerX = i * groupWidth;
-            g.drawLine(dividerX,
-                       bounds.getY(),
-                       dividerX,
-                       bounds.getBottom() - 10,
-                       1.0f);
+        
+        // Get the number of active groups
+        const int numGroups = static_cast<int>(processor.getSampleManager().getNumGroups());
+        
+        if (numGroups > 0) {
+            // Draw vertical divider lines between all 8 group slots when groups exist
+            const int groupWidth = bounds.getWidth() / MAX_GROUPS;
+            g.setColour(juce::Colour(0xffbf52d9).withAlpha(0.5f));
+            for (int i = 1; i < MAX_GROUPS; ++i) {
+                int dividerX = i * groupWidth;
+                g.drawLine(dividerX,
+                        bounds.getY(),
+                        dividerX,
+                        bounds.getBottom() - 10,
+                        1.0f);
+            }
+        } else {
+            // Display centered message when no groups exist
+            g.setColour(juce::Colours::white);
+            g.setFont(16.0f);
+            g.drawText("Create groups by multi-selecting samples and right clicking",
+                       bounds,
+                       juce::Justification::centred,
+                       true);
         }
     }
 

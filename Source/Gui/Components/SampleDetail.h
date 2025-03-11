@@ -17,7 +17,7 @@ public:
         // Initialize the thumbnail cache and source
         thumbnailCache = std::make_unique<juce::AudioThumbnailCache>(5);
         thumbnail =
-            std::make_unique<juce::AudioThumbnail>(512, formatManager, *thumbnailCache);
+            std::make_unique<juce::AudioThumbnail>(4096, formatManager, *thumbnailCache);
 
         formatManager.registerBasicFormats();
 
@@ -85,13 +85,15 @@ public:
                     auto& audioData = *sound->getAudioData();
                     double sampleRate = sound->getSourceSampleRate();
 
-                    // Set the sample data to the thumbnail
-                    thumbnail->reset(audioData.getNumChannels(),
-                                     sampleRate,
-                                     audioData.getNumSamples());
+                    thumbnail->setSource(&audioData, sampleRate, static_cast<juce::int64>(currentSampleIndex));
 
-                    // Add the sample data to the thumbnail
-                    thumbnail->addBlock(0, audioData, 0, audioData.getNumSamples());
+//                    // Set the sample data to the thumbnail
+//                    thumbnail->reset(audioData.getNumChannels(),
+//                                     sampleRate,
+//                                     audioData.getNumSamples());
+//
+//                    // Add the sample data to the thumbnail
+//                    thumbnail->addBlock(0, audioData, 0, audioData.getNumSamples());
 
                     // If no onset markers exist, detect them
                     if (sound->getOnsetMarkers().empty())
@@ -640,13 +642,8 @@ private:
             // Get audio data
             auto& audioData = *sound->getAudioData();
             double sampleRate = sound->getSourceSampleRate();
-
-            // Detect onsets
-            std::vector<float> onsetPositions =
-                detector.detectOnsets(audioData, sampleRate);
-
             // Set the onset markers
-            sound->setOnsetMarkers(onsetPositions);
+            sound->setOnsetMarkers(detector.detectOnsets(audioData, sampleRate));
         }
     }
 
