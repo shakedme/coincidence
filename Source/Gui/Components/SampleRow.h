@@ -1,6 +1,7 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 #include "SampleList.h"
 #include "../../Audio/Sampler/Sampler.h"
+#include "Icon.h"
 
 // A complete cell component that includes both sample name, probability slider and icons
 class SampleRow : public juce::Component {
@@ -23,7 +24,6 @@ private:
     std::unique_ptr<Icon> editIcon;
     std::unique_ptr<Icon> onsetIcon;
     std::unique_ptr<Icon> deleteIcon;
-    std::unique_ptr<TextIcon> reverbIcon;
 
     // Rate icons
     std::unique_ptr<TextIcon> rate1_1Icon;

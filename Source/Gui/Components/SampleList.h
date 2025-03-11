@@ -60,10 +60,6 @@ public:
 
     // Toggle onset randomization for a sample
     void toggleOnsetRandomization(int sampleIndex);
-
-    // Toggle reverb enabled for a sample
-    void toggleReverbForSample(int sampleIndex);
-
 private:
     std::unique_ptr<juce::TableListBox> sampleListBox;
 

@@ -7,6 +7,9 @@ SampleList::SampleList(PluginProcessor &p)
     sampleListBox = std::make_unique<juce::TableListBox>("Sample List", this);
     sampleListBox->setHeaderHeight(0); // Remove the header by setting height to 0
     sampleListBox->setMultipleSelectionEnabled(true); // Enable multiple selections
+    
+    // Set a fixed row height to improve scrolling performance
+    sampleListBox->setRowHeight(40);
 
     // Disable automatic row selection toggling - we'll handle this manually
     sampleListBox->setClickingTogglesRowSelection(false);
@@ -163,9 +166,7 @@ void SampleList::paintCell(juce::Graphics &g,
                            int width,
                            int height,
                            bool /*rowIsSelected*/) {
-    // We're now using a custom component for the single column,
-    // so we don't need to paint anything here.
-    // The SampleNameCellComponent handles all painting.
+
 }
 
 void SampleList::deleteKeyPressed(int /*rowNumber*/) {
@@ -211,23 +212,18 @@ SampleList::refreshComponentForCell(int rowNumber,
     if (rowNumber >= processor.getSampleManager().getNumSamples())
         return nullptr;
 
-    // Only handle column 1 (the name column) since it's now a single-column display
     if (columnId == 1) {
         // Get the sample sound
         auto *sound = processor.getSampleManager().getSampleSound(rowNumber);
 
-        // Create new component or reuse existing
-        auto *cellComponent =
-                dynamic_cast<SampleRow *>(existingComponentToUpdate);
+        // Create new component or update existing
+        auto *cellComponent = dynamic_cast<SampleRow *>(existingComponentToUpdate);
         if (cellComponent == nullptr) {
-            cellComponent = new SampleRow(this, rowNumber, sound);
-        } else {
-            // If we're reusing, it's better to recreate to ensure state is fresh
-            delete cellComponent;
-            cellComponent = new SampleRow(this, rowNumber, sound);
+            return new SampleRow(this, rowNumber, sound);
         }
 
-        return cellComponent;
+        delete cellComponent;
+        return new SampleRow(this, rowNumber, sound);
     }
 
     return nullptr;
@@ -291,7 +287,7 @@ void SampleList::toggleOnsetRandomization(int sampleIndex) {
             if (sound->getOnsetMarkers().empty()) {
                 // No onset markers available, show warning
                 juce::AlertWindow::showMessageBoxAsync(
-                        juce::AlertWindow::WarningIcon,
+                        juce::AlertWindow::NoIcon,
                         "No Onset Markers",
                         "This sample doesn't have any onset markers yet. Please edit the sample to detect or add onset markers.",
                         "OK",
@@ -305,20 +301,6 @@ void SampleList::toggleOnsetRandomization(int sampleIndex) {
                 // This ensures the SampleNameCellComponent gets recreated with the correct icon state
                 updateContent();
             }
-        }
-    }
-}
-
-void SampleList::toggleReverbForSample(int sampleIndex) {
-    if (sampleIndex >= 0 && sampleIndex < processor.getSampleManager().getNumSamples()) {
-        auto *sound = processor.getSampleManager().getSampleSound(sampleIndex);
-        if (sound != nullptr) {
-            // Toggle reverb enabled state
-            bool newState = !sound->isReverbEnabled();
-            sound->setReverbEnabled(newState);
-
-            // Update content to refresh the icon
-            updateContent();
         }
     }
 }

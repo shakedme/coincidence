@@ -419,7 +419,7 @@ private:
 
         // Make icons more visible with brighter initial color
         icon->setNormalColour(juce::Colour(0xffaaaaaa));
-        icon->setTooltip("Toggle " + text + " rate for Group " + juce::String(groupIndex + 1));
+        icon->setTooltip("Toggle " + text + " rate for Group " + juce::String(groupIndex + 1) + ". When disabled, the rate will never be played regardless of probability settings.\"" );
 
         // Add click handler
         icon->onClicked = [this, rate, groupIndex]() {
@@ -451,11 +451,10 @@ private:
                 break;
         }
 
-        icon->setTooltip("Toggle " + effectName + " for Group " + juce::String(groupIndex + 1));
+        icon->setTooltip("Toggle " + effectName + " for Group " + juce::String(groupIndex + 1) + ". When disabled, the effect will never be applied to this group regardless of probability settings.");
 
         // Add click handler
         icon->onClicked = [this, effectType, groupIndex]() {
-            // TODO: Implement effect toggling in SampleManager
             int effectTypeIdx = static_cast<int>(effectType);
             bool currentState = processor.getSampleManager().isGroupEffectEnabled(groupIndex, effectTypeIdx);
             processor.getSampleManager().setGroupEffectEnabled(groupIndex, effectTypeIdx, !currentState);

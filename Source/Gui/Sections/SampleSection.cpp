@@ -440,6 +440,7 @@ void SampleSectionComponent::showListView()
 
     // Force a layout refresh
     resized();
+    sampleList->updateContent();
 }
 
 void SampleSectionComponent::showDetailViewForSample(int sampleIndex)

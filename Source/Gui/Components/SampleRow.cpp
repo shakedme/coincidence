@@ -1,4 +1,3 @@
-
 #include "SampleRow.h"
 
 SampleRow::SampleRow(SampleList *owner, int row, SamplerSound *sound)
@@ -42,20 +41,17 @@ SampleRow::SampleRow(SampleList *owner, int row, SamplerSound *sound)
     editIcon = std::make_unique<Icon>(BinaryData::pencil_svg, BinaryData::pencil_svgSize, 16.0f);
     onsetIcon = std::make_unique<Icon>(BinaryData::threelines_svg, BinaryData::threelines_svgSize, 16.0f);
     deleteIcon = std::make_unique<Icon>(BinaryData::delete_svg, BinaryData::delete_svgSize, 16.0f);
-    reverbIcon = std::make_unique<TextIcon>("R", 16.0f);
 
     // Set icon colors
     editIcon->setNormalColour(juce::Colours::lightgrey);
     onsetIcon->setNormalColour(juce::Colours::lightgrey);
     deleteIcon->setNormalColour(juce::Colours::lightgrey);
-    reverbIcon->setNormalColour(juce::Colours::lightgrey);
 
     // Set tooltips
     editIcon->setTooltip("Edit sample");
     onsetIcon->setTooltip(
             "Toggle onset randomization - each trigger will randomize the start position based on onset in the edit view.");
     deleteIcon->setTooltip("Delete sample");
-    reverbIcon->setTooltip("Allow reverb for this sample.");
     slider->setTooltip("Sample probability");
 
     editIcon->onClicked = [owner, row]() {
@@ -72,10 +68,6 @@ SampleRow::SampleRow(SampleList *owner, int row, SamplerSound *sound)
         owner->updateContent();
     };
 
-    reverbIcon->onClicked = [owner, row]() {
-        owner->toggleReverbForSample(row);
-    };
-
     // Configure onset icon state
     if (sound != nullptr) {
         bool hasOnsetMarkers = !sound->getOnsetMarkers().empty();
@@ -85,11 +77,6 @@ SampleRow::SampleRow(SampleList *owner, int row, SamplerSound *sound)
         if (hasOnsetMarkers && isRandomizationEnabled) {
             onsetIcon->setActive(true, juce::Colour(0xff52bfd9));
         }
-
-        // Configure reverb icon state
-        if (sound->isReverbEnabled()) {
-            reverbIcon->setActive(true, juce::Colour(0xff52bfd9));
-        }
     }
 
     // Add all components
@@ -97,7 +84,6 @@ SampleRow::SampleRow(SampleList *owner, int row, SamplerSound *sound)
     addAndMakeVisible(editIcon.get());
     addAndMakeVisible(onsetIcon.get());
     addAndMakeVisible(deleteIcon.get());
-    addAndMakeVisible(reverbIcon.get());
 
     // Setup rate icons
     setupRateIcon(rate1_1Icon, "1/1", Params::RATE_1_1);
@@ -109,29 +95,30 @@ SampleRow::SampleRow(SampleList *owner, int row, SamplerSound *sound)
 }
 
 void SampleRow::paint(juce::Graphics &g) {
+    static const juce::Font sampleNameFont(juce::FontOptions(14.0f));
     g.setColour(juce::Colours::white);
-    g.setFont(juce::Font(juce::FontOptions(14.0f)));
+    g.setFont(sampleNameFont);
 
-// Calculate the space needed for all controls
-    int iconSize = 16;
-    int padding = 8;
-    int sliderSize = 16;
+    // Use minimal padding between controls
+    static const int iconSize = 16;
+    static const int padding = 2; // Reduced from 8 to 2
+    static const int sliderSize = 16;
+    static const int numRateIcons = 6;
+    static const int numOtherIcons = 4;
+    
+    // Calculate minimum width needed for controls with minimal padding
+    static const int controlsWidth = numRateIcons * rateIconWidth + 
+                                   numOtherIcons * iconSize +
+                                   sliderSize +
+                                   (numRateIcons + numOtherIcons + 1) * padding +
+                                   4; // Extra right margin
 
-// Calculate the space needed for all controls on the right
-    int controlsWidth = 4 * rateIconWidth + // 4 rate icons
-                        4 * iconSize +      // 4 icons (edit, onset, delete, reverb)
-                        sliderSize +        // slider
-                        9 * padding;        // padding between elements
+    // Calculate text area width based on available space
+    const int textAreaWidth = juce::jmax(50, getWidth() - controlsWidth - 8);
 
-// Calculate text area width dynamically based on available space
-    int textAreaWidth = getWidth() - controlsWidth - 8; // Additional 8px margin
-
-// Ensure text area doesn't go below minimum width
-    textAreaWidth = std::max(textAreaWidth, 50);
-
-// Draw the sample name with calculated width
+    // Draw the sample name with calculated width
     g.drawText(sampleName,
-               4,
+               4, // Left margin
                0,
                textAreaWidth,
                getHeight(),
@@ -139,62 +126,47 @@ void SampleRow::paint(juce::Graphics &g) {
 }
 
 void SampleRow::resized() {
-    // Position slider first, followed by icons on the right
-    int iconSize = 16;
-    int padding = 4; // Reduced padding to ensure everything fits
-    int sliderSize = 16; // Slightly larger for usability
-
+    static const int iconSize = 16;
+    static const int sliderSize = 16;
+    static const int padding = 4; // Reduced padding
+    
     // Calculate total available width
-    int availableWidth = getWidth();
-
-    // Calculate the width needed for all controls
-    int controlsWidth = 4 * rateIconWidth + // 4 rate icons
-                        4 * iconSize +      // 4 icons (edit, onset, delete, reverb)
-                        sliderSize +        // slider
-                        9 * padding;        // padding between elements
-
-    // Ensure minimum text area for sample name
-    int minTextWidth = 100;
-
-    // If we don't have enough space, reduce padding to ensure everything fits
-    if (availableWidth < controlsWidth + minTextWidth) {
-        padding = std::max(2, (availableWidth - minTextWidth - (4 * rateIconWidth + 4 * iconSize + sliderSize)) / 9);
-    }
-
-    // Start position for right-aligned elements
-    int x = availableWidth - iconSize - padding;
-
-    deleteIcon->setBounds(x, (getHeight() - iconSize) / 2, iconSize, iconSize);
-
+    const int availableWidth = getWidth();
+    
+    // Start position for right-aligned elements (with small right margin)
+    int x = availableWidth - iconSize - 4; // 4px right margin
+    const int yCenter = (getHeight() - iconSize) / 2;
+    
+    // Position all controls from right to left with minimal padding
+    deleteIcon->setBounds(x, yCenter, iconSize, iconSize);
+    
     x -= iconSize + padding;
-    editIcon->setBounds(x, (getHeight() - iconSize) / 2, iconSize, iconSize);
-
+    editIcon->setBounds(x, yCenter, iconSize, iconSize);
+    
     x -= iconSize + padding;
-    onsetIcon->setBounds(x, (getHeight() - iconSize) / 2, iconSize, iconSize);
-
-    x -= iconSize + padding;
-    reverbIcon->setBounds(x, (getHeight() - iconSize) / 2, iconSize, iconSize);
+    onsetIcon->setBounds(x, yCenter, iconSize, iconSize);
 
     x -= sliderSize + padding;
-    slider->setBounds(x, (getHeight() - sliderSize) / 2, sliderSize, sliderSize);
-
+    slider->setBounds(x, yCenter, sliderSize, sliderSize);
+    
+    // Position rate icons with minimal padding
     x -= rateIconWidth + padding;
-    rate1_32Icon->setBounds(x, (getHeight() - iconSize) / 2, rateIconWidth, iconSize);
-
+    rate1_32Icon->setBounds(x, yCenter, rateIconWidth, iconSize);
+    
     x -= rateIconWidth + padding;
-    rate1_16Icon->setBounds(x, (getHeight() - iconSize) / 2, rateIconWidth, iconSize);
-
+    rate1_16Icon->setBounds(x, yCenter, rateIconWidth, iconSize);
+    
     x -= rateIconWidth + padding;
-    rate1_8Icon->setBounds(x, (getHeight() - iconSize) / 2, rateIconWidth, iconSize);
-
+    rate1_8Icon->setBounds(x, yCenter, rateIconWidth, iconSize);
+    
     x -= rateIconWidth + padding;
-    rate1_4Icon->setBounds(x, (getHeight() - iconSize) / 2, rateIconWidth, iconSize);
-
+    rate1_4Icon->setBounds(x, yCenter, rateIconWidth, iconSize);
+    
     x -= rateIconWidth + padding;
-    rate1_2Icon->setBounds(x, (getHeight() - iconSize) / 2, rateIconWidth, iconSize);
-
+    rate1_2Icon->setBounds(x, yCenter, rateIconWidth, iconSize);
+    
     x -= rateIconWidth + padding;
-    rate1_1Icon->setBounds(x, (getHeight() - iconSize) / 2, rateIconWidth, iconSize);
+    rate1_1Icon->setBounds(x, yCenter, rateIconWidth, iconSize);
 }
 
 void SampleRow::mouseDown(const juce::MouseEvent &e) {
