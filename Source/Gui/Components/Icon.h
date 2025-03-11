@@ -34,18 +34,19 @@ public:
         if (drawable != nullptr)
         {
             // Apply current color
-            juce::Colour currentColor = isEnabled() ?
+            juce::Colour nextColour = isEnabled() ?
                                                     (isActive ? activeColour : normalColour) :
                                                     juce::Colours::darkgrey;
 
             if (isMouseOver())
-                currentColor = currentColor.brighter(0.2f);
+                nextColour = nextColour.brighter(0.2f);
 
             if (isMouseButtonDown())
-                currentColor = currentColor.brighter(0.5f);
+                nextColour = nextColour.brighter(0.5f);
 
             // Set the fill color on the drawable
-            drawable->replaceColour(juce::Colours::black, currentColor);
+            drawable->replaceColour(currentColour, nextColour);
+            currentColour = nextColour;
 
             // Draw the SVG
             drawable->drawWithin(g, getLocalBounds().toFloat(),
@@ -84,6 +85,7 @@ public:
 private:
     std::unique_ptr<juce::Drawable> drawable;
     juce::Colour normalColour = juce::Colours::lightgrey;
+    juce::Colour currentColour = juce::Colours::black;
     juce::Colour activeColour = juce::Colour(0xff52bfd9);
     bool isActive = false;
 };
@@ -96,7 +98,7 @@ class TextIcon : public juce::Component, public juce::SettableTooltipClient
 {
 public:
     TextIcon(const juce::String& text, float width = 16.0f, float height = 16.0f)
-        : iconText(text), iconWidth(width), iconHeight(height)
+        : iconText(text), iconHeight(height)
     {
         setInterceptsMouseClicks(true, false);
         setSize(width, height);
@@ -154,7 +156,6 @@ public:
 
 private:
     juce::String iconText;
-    float iconWidth;
     float iconHeight;
     juce::Colour normalColour = juce::Colours::lightgrey;
     juce::Colour activeColour = juce::Colour(0xff52bfd9);

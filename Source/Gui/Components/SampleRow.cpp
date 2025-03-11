@@ -2,16 +2,6 @@
 
 SampleRow::SampleRow(SampleList *owner, int row, SamplerSound *sound)
         : ownerList(owner), rowNumber(row) {
-    // Get the sample name
-    sampleName = owner->processor.getSampleManager().getSampleName(row);
-
-    // Add group information if applicable
-    if (sound != nullptr) {
-        int groupIdx = sound->getGroupIndex();
-        if (groupIdx >= 0 && groupIdx < owner->processor.getSampleManager().getNumGroups()) {
-            sampleName += " [G" + juce::String(groupIdx + 1) + "]";
-        }
-    }
 
     // Create probability slider
     slider = std::make_unique<juce::Slider>();
@@ -24,65 +14,30 @@ SampleRow::SampleRow(SampleList *owner, int row, SamplerSound *sound)
     slider->setColour(juce::Slider::trackColourId, juce::Colour(0xff222222)); // Darker track color
     slider->setColour(juce::Slider::backgroundColourId, juce::Colour(0xff666666)); // Lighter background
 
-    // Set initial value
-    float probability = owner->processor.getSampleManager().getSampleProbability(row);
-    slider->setValue(probability, juce::dontSendNotification);
-
-    // Connect slider value change to the ownerList
-    slider->onValueChange = [this, owner, row]() {
-        double value = slider->getValue();
-        owner->handleSliderValueChanged(row, value);
-    };
-
     // Set property to identify the slider for event handling
     slider->getProperties().set("slider", true);
 
     // Create icons with direct BinaryData pointers
     editIcon = std::make_unique<Icon>(BinaryData::pencil_svg, BinaryData::pencil_svgSize, 16.0f);
-    onsetIcon = std::make_unique<Icon>(BinaryData::threelines_svg, BinaryData::threelines_svgSize, 16.0f);
     deleteIcon = std::make_unique<Icon>(BinaryData::delete_svg, BinaryData::delete_svgSize, 16.0f);
 
     // Set icon colors
     editIcon->setNormalColour(juce::Colours::lightgrey);
-    onsetIcon->setNormalColour(juce::Colours::lightgrey);
     deleteIcon->setNormalColour(juce::Colours::lightgrey);
 
-    // Set tooltips
-    editIcon->setTooltip("Edit sample");
-    onsetIcon->setTooltip(
-            "Toggle onset randomization - each trigger will randomize the start position based on onset in the edit view.");
     deleteIcon->setTooltip("Delete sample");
+    editIcon->setTooltip("Edit sample");
     slider->setTooltip("Sample probability");
 
-    editIcon->onClicked = [owner, row]() {
-        if (owner->onSampleDetailRequested)
-            owner->onSampleDetailRequested(row);
-    };
-
-    onsetIcon->onClicked = [owner, row]() {
-        owner->toggleOnsetRandomization(row);
-    };
-
-    deleteIcon->onClicked = [owner, row]() {
-        owner->processor.getSampleManager().removeSamples(row, row);
-        owner->updateContent();
-    };
-
-    // Configure onset icon state
-    if (sound != nullptr) {
-        bool hasOnsetMarkers = !sound->getOnsetMarkers().empty();
-        bool isRandomizationEnabled = sound->isOnsetRandomizationEnabled();
-
-        onsetIcon->setEnabled(hasOnsetMarkers);
-        if (hasOnsetMarkers && isRandomizationEnabled) {
-            onsetIcon->setActive(true, juce::Colour(0xff52bfd9));
-        }
-    }
+    onsetIcon = std::make_unique<Icon>(BinaryData::threelines_svg, BinaryData::threelines_svgSize, 16.0f);
+    onsetIcon->setNormalColour(juce::Colours::lightgrey);
+    onsetIcon->setTooltip(
+            "Toggle onset randomization - each trigger will randomize the start position based on onset in the edit view.");
+    addAndMakeVisible(onsetIcon.get());
 
     // Add all components
     addAndMakeVisible(slider.get());
     addAndMakeVisible(editIcon.get());
-    addAndMakeVisible(onsetIcon.get());
     addAndMakeVisible(deleteIcon.get());
 
     // Setup rate icons
@@ -92,6 +47,62 @@ SampleRow::SampleRow(SampleList *owner, int row, SamplerSound *sound)
     setupRateIcon(rate1_8Icon, "1/8", Params::RATE_1_8);
     setupRateIcon(rate1_16Icon, "1/16", Params::RATE_1_16);
     setupRateIcon(rate1_32Icon, "1/32", Params::RATE_1_32);
+
+    updateContent(owner, row, sound);
+}
+
+
+void SampleRow::updateContent(SampleList *owner, int row, SamplerSound *sound) {
+    rowNumber = row;
+    ownerList = owner;
+    sampleName = owner->processor.getSampleManager().getSampleName(row);
+
+    // Add group information if applicable
+    if (sound != nullptr) {
+        int groupIdx = sound->getGroupIndex();
+        if (groupIdx >= 0 && groupIdx < owner->processor.getSampleManager().getNumGroups()) {
+            sampleName += " [G" + juce::String(groupIdx + 1) + "]";
+        }
+    }
+
+    // Configure onset icon state
+    if (sound != nullptr) {
+        bool hasOnsetMarkers = !sound->getOnsetMarkers().empty();
+        onsetIcon->setEnabled(hasOnsetMarkers);
+        onsetIcon->setActive(sound->isOnsetRandomizationEnabled());
+    }
+
+    // Set initial value
+    float probability = ownerList->processor.getSampleManager().getSampleProbability(row);
+    slider->setValue(probability, juce::dontSendNotification);
+
+    // Connect slider value change to the ownerList
+    slider->onValueChange = [this, row]() {
+        double value = slider->getValue();
+        ownerList->handleSliderValueChanged(row, value);
+    };
+
+    editIcon->onClicked = [this, row]() {
+        if (ownerList->onSampleDetailRequested)
+            ownerList->onSampleDetailRequested(row);
+    };
+
+    onsetIcon->onClicked = [this, row]() {
+        ownerList->toggleOnsetRandomization(row);
+    };
+
+    deleteIcon->onClicked = [this, row]() {
+        ownerList->processor.getSampleManager().removeSamples(row, row);
+        ownerList->updateContent();
+    };
+
+    // Update rate icons
+    updateRateIcon(Params::RATE_1_1);
+    updateRateIcon(Params::RATE_1_2);
+    updateRateIcon(Params::RATE_1_4);
+    updateRateIcon(Params::RATE_1_8);
+    updateRateIcon(Params::RATE_1_16);
+    updateRateIcon(Params::RATE_1_32);
 }
 
 void SampleRow::paint(juce::Graphics &g) {
@@ -105,13 +116,13 @@ void SampleRow::paint(juce::Graphics &g) {
     static const int sliderSize = 16;
     static const int numRateIcons = 6;
     static const int numOtherIcons = 4;
-    
+
     // Calculate minimum width needed for controls with minimal padding
-    static const int controlsWidth = numRateIcons * rateIconWidth + 
-                                   numOtherIcons * iconSize +
-                                   sliderSize +
-                                   (numRateIcons + numOtherIcons + 1) * padding +
-                                   4; // Extra right margin
+    static const int controlsWidth = numRateIcons * rateIconWidth +
+                                     numOtherIcons * iconSize +
+                                     sliderSize +
+                                     (numRateIcons + numOtherIcons + 1) * padding +
+                                     4; // Extra right margin
 
     // Calculate text area width based on available space
     const int textAreaWidth = juce::jmax(50, getWidth() - controlsWidth - 8);
@@ -129,42 +140,42 @@ void SampleRow::resized() {
     static const int iconSize = 16;
     static const int sliderSize = 16;
     static const int padding = 4; // Reduced padding
-    
+
     // Calculate total available width
     const int availableWidth = getWidth();
-    
+
     // Start position for right-aligned elements (with small right margin)
     int x = availableWidth - iconSize - 4; // 4px right margin
     const int yCenter = (getHeight() - iconSize) / 2;
-    
+
     // Position all controls from right to left with minimal padding
     deleteIcon->setBounds(x, yCenter, iconSize, iconSize);
-    
+
     x -= iconSize + padding;
     editIcon->setBounds(x, yCenter, iconSize, iconSize);
-    
+
     x -= iconSize + padding;
     onsetIcon->setBounds(x, yCenter, iconSize, iconSize);
 
     x -= sliderSize + padding;
     slider->setBounds(x, yCenter, sliderSize, sliderSize);
-    
+
     // Position rate icons with minimal padding
     x -= rateIconWidth + padding;
     rate1_32Icon->setBounds(x, yCenter, rateIconWidth, iconSize);
-    
+
     x -= rateIconWidth + padding;
     rate1_16Icon->setBounds(x, yCenter, rateIconWidth, iconSize);
-    
+
     x -= rateIconWidth + padding;
     rate1_8Icon->setBounds(x, yCenter, rateIconWidth, iconSize);
-    
+
     x -= rateIconWidth + padding;
     rate1_4Icon->setBounds(x, yCenter, rateIconWidth, iconSize);
-    
+
     x -= rateIconWidth + padding;
     rate1_2Icon->setBounds(x, yCenter, rateIconWidth, iconSize);
-    
+
     x -= rateIconWidth + padding;
     rate1_1Icon->setBounds(x, yCenter, rateIconWidth, iconSize);
 }
@@ -229,31 +240,32 @@ void SampleRow::mouseDrag(const juce::MouseEvent &e) {
 }
 
 void SampleRow::setupRateIcon(std::unique_ptr<TextIcon> &icon,
-                              const juce::String &text, Params::RateOption rate) {
+                              const juce::String &text, Params::RateOption /*rate*/) {
     icon = std::make_unique<TextIcon>(text, rateIconWidth, 16.0f);
     icon->setNormalColour(juce::Colours::lightgrey);
     icon->setTooltip("Toggle " + text + " rate");
-
-    // Set initial state
-    bool isEnabled = ownerList->processor.getSampleManager().isSampleRateEnabled(rowNumber, rate);
-    if (isEnabled)
-        icon->setActive(true, juce::Colour(0xff52bfd9));
-
-    // Add click handler
-    icon->onClicked = [this, rate]() {
-        bool currentState = ownerList->processor.getSampleManager().isSampleRateEnabled(rowNumber, rate);
-        ownerList->processor.getSampleManager().setSampleRateEnabled(rowNumber, rate, !currentState);
-
-        // Update icon state
-        if (auto *icon = getRateIcon(rate)) {
-            if (!currentState)
-                icon->setActive(true, juce::Colour(0xff52bfd9));
-            else
-                icon->setActive(false);
-        }
-    };
-
     addAndMakeVisible(icon.get());
+}
+
+void SampleRow::updateRateIcon(Params::RateOption rate) {
+    if (auto *icon = getRateIcon(rate)) {
+        bool isEnabled = ownerList->processor.getSampleManager().isSampleRateEnabled(rowNumber, rate);
+        if (isEnabled) {
+            icon->setActive(true, juce::Colour(0xff52bfd9));
+        } else {
+            icon->setActive(false);
+        }
+        // Add click handler
+        icon->onClicked = [this, icon, rate]() {
+            bool currentState = ownerList->processor.getSampleManager().isSampleRateEnabled(rowNumber, rate);
+            ownerList->processor.getSampleManager().setSampleRateEnabled(rowNumber, rate, !currentState);
+            if (!currentState) {
+                icon->setActive(true, juce::Colour(0xff52bfd9));
+            } else {
+                icon->setActive(false);
+            }
+        };
+    }
 }
 
 TextIcon *SampleRow::getRateIcon(Params::RateOption rate) {

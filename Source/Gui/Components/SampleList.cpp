@@ -9,7 +9,7 @@ SampleList::SampleList(PluginProcessor &p)
     sampleListBox->setMultipleSelectionEnabled(true); // Enable multiple selections
     
     // Set a fixed row height to improve scrolling performance
-    sampleListBox->setRowHeight(40);
+    sampleListBox->setRowHeight(25);
 
     // Disable automatic row selection toggling - we'll handle this manually
     sampleListBox->setClickingTogglesRowSelection(false);
@@ -208,7 +208,6 @@ SampleList::refreshComponentForCell(int rowNumber,
                                     int columnId,
                                     bool /*isRowSelected*/,
                                     juce::Component *existingComponentToUpdate) {
-    // Only create components for valid samples
     if (rowNumber >= processor.getSampleManager().getNumSamples())
         return nullptr;
 
@@ -218,12 +217,12 @@ SampleList::refreshComponentForCell(int rowNumber,
 
         // Create new component or update existing
         auto *cellComponent = dynamic_cast<SampleRow *>(existingComponentToUpdate);
+
         if (cellComponent == nullptr) {
             return new SampleRow(this, rowNumber, sound);
         }
-
-        delete cellComponent;
-        return new SampleRow(this, rowNumber, sound);
+        cellComponent->updateContent(this, rowNumber, sound);
+        return cellComponent;
     }
 
     return nullptr;
@@ -293,12 +292,20 @@ void SampleList::toggleOnsetRandomization(int sampleIndex) {
                         "OK",
                         this);
             } else {
-                // Toggle onset randomization
-                bool newState = !sound->isOnsetRandomizationEnabled();
+                // Toggle onset randomization and ensure state changes are immediately visible
+                bool oldState = sound->isOnsetRandomizationEnabled();
+                bool newState = !oldState;
+                
+                // Update the model
                 sound->setOnsetRandomizationEnabled(newState);
-
-                // Use updateContent instead of just repainting the row
-                // This ensures the SampleNameCellComponent gets recreated with the correct icon state
+                
+                // Note: The row component itself will handle updating the icon now
+                // through its click handler. We'll just ensure the table is updated.
+                
+                // Force an immediate repaint of the specific row
+                sampleListBox->repaintRow(sampleIndex);
+                
+                // Also update content to ensure model consistency
                 updateContent();
             }
         }

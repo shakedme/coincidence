@@ -14,7 +14,7 @@ public:
     void mouseDown(const juce::MouseEvent &e) override;
     void mouseUp(const juce::MouseEvent &e) override;
     void mouseDrag(const juce::MouseEvent &e) override;
-
+    void updateContent(SampleList *owner, int row, SamplerSound *sound);
 private:
     SampleList *ownerList;
     int rowNumber;
@@ -36,5 +36,6 @@ private:
     int rateIconWidth = 30;
 
     void setupRateIcon(std::unique_ptr<TextIcon> &icon, const juce::String &text, Params::RateOption rate);
+    void updateRateIcon(Params::RateOption rate);
     TextIcon *getRateIcon(Params::RateOption rate);
 };
