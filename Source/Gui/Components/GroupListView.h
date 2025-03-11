@@ -344,8 +344,8 @@ public:
             }
         } else {
             // Display centered message when no groups exist
-            g.setColour(juce::Colours::white);
-            g.setFont(16.0f);
+            g.setColour(juce::Colours::white.withAlpha(0.5f));
+            g.setFont(juce::Font(juce::FontOptions(14.0f)));
             g.drawText("Create groups by multi-selecting samples and right clicking",
                        bounds,
                        juce::Justification::centred,

@@ -34,17 +34,7 @@ private:
 
     juce::Reverb juceReverb;
     juce::Reverb::Parameters juceReverbParams;
-
-    double sampleRate {44100.0};
-    int currentBufferSize {512};
-    
-    // Track active reverb effects
     ActiveReverb activeReverb;
-    
-    const double MIN_TIME_BETWEEN_TRIGGERS_SECONDS = 3.0;
-    
-    // Track the last time the reverb was triggered
-    juce::int64 lastTriggerSample = 0;
 
     bool isReverbEnabledForSample();
     void processActiveReverb(juce::AudioBuffer<float>& buffer, 

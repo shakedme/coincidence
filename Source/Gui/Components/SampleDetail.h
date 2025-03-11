@@ -87,14 +87,6 @@ public:
 
                     thumbnail->setSource(&audioData, sampleRate, static_cast<juce::int64>(currentSampleIndex));
 
-//                    // Set the sample data to the thumbnail
-//                    thumbnail->reset(audioData.getNumChannels(),
-//                                     sampleRate,
-//                                     audioData.getNumSamples());
-//
-//                    // Add the sample data to the thumbnail
-//                    thumbnail->addBlock(0, audioData, 0, audioData.getNumSamples());
-
                     // If no onset markers exist, detect them
                     if (sound->getOnsetMarkers().empty())
                     {
