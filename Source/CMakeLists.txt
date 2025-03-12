@@ -18,6 +18,9 @@ juce_add_plugin("${BaseTargetName}"
         FORMATS AU VST3 Standalone
         PRODUCT_NAME "Coincidence")
 
+# Disable unity builds for the standalone target to prevent header inclusion issues
+set_target_properties(${BaseTargetName}_Standalone PROPERTIES UNITY_BUILD OFF)
+
 target_compile_features(${BaseTargetName} PRIVATE cxx_std_20)
 
 target_sources(${BaseTargetName} PRIVATE
