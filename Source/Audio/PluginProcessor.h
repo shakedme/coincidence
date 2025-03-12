@@ -11,6 +11,7 @@
 // Forward declarations
 class PluginEditor;
 class FxEngine;
+class EnvelopeComponent;
 
 /**
  * Main processor class for the MIDI generator plugin.
@@ -68,6 +69,9 @@ public:
     
     // Access to the note generator
     NoteGenerator& getNoteGenerator() const { return *noteGenerator; }
+
+    // Access to the timing manager
+    TimingManager& getTimingManager() const { return *timingManager; }
     
     // Current state values for UI visualization
     float getCurrentRandomizedGate() const { return noteGenerator->getCurrentRandomizedGate(); }
@@ -75,6 +79,10 @@ public:
 
     void updateFxSettingsFromParameters();
     const Params::FxSettings& getGlitchSettings() const { return fxSettings; }
+
+    // Connect the envelope component to receive waveform data
+    void connectEnvelopeComponent(EnvelopeComponent* component);
+
 private:
     // Update settings from parameters
     void updateMidiSettingsFromParameters();
@@ -88,6 +96,10 @@ private:
     std::unique_ptr<CoincidenceAudioProcessor> audioProcessor;
     std::unique_ptr<FxEngine> fxEngine;
     std::shared_ptr<TimingManager> timingManager;
+
+    // Pointer to the envelope component for waveform visualization
+    EnvelopeComponent* envelopeComponent = nullptr;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginProcessor)
 };
 

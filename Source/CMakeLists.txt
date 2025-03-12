@@ -3,8 +3,8 @@ project(Coincidence VERSION 0.0.1)
 set (BaseTargetName Coincidence)
 
 juce_add_plugin("${BaseTargetName}"
-        # VERSION ...                               # Set this if the plugin version is different to the project version
-        # ICON_BIG ...                              # ICON_* arguments specify a path to an image file to use as an icon for the Standalone
+        # VERSION ...
+        # ICON_BIG ...
         # ICON_SMALL ...
         COMPANY_NAME "Shaduki"
         IS_SYNTH TRUE
@@ -24,6 +24,7 @@ target_sources(${BaseTargetName} PRIVATE
         Gui/Sections/BaseSection.cpp
         Gui/Sections/EffectsSection.cpp
         Gui/Sections/GrooveSection.cpp
+        Gui/Sections/EnvelopeSection.cpp
         Gui/Sections/PitchSection.cpp
         Gui/Sections/SampleSection.cpp
         Gui/Components/DirectionButton.h
@@ -33,6 +34,8 @@ target_sources(${BaseTargetName} PRIVATE
         Gui/Components/GroupListView.h
         Gui/Components/SampleRow.cpp
         Gui/Components/Toggle.h
+        Gui/Components/EnvelopeComponent.cpp
+        Gui/Components/HeaderComponent.h
         Audio/Params.cpp
         Audio/PluginProcessor.cpp
         Audio/Sampler/SampleManager.cpp
@@ -48,6 +51,8 @@ target_sources(${BaseTargetName} PRIVATE
         Audio/Effects/Reverb.cpp
         Audio/Effects/Delay.cpp
         Audio/Effects/BaseEffect.cpp
+        Audio/Util/AudioBufferQueue.h
+        Audio/Util/AudioOscilloscope.cpp
         )
 
 target_compile_definitions(${BaseTargetName}

@@ -8,6 +8,8 @@
 #include "Sections/EffectsSection.h"
 #include "Sections/SampleSection.h"
 #include "melatonin_inspector/melatonin_inspector.h"
+#include "Sections/EnvelopeSection.h"
+#include "Components/HeaderComponent.h"
 
 class PluginEditor
     : public juce::AudioProcessorEditor
@@ -34,11 +36,15 @@ private:
     LookAndFeel customLookAndFeel;
 //    melatonin::Inspector inspector { *this };
 
+    // Header component with tabs
+    std::unique_ptr<HeaderComponent> header;
+
     // UI Sections
     std::unique_ptr<GrooveSectionComponent> grooveSection;
     std::unique_ptr<PitchSectionComponent> pitchSection;
     std::unique_ptr<EffectsSection> glitchSection;
     std::unique_ptr<SampleSectionComponent> sampleSection;
+    std::unique_ptr<EnvelopeSectionComponent> envelopeSection;
     std::unique_ptr<juce::TooltipWindow> tooltipWindow;
 
     // Keyboard component and state
@@ -48,6 +54,7 @@ private:
 
     void setupKeyboard();
     void timerCallback() override;
+    void switchTab(HeaderComponent::Tab tab);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginEditor)
 };

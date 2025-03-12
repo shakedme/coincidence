@@ -33,16 +33,4 @@ FetchContent_Declare (melatonin_inspector
         SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/melatonin_inspector)
 FetchContent_MakeAvailable (melatonin_inspector)
 
-#By default, we are building the provided plugin/app examples:
-option(BUILD_JUCE_PROTOTYPE_EXAMPLES "Build JUCE prototype examples" ON)
-
-# add source code
 add_subdirectory(Source)
-
-#optionally, we're also adding the unit tests:
-option(BUILD_UNIT_TESTS "Build JUCE prototype examples" OFF)
-
-if (BUILD_UNIT_TESTS)
-    enable_testing()
-    add_subdirectory(Tests)
-endif ()

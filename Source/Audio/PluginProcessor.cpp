@@ -17,16 +17,15 @@ PluginProcessor::PluginProcessor()
     noteGenerator = std::make_unique<NoteGenerator>(*this, timingManager);
     fxEngine = std::make_unique<FxEngine>(timingManager, *this);
 
-
     // Update settings from parameters
     updateMidiSettingsFromParameters();
     updateFxSettingsFromParameters();
 
     // Start timer for any background tasks
     startTimerHz(50);
-
-    auto* fileLogger = new FileLogger();
-    juce::Logger::setCurrentLogger(fileLogger);
+//
+//    auto* fileLogger = new FileLogger();
+//    juce::Logger::setCurrentLogger(fileLogger);
 }
 
 PluginProcessor::~PluginProcessor()
@@ -172,6 +171,12 @@ void PluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     audioProcessor->prepareToPlay(sampleRate, samplesPerBlock);
     noteGenerator->prepareToPlay(sampleRate, samplesPerBlock);
     fxEngine->prepareToPlay(sampleRate, samplesPerBlock);
+    
+    // Update the envelope component's sample rate if it's connected
+    if (envelopeComponent != nullptr)
+    {
+        envelopeComponent->setSampleRate(static_cast<float>(sampleRate));
+    }
 }
 
 void PluginProcessor::releaseResources()
@@ -217,6 +222,16 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     fxEngine->processAudio(buffer, playHead, processedMidi);
 
     timingManager->updateSamplePosition(buffer.getNumSamples());
+
+    // After processing is done, send the processed audio data to the envelope component
+    if (envelopeComponent != nullptr)
+    {
+        // Send the first channel for visualization (can be modified to send other channels or a mix)
+        if (buffer.getNumChannels() > 0)
+        {
+            envelopeComponent->pushAudioBuffer(buffer.getReadPointer(0), buffer.getNumSamples());
+        }
+    }
 }
 
 //==============================================================================
@@ -525,4 +540,9 @@ Params::DirectionType PluginProcessor::getSampleDirectionType() const
         return static_cast<Params::DirectionType>(index);
     }
     return Params::RIGHT; // Default to random
+}
+
+void PluginProcessor::connectEnvelopeComponent(EnvelopeComponent* component)
+{
+    envelopeComponent = component;
 }
