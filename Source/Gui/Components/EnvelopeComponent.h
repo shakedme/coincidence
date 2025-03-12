@@ -30,13 +30,11 @@ public:
 
     void mouseDoubleClick(const juce::MouseEvent &e) override;
 
-    void setGridDivisions(int vertical, int horizontal);
+    // Handle keyboard input for deletion of selected points
+    bool keyPressed(const juce::KeyPress &key) override;
 
     // Thread-safe method to update audio buffer data from audio thread
     void pushAudioBuffer(const float *audioData, int numSamples);
-
-    // Set the waveform display parameters
-    void setWaveformColour(juce::Colour colour);
 
     void setWaveformScaleFactor(float scale);
 
@@ -46,21 +44,19 @@ public:
     // Set the time range displayed in the waveform (in seconds)
     void setTimeRange(float seconds);
 
-    // Set the direction of the waveform scrolling
-    void setScrollDirection(bool leftToRight);
-
-    // Toggle the scroll direction
-    void toggleScrollDirection();
-
-    // Get the current scroll direction
-    bool isScrollingLeftToRight() const;
-
 private:
     std::vector<std::unique_ptr<EnvelopePoint>> points;
     EnvelopePoint *pointDragging = nullptr;
     int curveEditingSegment = -1;
     juce::Point<float> curveEditStartPos;
     float initialCurvature = 0.0f;
+
+    // Rectangle selection related variables
+    bool isCreatingSelectionArea = false;
+    juce::Point<float> selectionStart;
+    juce::Rectangle<float> selectionArea;
+    juce::Point<float> lastDragPosition;
+    bool isDraggingSelectedPoints = false;
 
     const float pointRadius = 6.0f;
     int verticalDivisions = 10;
@@ -99,6 +95,15 @@ private:
     void drawEnvelopeLine(juce::Graphics &g);
 
     void drawPoints(juce::Graphics &g);
+
+    // Draw the selection rectangle
+    void drawSelectionArea(juce::Graphics &g);
+
+    // Select points that are within the selection rectangle
+    void selectPointsInArea();
+
+    // Get the number of currently selected points
+    int getSelectedPointsCount() const;
 
     juce::Point<float> getPointScreenPosition(const EnvelopePoint &point) const;
 

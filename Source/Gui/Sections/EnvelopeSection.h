@@ -35,13 +35,11 @@ private:
     std::unique_ptr<juce::Label> rateLabel;
     std::unique_ptr<juce::TabbedComponent> paramTabs;
     std::unique_ptr<EnvelopeComponent> envelopeComponent;
-    std::unique_ptr<juce::TextButton> directionButton;
     std::unique_ptr<juce::Slider> scaleSlider;
     std::unique_ptr<juce::Label> scaleLabel;
 
     void setupRateComboBox();
     void updateTimeRangeFromRate();
-    void setupDirectionButton();
     void setupScaleSlider();
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(EnvelopeSectionComponent)
