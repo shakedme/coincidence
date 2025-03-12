@@ -1,121 +1,157 @@
 #pragma once
 
+#include <vector>
+#include <memory>
+#include <atomic>
+#include <mutex>
+#include "../../Audio/Envelope/EnvelopeParameterMapper.h"
+#include "../../Audio/Envelope/EnvelopeParameterTypes.h"
+#include "../../Audio/Shared/TimingManager.h"
 #include "../../Audio/Util/AudioBufferQueue.h"
-#include <juce_audio_utils/juce_audio_utils.h>
-
-class EnvelopePoint {
-public:
-    EnvelopePoint(float x, float y) : position(x, y) {}
-
-    juce::Point<float> position;
-    bool selected = false;
-    float curvature = 0.0f; // 0.0 = straight line, -1.0 to 1.0 = curved
-};
 
 class EnvelopeComponent : public juce::Component, private juce::Timer {
 public:
-    EnvelopeComponent();
+    explicit EnvelopeComponent(EnvelopeParams::ParameterType type = EnvelopeParams::ParameterType::Amplitude);
 
     ~EnvelopeComponent() override;
 
+    void paint(juce::Graphics &) override;
+
     void resized() override;
 
-    void paint(juce::Graphics &g) override;
-
+    // Mouse interaction
     void mouseDown(const juce::MouseEvent &e) override;
 
     void mouseDrag(const juce::MouseEvent &e) override;
 
-    void mouseUp(const juce::MouseEvent &) override;
+    void mouseUp(const juce::MouseEvent &e) override;
 
     void mouseDoubleClick(const juce::MouseEvent &e) override;
 
-    // Handle keyboard input for deletion of selected points
     bool keyPressed(const juce::KeyPress &key) override;
 
-    // Thread-safe method to update audio buffer data from audio thread
-    void pushAudioBuffer(const float *audioData, int numSamples);
-
+    // Set the factor to scale the waveform by
     void setWaveformScaleFactor(float scale);
 
-    // Set the sample rate for the waveform display
+    // Set the sample rate for audio visualization
     void setSampleRate(float newSampleRate);
 
-    // Set the time range displayed in the waveform (in seconds)
+    // Set time range in seconds (for scaling the waveform)
     void setTimeRange(float seconds);
 
+    // Add audio samples for visualization
+    void pushAudioBuffer(const float *audioData, int numSamples);
+
+    // Callbacks for parameter change notifications
+    std::function<void()> onPointsChanged;
+    std::function<void(float)> onRateChanged;
+
+    // Parameter mapping
+    void setParameterRange(float min, float max, bool exponential = false);
+
+    void setParameterType(EnvelopeParams::ParameterType type);
+
+    EnvelopeParams::ParameterType getParameterType() const;
+
+    // Get the current envelope value
+    float getCurrentValue() const;
+
+    // Update the envelope time
+    void updateTime(float deltaTime);
+
+    // Set envelope rate
+    void setRate(float newRate);
+
+    float getRate() const { return parameterMapper.getRate(); }
+
+    // Access envelope points
+    const std::vector<std::unique_ptr<EnvelopePoint>> &getPoints() const { return points; }
+
+    // Set the TimingManager to get transport position
+    void setTimingManager(std::shared_ptr<TimingManager> manager) { timingManager = manager; }
+
 private:
-    std::vector<std::unique_ptr<EnvelopePoint>> points;
-    EnvelopePoint *pointDragging = nullptr;
-    int curveEditingSegment = -1;
-    juce::Point<float> curveEditStartPos;
-    float initialCurvature = 0.0f;
-
-    // Rectangle selection related variables
-    bool isCreatingSelectionArea = false;
-    juce::Point<float> selectionStart;
-    juce::Rectangle<float> selectionArea;
-    juce::Point<float> lastDragPosition;
-    bool isDraggingSelectedPoints = false;
-
-    const float pointRadius = 6.0f;
-    int verticalDivisions = 10;
-    int horizontalDivisions = 8;
-
-    // Structure to store min-max peak values for each pixel column
-    struct WaveformPeak {
-        float min = 0.0f;
-        float max = 0.0f;
-    };
-
-    // Waveform visualization members
-    AudioBufferQueue *audioBufferQueue = nullptr;
-    juce::Image waveformCache;
-    std::atomic<bool> waveformNeedsRedraw{false};
-    std::vector<float> waveformData;
-    std::vector<WaveformPeak> waveformPeaks; // Min-max peak data for high-resolution display
-    juce::Colour waveformColour{juce::Colour(0xff3a5c8b)}; // Default to a nice blue
-    float waveformScaleFactor = 1.0f;
-    std::mutex waveformMutex; // Protects waveform cache updates
-    float timeRangeInSeconds = 2.0f; // Default to 2 seconds
-    int writePosition = 0; // Current write position for scrolling waveform
-    float sampleRate = 44100.0f; // Default sample rate
-    bool waveformScrollLeftToRight = true; // Direction of scrolling
-
-    void timerCallback() override;
-
-    void setupWaveformRendering();
-
-    void updateWaveformCache();
-
-    void drawWaveform(juce::Graphics &g);
-
+    // Draw helper methods
     void drawGrid(juce::Graphics &g);
 
     void drawEnvelopeLine(juce::Graphics &g);
 
     void drawPoints(juce::Graphics &g);
 
-    // Draw the selection rectangle
+    void drawWaveform(juce::Graphics &g);
+
     void drawSelectionArea(juce::Graphics &g);
 
-    // Select points that are within the selection rectangle
-    void selectPointsInArea();
+    void drawPositionMarker(juce::Graphics &g);
 
-    // Get the number of currently selected points
-    int getSelectedPointsCount() const;
-
+    // Position helpers
     juce::Point<float> getPointScreenPosition(const EnvelopePoint &point) const;
 
     int findClosestSegmentIndex(const juce::Point<float> &clickPos) const;
 
-    // Calculate distance from a point to a line segment
-    float
-    distanceToLineSegment(const juce::Point<float> &p, const juce::Point<float> &v, const juce::Point<float> &w) const;
+    float distanceToLineSegment(const juce::Point<float> &p, const juce::Point<float> &v,
+                                const juce::Point<float> &w) const;
 
-    // Calculate distance from a point to a curved segment
     float distanceToCurve(const juce::Point<float> &point, const juce::Point<float> &start,
                           const juce::Point<float> &end, float curvature) const;
+
+    // Selection methods
+    void selectPointsInArea();
+
+    int getSelectedPointsCount() const;
+
+    // Waveform rendering
+    void setupWaveformRendering();
+
+    void updateWaveformCache();
+
+    void timerCallback() override;
+
+    // Point change notification
+    void notifyPointsChanged();
+
+    // Envelope data
+    std::vector<std::unique_ptr<EnvelopePoint>> points;
+    EnvelopePoint *pointDragging = nullptr;
+    bool isDraggingSelectedPoints = false;
+    juce::Point<float> lastDragPosition;
+
+    // Envelope parameters
+    static constexpr float pointRadius = 6.0f;
+    int horizontalDivisions = 10;
+    int verticalDivisions = 4;
+
+    // Curve editing
+    int curveEditingSegment = -1;
+    float initialCurvature = 0.0f;
+    juce::Point<float> curveEditStartPos;
+
+    // Selection area
+    bool isCreatingSelectionArea = false;
+    juce::Point<float> selectionStart;
+    juce::Rectangle<float> selectionArea;
+
+    // Waveform visualization
+    AudioBufferQueue *audioBufferQueue = nullptr;
+    std::vector<float> waveformData;
+    struct PeakData {
+        float min = 0.0f;
+        float max = 0.0f;
+    };
+    std::vector<PeakData> waveformPeaks;
+    juce::Image waveformCache;
+    std::atomic<bool> waveformNeedsRedraw{false};
+    std::mutex waveformMutex;
+    float sampleRate = 44100.0f;
+    float timeRangeInSeconds = 1.0f;
+    float waveformScaleFactor = 1.0f;
+    juce::Colour waveformColour = juce::Colour(0xff52bfd9);
+
+    // Parameter mapper
+    EnvelopeParameterMapper parameterMapper;
+
+    // Timing manager reference (for transport sync)
+    std::shared_ptr<TimingManager> timingManager;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(EnvelopeComponent)
 }; 

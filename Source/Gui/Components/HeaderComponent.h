@@ -2,6 +2,8 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include <memory>
+
 //==============================================================================
 class HeaderComponent : public juce::Component
 {
@@ -15,21 +17,21 @@ public:
     HeaderComponent()
     {
         // Add title label
-        titleLabel.reset(new juce::Label("titleLabel", "Coincidence"));
+        titleLabel = std::make_unique<juce::Label>("titleLabel", "Coincidence");
         titleLabel->setFont(juce::Font(24.0f, juce::Font::bold));
         titleLabel->setJustificationType(juce::Justification::centred);
         titleLabel->setColour(juce::Label::textColourId, juce::Colours::white);
         addAndMakeVisible(titleLabel.get());
 
         // Add tabs
-        mainTabButton.reset(new juce::TextButton("Main"));
+        mainTabButton = std::make_unique<juce::TextButton>("Main");
         mainTabButton->setRadioGroupId(1);
         mainTabButton->setClickingTogglesState(true);
         mainTabButton->setToggleState(true, juce::dontSendNotification);
         mainTabButton->onClick = [this] { setActiveTab(Tab::Main); };
         addAndMakeVisible(mainTabButton.get());
 
-        envTabButton.reset(new juce::TextButton("Env"));
+        envTabButton = std::make_unique<juce::TextButton>("Env");
         envTabButton->setRadioGroupId(1);
         envTabButton->setClickingTogglesState(true);
         envTabButton->onClick = [this] { setActiveTab(Tab::Env); };

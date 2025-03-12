@@ -18,6 +18,8 @@ juce_add_plugin("${BaseTargetName}"
         FORMATS AU VST3 Standalone
         PRODUCT_NAME "Coincidence")
 
+target_compile_features(${BaseTargetName} PRIVATE cxx_std_20)
+
 target_sources(${BaseTargetName} PRIVATE
         Gui/LookAndFeel.cpp
         Gui/PluginEditor.cpp
@@ -44,13 +46,14 @@ target_sources(${BaseTargetName} PRIVATE
         Audio/Shared/TimingManager.cpp
         Audio/Midi/ScaleManager.cpp
         Audio/Midi/NoteGenerator.cpp
-        Audio/CoincidenceAudioProcessor.cpp
         Audio/FileLogger.cpp
         Audio/Effects/FxEngine.cpp
         Audio/Effects/Stutter.cpp
         Audio/Effects/Reverb.cpp
         Audio/Effects/Delay.cpp
         Audio/Effects/BaseEffect.cpp
+        Audio/Envelope/EnvelopeParameterMapper.cpp
+        Audio/Envelope/EnvelopeParameterTypes.h
         Audio/Util/AudioBufferQueue.h
         Audio/Util/AudioOscilloscope.cpp
         )

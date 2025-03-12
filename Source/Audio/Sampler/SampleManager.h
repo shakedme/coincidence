@@ -10,7 +10,7 @@
 
 class SampleManager {
 public:
-    SampleManager();
+    SampleManager(PluginProcessor& processor);
 
     ~SampleManager();
 
@@ -55,6 +55,9 @@ public:
 
         Group(const juce::String &n, int idx) : name(n), index(idx) {}
     };
+
+    void processAudio(juce::AudioBuffer<float> &buffer, juce::MidiBuffer &processedMidi,
+                      juce::MidiBuffer &midiMessages);
 
     // Sample management
     void addSample(const juce::File &file);
@@ -155,6 +158,8 @@ private:
     int selectGroup(const std::map<int, std::vector<int>> &groupedValidSamples, float totalGroupProbability);
 
     int selectSampleFromGroup(const std::vector<int> &samplesInGroup);
+
+    PluginProcessor &processor;
 
     // Sample groups (max 8 groups)
     std::vector<std::unique_ptr<Group>> groups;

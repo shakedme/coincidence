@@ -1,8 +1,13 @@
 cmake_minimum_required(VERSION 3.16)
 project(Coincidence)
 
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 # First, we'll add the CMake folder, in case we'll need to find_package later:
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake")
+
 # Compile commands, useful for some IDEs like VS-Code
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 enable_language(OBJC)

@@ -1,19 +1,20 @@
 #include "EnvelopeComponent.h"
+#include <juce_graphics/juce_graphics.h>
 
 //==============================================================================
-EnvelopeComponent::EnvelopeComponent() {
-    // Add some initial points
-    points.push_back(std::make_unique<EnvelopePoint>(0.0f, 0.5f));
-    points.push_back(std::make_unique<EnvelopePoint>(0.5f, 0.5f));
-    points.push_back(std::make_unique<EnvelopePoint>(1.0f, 0.5f));
+EnvelopeComponent::EnvelopeComponent(EnvelopeParams::ParameterType type)
+        : parameterMapper(type) {
+    // Initialize with default points
+    points.push_back(std::make_unique<EnvelopePoint>(0.0f, 0.5f, false));
+    points.push_back(std::make_unique<EnvelopePoint>(1.0f, 0.5f, false));
 
-    setWantsKeyboardFocus(true);
-
-    // Initialize waveform rendering
+    // Set up waveform rendering
     setupWaveformRendering();
 
-    // Start a timer to handle waveform updates
-    startTimerHz(60); // 60fps refresh rate for waveform
+    // Start the timer for waveform updates - use higher refresh rate for smoother animation
+    startTimerHz(30); // 30 FPS for smoother visualization
+
+    setWantsKeyboardFocus(true);
 }
 
 EnvelopeComponent::~EnvelopeComponent() {
@@ -38,6 +39,9 @@ void EnvelopeComponent::paint(juce::Graphics &g) {
 
     // Draw envelope line
     drawEnvelopeLine(g);
+    
+    // Draw current position marker
+    drawPositionMarker(g);
 
     // Draw points
     drawPoints(g);
@@ -73,12 +77,14 @@ void EnvelopeComponent::mouseDown(const juce::MouseEvent &e) {
 
             point->selected = true;
             lastDragPosition = e.position;
-            if (getSelectedPointsCount() == 1) {
-                pointDragging = point.get();
-                isDraggingSelectedPoints = false;
-            } else {
-                pointDragging = nullptr;
-                isDraggingSelectedPoints = true;
+            if (point->isEditable) {
+                if (getSelectedPointsCount() == 1) {
+                    pointDragging = point.get();
+                    isDraggingSelectedPoints = false;
+                } else {
+                    pointDragging = nullptr;
+                    isDraggingSelectedPoints = true;
+                }
             }
             repaint();
             return;
@@ -132,6 +138,9 @@ void EnvelopeComponent::mouseDrag(const juce::MouseEvent &e) {
                       return a->position.x < b->position.x;
                   });
 
+        // Update parameter mapper
+        parameterMapper.setPoints(points);
+        notifyPointsChanged();
         repaint();
     } else if (isDraggingSelectedPoints) {
         // Move all selected points together
@@ -157,16 +166,22 @@ void EnvelopeComponent::mouseDrag(const juce::MouseEvent &e) {
                       return a->position.x < b->position.x;
                   });
 
+        // Update parameter mapper
+        parameterMapper.setPoints(points);
+        notifyPointsChanged();
         lastDragPosition = e.position;
         repaint();
     } else if (curveEditingSegment >= 0 && curveEditingSegment < points.size() - 1) {
         // Calculate curve adjustment based on vertical drag distance
-        // Invert the direction so dragging up creates a downward curve
-        float verticalDelta = (curveEditStartPos.getY() - e.position.getY()) / 100.0f;
+        // Make the direction intuitive: dragging down creates a downward curve (negative value)
+        float verticalDelta = (e.position.getY() - curveEditStartPos.getY()) / 100.0f;
 
         // Adjust the curvature of the line segment (next point stores the curve)
         points[curveEditingSegment + 1]->curvature = juce::jlimit(-1.0f, 1.0f, initialCurvature + verticalDelta);
 
+        // Update parameter mapper
+        parameterMapper.setPoints(points);
+        notifyPointsChanged();
         repaint();
     } else if (isCreatingSelectionArea) {
         // Update the selection rectangle
@@ -213,6 +228,9 @@ void EnvelopeComponent::mouseDoubleClick(const juce::MouseEvent &e) {
             // Don't allow deleting the first or last point
             if (it != points.begin() && it != std::prev(points.end())) {
                 points.erase(it);
+                // Update parameter mapper
+                parameterMapper.setPoints(points);
+                notifyPointsChanged();
                 repaint();
             }
             return;
@@ -223,6 +241,9 @@ void EnvelopeComponent::mouseDoubleClick(const juce::MouseEvent &e) {
     int segmentIndex = findClosestSegmentIndex(e.position.toFloat());
     if (segmentIndex >= 0) {
         points[segmentIndex + 1]->curvature = 0.0f;
+        // Update parameter mapper
+        parameterMapper.setPoints(points);
+        notifyPointsChanged();
         repaint();
         return;
     }
@@ -246,7 +267,11 @@ void EnvelopeComponent::mouseDoubleClick(const juce::MouseEvent &e) {
                                });
 
     points.insert(it, std::move(newPoint));
-    
+
+    // Update parameter mapper
+    parameterMapper.setPoints(points);
+    notifyPointsChanged();
+
     // Reset dragging state immediately
     pointDragging = nullptr;
     isDraggingSelectedPoints = false;
@@ -294,8 +319,7 @@ void EnvelopeComponent::drawGrid(juce::Graphics &g) {
 }
 
 void EnvelopeComponent::drawEnvelopeLine(juce::Graphics &g) {
-    if (points.size() < 2)
-        return;
+    if (points.size() < 2) return;
 
     g.setColour(juce::Colour(0xff52bfd9));
 
@@ -311,8 +335,11 @@ void EnvelopeComponent::drawEnvelopeLine(juce::Graphics &g) {
         if (points[i]->curvature != 0.0f) {
             // Calculate control points for a quadratic bezier curve
             const float curvature = points[i]->curvature;
-            const float curveAmount = 100.0f * curvature; // Adjust for desired curve intensity
-
+            
+            // For visual display, use a large multiplier, but invert the sign to match parameter behavior
+            // Negative curvature = bend down, positive curvature = bend up
+            const float curveAmount = -100.0f * curvature; // Invert direction for visual consistency
+            
             // Calculate control point position
             juce::Point<float> midPoint = startPos + (endPos - startPos) * 0.5f;
             juce::Point<float> perpendicular(-((endPos.y - startPos.y)), (endPos.x - startPos.x));
@@ -429,7 +456,8 @@ float EnvelopeComponent::distanceToCurve(const juce::Point<float> &point, const 
     float minDistance = std::numeric_limits<float>::max();
 
     // Calculate the control point for the quadratic bezier
-    const float curveAmount = 100.0f * curvature;
+    // Use the same inversion as in drawEnvelopeLine for consistency
+    const float curveAmount = -100.0f * curvature; // Invert direction to match visual display
     juce::Point<float> midPoint = start + (end - start) * 0.5f;
     juce::Point<float> perpendicular(-((end.y - start.y)), (end.x - start.x));
 
@@ -484,6 +512,15 @@ void EnvelopeComponent::pushAudioBuffer(const float *audioData, int numSamples) 
 }
 
 void EnvelopeComponent::timerCallback() {
+    // Update transport position if timing manager is available
+    if (timingManager != nullptr) {
+        double ppqPosition = timingManager->getPpqPosition();
+        parameterMapper.setTransportPosition(ppqPosition);
+        
+        // Always repaint to show current envelope position in sync with transport
+        repaint();
+    }
+
     // Check if we need to update the waveform
     if (waveformNeedsRedraw.load()) {
         // Use mutex to protect the cache update, but not the data acquisition
@@ -495,7 +532,7 @@ void EnvelopeComponent::timerCallback() {
 
 void EnvelopeComponent::updateWaveformCache() {
     // Check if component has been resized
-    if (waveformData.size() != static_cast<size_t>(getWidth())) {
+    if (waveformData.size() != static_cast<size_t>(getWidth()) && getWidth() > 0 && !waveformData.empty()) {
         waveformData.resize(getWidth(), 0.0f);
         waveformCache = juce::Image(juce::Image::ARGB, getWidth(), getHeight(), true);
     }
@@ -510,23 +547,7 @@ void EnvelopeComponent::updateWaveformCache() {
             waveformData.resize(samplesForTimeRange, 0.0f);
         }
 
-        // Create a scrolling effect by advancing the write position
-        static size_t lastOffset = 0;
-        size_t totalSamples = audioBufferQueue->getTotalSamplesWritten();
-
-        // Calculate how many samples to advance since last update
-        size_t currentOffset = totalSamples % samplesForTimeRange;
-        size_t samplesAdvanced = (currentOffset >= lastOffset) ?
-                                 (currentOffset - lastOffset) :
-                                 (samplesForTimeRange - lastOffset + currentOffset);
-
-        // If we haven't advanced, keep the same view
-        if (samplesAdvanced == 0)
-            return;
-
-        lastOffset = currentOffset;
-
-        // Get samples for the visible range
+        // Get samples for the visible range - we want the most recent samples, so offset is 0
         audioBufferQueue->getVisibleSamples(waveformData.data(), waveformData.size(), 0);
     }
 
@@ -541,9 +562,13 @@ void EnvelopeComponent::updateWaveformCache() {
         float min = 0.0f;
         float max = 0.0f;
 
+        // For left-to-right flow, we need to reverse the x index used to look up samples
+        // This makes newest samples appear on the right and older samples flow left
+        int reverseX = getWidth() - 1 - x;
+
         // Calculate the range of samples that correspond to this pixel
-        int startSample = static_cast<int>(x * samplesPerPixel);
-        int endSample = static_cast<int>((x + 1) * samplesPerPixel);
+        int startSample = static_cast<int>(reverseX * samplesPerPixel);
+        int endSample = static_cast<int>((reverseX + 1) * samplesPerPixel);
 
         // Ensure we don't exceed the buffer bounds
         startSample = juce::jlimit(0, static_cast<int>(waveformData.size()) - 1, startSample);
@@ -575,28 +600,16 @@ void EnvelopeComponent::updateWaveformCache() {
     g.fillAll();
 
     // Draw the waveform with more transparency
-    // Set a more transparent color for the waveform (alpha of 0.3)
     g.setColour(waveformColour.withAlpha(0.3f));
 
     const float midY = getHeight() / 2.0f;
     const float scaleFactor = midY * waveformScaleFactor;
 
-    // Create paths for min and max values
-    juce::Path waveformPath;
-    bool pathStarted = false;
-
+    // Draw waveform using high-resolution peaks
     for (int x = 0; x < getWidth(); ++x) {
-        int index = x;
-
-        // Reverse the drawing order if needed
-        if (waveformScrollLeftToRight) {
-            // Left to right: newest samples on left
-            index = getWidth() - 1 - x;
-        }
-
         // Get min and max values for this pixel
-        float minVal = waveformPeaks[index].min;
-        float maxVal = waveformPeaks[index].max;
+        float minVal = waveformPeaks[x].min;
+        float maxVal = waveformPeaks[x].max;
 
         // Convert to screen coordinates
         float minY = midY - (minVal * scaleFactor);
@@ -617,16 +630,8 @@ void EnvelopeComponent::updateWaveformCache() {
     bool centerPathStarted = false;
 
     for (int x = 0; x < getWidth(); ++x) {
-        int index = x;
-
-        // Reverse the drawing order if needed
-        if (waveformScrollLeftToRight) {
-            // Left to right: newest samples on left
-            index = getWidth() - 1 - x;
-        }
-
         // Calculate the average value at this point
-        float avgY = midY - ((waveformPeaks[index].min + waveformPeaks[index].max) * 0.5f * scaleFactor);
+        float avgY = midY - ((waveformPeaks[x].min + waveformPeaks[x].max) * 0.5f * scaleFactor);
 
         if (!centerPathStarted) {
             centerPath.startNewSubPath(static_cast<float>(x), avgY);
@@ -636,8 +641,8 @@ void EnvelopeComponent::updateWaveformCache() {
         }
     }
 
-    // Draw the center line with a slightly translucent color (alpha of 0.4)
-    g.setColour(waveformColour.withAlpha(0.4f));
+    // Draw the center line with a slightly more visible color
+    g.setColour(waveformColour.withAlpha(0.5f));
     g.strokePath(centerPath, juce::PathStrokeType(1.0f));
 }
 
@@ -701,4 +706,61 @@ bool EnvelopeComponent::keyPressed(const juce::KeyPress &key) {
         }
     }
     return false;
+}
+
+// Parameter mapping methods
+void EnvelopeComponent::setParameterRange(float min, float max, bool exponential) {
+    parameterMapper.setParameterRange(min, max, exponential);
+}
+
+float EnvelopeComponent::getCurrentValue() const {
+    return parameterMapper.getCurrentValue();
+}
+
+void EnvelopeComponent::updateTime(float deltaTime) {
+    parameterMapper.updateTime(deltaTime);
+}
+
+void EnvelopeComponent::setRate(float newRate) {
+    parameterMapper.setRate(newRate);
+    // Notify listeners of rate change if callback is set
+    if (onRateChanged) {
+        onRateChanged(newRate);
+    }
+}
+
+void EnvelopeComponent::notifyPointsChanged() {
+    if (onPointsChanged) {
+        onPointsChanged();
+    }
+}
+
+void EnvelopeComponent::setParameterType(EnvelopeParams::ParameterType type) {
+    parameterMapper.setParameterType(type);
+    repaint();
+}
+
+EnvelopeParams::ParameterType EnvelopeComponent::getParameterType() const {
+    return parameterMapper.getParameterType();
+}
+
+// Add this new method to draw the position marker
+void EnvelopeComponent::drawPositionMarker(juce::Graphics &g) {
+    if (timingManager == nullptr)
+        return;
+    
+    // Calculate current position in the envelope cycle
+    double ppqPosition = timingManager->getPpqPosition();
+    float cycle = std::fmod(static_cast<float>(ppqPosition * parameterMapper.getRate()), 1.0f);
+    
+    // Convert to screen x-coordinate
+    float x = cycle * getWidth();
+    
+    // Draw vertical line at current position
+    g.setColour(juce::Colours::white.withAlpha(0.5f));
+    g.drawLine(x, 0, x, static_cast<float>(getHeight()), 1.0f);
+    
+    // Add a small indicator at the top
+    g.setColour(juce::Colours::white);
+    g.fillRoundedRectangle(x - 2, 0, 4, 8, 2);
 } 

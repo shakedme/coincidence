@@ -42,7 +42,7 @@ private:
     // UI Sections
     std::unique_ptr<GrooveSectionComponent> grooveSection;
     std::unique_ptr<PitchSectionComponent> pitchSection;
-    std::unique_ptr<EffectsSection> glitchSection;
+    std::unique_ptr<EffectsSection> fxSection;
     std::unique_ptr<SampleSectionComponent> sampleSection;
     std::unique_ptr<EnvelopeSectionComponent> envelopeSection;
     std::unique_ptr<juce::TooltipWindow> tooltipWindow;

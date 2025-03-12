@@ -20,8 +20,8 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     pitchSection = std::make_unique<PitchSectionComponent>(*this, audioProcessor);
     addAndMakeVisible(pitchSection.get());
 
-    glitchSection = std::make_unique<EffectsSection>(*this, audioProcessor);
-    addAndMakeVisible(glitchSection.get());
+    fxSection = std::make_unique<EffectsSection>(*this, audioProcessor);
+    addAndMakeVisible(fxSection.get());
 
     sampleSection = std::make_unique<SampleSectionComponent>(*this, audioProcessor);
     addAndMakeVisible(sampleSection.get());
@@ -35,8 +35,6 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     {
         audioProcessor.connectEnvelopeComponent(envelopeSection->getEnvelopeComponent());
     }
-
-//    test
 
     tooltipWindow = std::make_unique<juce::TooltipWindow>(this, 0);
 
@@ -122,8 +120,8 @@ void PluginEditor::resized()
         int sampleY = topSectionY + topSectionHeight + sectionPadding;
         sampleSection->setBounds(xPadding, sampleY, getWidth() - xPadding * 2, sampleHeight);
 
-        int glitchY = sampleY + sampleHeight + sectionPadding;
-        glitchSection->setBounds(xPadding, glitchY, getWidth() - xPadding * 2, glitchHeight);
+        int fxY = sampleY + sampleHeight + sectionPadding;
+        fxSection->setBounds(xPadding, fxY, getWidth() - xPadding * 2, glitchHeight);
     }
 }
 
@@ -169,7 +167,7 @@ void PluginEditor::switchTab(HeaderComponent::Tab tab)
     grooveSection->setVisible(isMainTab);
     pitchSection->setVisible(isMainTab);
     sampleSection->setVisible(isMainTab);
-    glitchSection->setVisible(isMainTab);
+    fxSection->setVisible(isMainTab);
     
     envelopeSection->setVisible(!isMainTab);
     

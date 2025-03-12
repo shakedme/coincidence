@@ -47,6 +47,22 @@ void EnvelopeSectionComponent::setupRateComboBox() {
     rateComboBox->setSelectedId(static_cast<int>(Rate::Whole) + 1);
     rateComboBox->onChange = [this] {
         updateTimeRangeFromRate();
+        
+        // Calculate and set the appropriate rate based on selection
+        float newRate = 1.0f;
+        switch (static_cast<Rate>(rateComboBox->getSelectedId() - 1)) {
+            case Rate::TwoWhole:    newRate = 0.125f; break;
+            case Rate::Whole:       newRate = 0.25f; break;
+            case Rate::Half:        newRate = 0.5f; break;
+            case Rate::Quarter:     newRate = 1.0f; break;
+            case Rate::Eighth:      newRate = 2.0f; break;
+            case Rate::Sixteenth:   newRate = 4.0f; break;
+            case Rate::ThirtySecond: newRate = 8.0f; break;
+        }
+        
+        if (envelopeComponent != nullptr) {
+            envelopeComponent->setRate(newRate);
+        }
     };
     addAndMakeVisible(rateComboBox.get());
 }
@@ -78,39 +94,36 @@ void EnvelopeSectionComponent::updateTimeRangeFromRate() {
     const double bpm = processor.getTimingManager().getBpm();
     const double beatsPerSecond = bpm / 60.0;
 
-    // Calculate time range based on selected rate
+    // Calculate time range based on selected rate - this should match exactly one envelope cycle
     float timeRangeInSeconds = 1.0f;
 
     switch (static_cast<Rate>(rateComboBox->getSelectedId() - 1)) {
         case Rate::TwoWhole:
-            // Four beats
+            // Two whole notes = 8 quarter notes
             timeRangeInSeconds = static_cast<float>(8.0 / beatsPerSecond);
             break;
         case Rate::Whole:
-            // Two beats
+            // One whole note = 4 quarter notes
             timeRangeInSeconds = static_cast<float>(4.0 / beatsPerSecond);
             break;
         case Rate::Half:
-            // Two beats
+            // One half note = 2 quarter notes
             timeRangeInSeconds = static_cast<float>(2.0 / beatsPerSecond);
             break;
         case Rate::Quarter:
-            // One beat at 120 BPM = 0.5 seconds
+            // One quarter note
             timeRangeInSeconds = static_cast<float>(1.0 / beatsPerSecond);
             break;
-
         case Rate::Eighth:
-            // Half a beat
+            // One eighth note = 0.5 quarter notes
             timeRangeInSeconds = static_cast<float>(0.5 / beatsPerSecond);
             break;
-
         case Rate::Sixteenth:
-            // Quarter beat
+            // One sixteenth note = 0.25 quarter notes
             timeRangeInSeconds = static_cast<float>(0.25 / beatsPerSecond);
             break;
-
         case Rate::ThirtySecond:
-            // Eighth beat
+            // One thirty-second note = 0.125 quarter notes
             timeRangeInSeconds = static_cast<float>(0.125 / beatsPerSecond);
             break;
     }

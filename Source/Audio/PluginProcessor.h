@@ -5,8 +5,9 @@
 #include "Shared/TimingManager.h"
 #include "Midi/ScaleManager.h"
 #include "Midi/NoteGenerator.h"
-#include "CoincidenceAudioProcessor.h"
 #include "Sampler/Sampler.h"
+#include "Envelope/EnvelopeParameterMapper.h"
+#include "Sampler/SampleManager.h"
 
 // Forward declarations
 class PluginEditor;
@@ -83,6 +84,10 @@ public:
     // Connect the envelope component to receive waveform data
     void connectEnvelopeComponent(EnvelopeComponent* component);
 
+    // Envelope component management
+    void setEnvelopeComponent(EnvelopeComponent* component);
+    EnvelopeComponent* getEnvelopeComponent() const { return envelopeComponent; }
+
 private:
     // Update settings from parameters
     void updateMidiSettingsFromParameters();
@@ -93,9 +98,12 @@ private:
 
     // Specialized components for handling different aspects of the plugin
     std::unique_ptr<NoteGenerator> noteGenerator;
-    std::unique_ptr<CoincidenceAudioProcessor> audioProcessor;
+    std::unique_ptr<SampleManager> sampleManager;
     std::unique_ptr<FxEngine> fxEngine;
     std::shared_ptr<TimingManager> timingManager;
+
+    // Envelope parameter mapper for amplitude control
+    EnvelopeParameterMapper amplitudeEnvelope;
 
     // Pointer to the envelope component for waveform visualization
     EnvelopeComponent* envelopeComponent = nullptr;
