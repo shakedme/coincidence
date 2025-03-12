@@ -35,7 +35,9 @@ void NoteGenerator::releaseResources()
 
 void NoteGenerator::processIncomingMidi(const juce::MidiBuffer& midiMessages,
                                         juce::MidiBuffer& processedMidi,
-                                        int)
+                                        int numSamples,
+                                        Params::GeneratorSettings settings
+                                        )
 {
     for (const auto metadata: midiMessages)
     {
@@ -65,6 +67,15 @@ void NoteGenerator::processIncomingMidi(const juce::MidiBuffer& midiMessages,
             processedMidi.addEvent(message, time);
         }
     }
+
+    // Check if active notes need to be turned off
+    checkActiveNotes(processedMidi, numSamples);
+
+    // Process any pending notes scheduled from previous buffers
+    processPendingNotes(processedMidi, numSamples);
+
+    // Generates midi based on settings
+    generateNewNotes(processedMidi, settings);
 }
 
 void NoteGenerator::checkActiveNotes(juce::MidiBuffer& midiMessages, int numSamples)

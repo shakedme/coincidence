@@ -6,22 +6,20 @@
 #include "ScaleManager.h"
 
 class PluginProcessor;
+
 class PluginEditor;
 
 /**
  * Class to handle note generation and MIDI processing functionality
  */
-class NoteGenerator
-{
+class NoteGenerator {
 public:
-    struct EligibleRate
-    {
+    struct EligibleRate {
         Params::RateOption rate;
         float weight;
     };
-    
-    struct PendingNote 
-    {
+
+    struct PendingNote {
         int noteNumber;
         int velocity;
         juce::int64 startSamplePosition; // Absolute sample position
@@ -29,61 +27,39 @@ public:
         int sampleIndex = -1; // For sample playback
     };
 
-    NoteGenerator(PluginProcessor& p, std::shared_ptr<TimingManager> t);
+    NoteGenerator(PluginProcessor &p, std::shared_ptr<TimingManager> t);
+
     ~NoteGenerator() = default;
 
     // Initialize with sample rate
     void prepareToPlay(double sampleRate, int samplesPerBlock);
-    
+
     // Clear state before releasing resources
     void releaseResources();
-    
-    // Collect all rates that should trigger
-    std::vector<EligibleRate> collectEligibleRates(const Params::GeneratorSettings& settings, float& totalWeight);
-    
-    // Select a rate from eligible rates based on weighted probability
-    Params::RateOption selectRateFromEligible(const std::vector<EligibleRate>& eligibleRates, float totalWeight);
-    
-    // Generate new notes based on settings
-    void generateNewNotes(juce::MidiBuffer& midiMessages, const Params::GeneratorSettings& settings);
-    
-    // Play a new note at the specified rate
-    void playNewNote(Params::RateOption selectedRate, juce::MidiBuffer& midiMessages, const Params::GeneratorSettings& settings);
-    
-    // Process pending notes (scheduled for future buffers)
-    void processPendingNotes(juce::MidiBuffer& midiMessages, int numSamples);
-    
-    // Calculate the note length in samples
-    int calculateNoteLength(Params::RateOption rate, const Params::GeneratorSettings& settings);
-    
-    // Calculate velocity based on settings
-    int calculateVelocity(const Params::GeneratorSettings& settings);
-    
-    // Apply randomization to a value
-    float applyRandomization(float value, float randomizeValue, Params::DirectionType direction) const;
-    
+
     // Process MIDI in for note tracking
-    void processIncomingMidi(const juce::MidiBuffer& midiMessages, juce::MidiBuffer& processedMidi, int numSamples);
-    
-    // Check if active notes need to be turned off
-    void checkActiveNotes(juce::MidiBuffer& midiMessages, int numSamples);
-    
-    // Stop an active note
-    void stopActiveNote(juce::MidiBuffer& midiMessages, int currentSamplePosition);
-    
+    void processIncomingMidi(const juce::MidiBuffer &midiMessages,
+                             juce::MidiBuffer &processedMidi,
+                             int numSamples,
+                             Params::GeneratorSettings settings);
+
     // Accessors
     float getCurrentRandomizedGate() const { return currentRandomizedGate; }
+
     float getCurrentRandomizedVelocity() const { return currentRandomizedVelocity; }
+
     int getCurrentActiveSampleIdx() const { return currentActiveSampleIdx; }
+
     bool isNoteActive() const { return noteIsActive; }
+
     juce::int64 getCurrentNoteDuration() const { return noteDurationInSamples; }
-    
+
     // Get the list of pending notes
-    const std::vector<PendingNote>& getPendingNotes() const { return pendingNotes; }
-    
+    const std::vector<PendingNote> &getPendingNotes() const { return pendingNotes; }
+
 private:
     // Reference to the main processor
-    PluginProcessor& processor;
+    PluginProcessor &processor;
 
 
     // Managers for specific functionality
@@ -101,25 +77,57 @@ private:
     int currentInputNote = -1;
     bool isInputNoteActive = false;
     int currentActiveSampleIdx = -1;
-    
+
     // Pending notes for future processing
     std::vector<PendingNote> pendingNotes;
-    
-    // Randomized values for visualization
-    std::atomic<float> currentRandomizedGate {0.0f};
-    std::atomic<float> currentRandomizedVelocity {0.0f};
 
-    void addNoteWithinCurrentBuffer(juce::MidiBuffer& buffer,
+    // Randomized values for visualization
+    std::atomic<float> currentRandomizedGate{0.0f};
+    std::atomic<float> currentRandomizedVelocity{0.0f};
+
+    void addNoteWithinCurrentBuffer(juce::MidiBuffer &buffer,
                                     int play,
                                     int velocity,
                                     int offset,
                                     juce::int64 position,
                                     int samples,
                                     int index);
+
     void addPendingNote(int noteToPlay,
                         int velocity,
                         int noteLengthSamples,
                         int sampleIndex,
                         juce::int64 position);
+
+    // Check if active notes need to be turned off
+    void checkActiveNotes(juce::MidiBuffer &midiMessages, int numSamples);
+
+    // Generate new notes based on settings
+    void generateNewNotes(juce::MidiBuffer &midiMessages, const Params::GeneratorSettings &settings);
+
+    // Collect all rates that should trigger
+    std::vector<EligibleRate> collectEligibleRates(const Params::GeneratorSettings &settings, float &totalWeight);
+
+    // Select a rate from eligible rates based on weighted probability
+    Params::RateOption selectRateFromEligible(const std::vector<EligibleRate> &eligibleRates, float totalWeight);
+
+    // Play a new note at the specified rate
+    void playNewNote(Params::RateOption selectedRate, juce::MidiBuffer &midiMessages,
+                     const Params::GeneratorSettings &settings);
+
+    // Process pending notes (scheduled for future buffers)
+    void processPendingNotes(juce::MidiBuffer &midiMessages, int numSamples);
+
+    // Calculate the note length in samples
+    int calculateNoteLength(Params::RateOption rate, const Params::GeneratorSettings &settings);
+
+    // Calculate velocity based on settings
+    int calculateVelocity(const Params::GeneratorSettings &settings);
+
+    // Apply randomization to a value
+    float applyRandomization(float value, float randomizeValue, Params::DirectionType direction) const;
+
+    // Stop an active note
+    void stopActiveNote(juce::MidiBuffer &midiMessages, int currentSamplePosition);
 
 };

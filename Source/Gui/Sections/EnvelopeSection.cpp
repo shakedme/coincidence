@@ -47,7 +47,7 @@ void EnvelopeSectionComponent::setupRateComboBox() {
     rateComboBox->setSelectedId(static_cast<int>(Rate::Whole) + 1);
     rateComboBox->onChange = [this] {
         updateTimeRangeFromRate();
-        
+
         // Calculate and set the appropriate rate based on selection
         float newRate = 1.0f;
         switch (static_cast<Rate>(rateComboBox->getSelectedId() - 1)) {
@@ -59,7 +59,7 @@ void EnvelopeSectionComponent::setupRateComboBox() {
             case Rate::Sixteenth:   newRate = 4.0f; break;
             case Rate::ThirtySecond: newRate = 8.0f; break;
         }
-        
+
         if (envelopeComponent != nullptr) {
             envelopeComponent->setRate(newRate);
         }

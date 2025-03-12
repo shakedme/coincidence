@@ -25,7 +25,7 @@ PluginProcessor::PluginProcessor()
     // Start timer for any background tasks
     startTimerHz(50);
 //
-    auto* fileLogger = new FileLogger();
+    auto *fileLogger = new FileLogger();
     juce::Logger::setCurrentLogger(fileLogger);
 }
 
@@ -186,16 +186,7 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
 
     // Process incoming MIDI messages
     noteGenerator->processIncomingMidi(
-            midiMessages, processedMidi, buffer.getNumSamples());
-
-    // Check if active notes need to be turned off
-    noteGenerator->checkActiveNotes(processedMidi, buffer.getNumSamples());
-
-    // Process any pending notes scheduled from previous buffers
-    noteGenerator->processPendingNotes(processedMidi, buffer.getNumSamples());
-
-    // Generates midi based on settings
-    noteGenerator->generateNewNotes(processedMidi, settings);
+            midiMessages, processedMidi, buffer.getNumSamples(), settings);
 
     // If samples are loaded, uses generated midi to trigger samples
     if (sampleManager->isSampleLoaded()) {
@@ -210,19 +201,19 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     const int numChannels = buffer.getNumChannels();
     const int numSamples = buffer.getNumSamples();
 //    const float sampleDeltaTime = 1.0f / getSampleRate();
-    
+
     // Apply envelope to each sample in all channels
     for (int sample = 0; sample < numSamples; ++sample) {
         // Get current envelope value
         float envelopeValue = amplitudeEnvelope.getCurrentValue();
-        
+
         // Apply to all channels
         for (int channel = 0; channel < numChannels; ++channel) {
-            float* channelData = buffer.getWritePointer(channel);
+            float *channelData = buffer.getWritePointer(channel);
             channelData[sample] *= envelopeValue;
         }
     }
-    
+
     timingManager->updateSamplePosition(buffer.getNumSamples());
 
     // After processing is done, send the processed audio data to the envelope component
@@ -502,7 +493,7 @@ void PluginProcessor::connectEnvelopeComponent(EnvelopeComponent *component) {
         // Set up the envelope component with the same points as our amplitude envelope
         envelopeComponent->setParameterType(EnvelopeParams::ParameterType::Amplitude);
         envelopeComponent->setRate(amplitudeEnvelope.getRate());
-        
+
         // Connect timing manager for transport sync
         envelopeComponent->setTimingManager(timingManager);
 
@@ -511,7 +502,7 @@ void PluginProcessor::connectEnvelopeComponent(EnvelopeComponent *component) {
             // Get points from the component and update our envelope
             amplitudeEnvelope.setPoints(envelopeComponent->getPoints());
         };
-        
+
         // Set up callback to sync rate changes from the UI
         envelopeComponent->onRateChanged = [this](float newRate) {
             // Update envelope rate when UI rate changes

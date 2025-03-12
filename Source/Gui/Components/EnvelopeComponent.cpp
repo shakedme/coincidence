@@ -653,7 +653,6 @@ void EnvelopeComponent::drawWaveform(juce::Graphics &g) {
     g.drawImageAt(waveformCache, 0, 0);
 }
 
-
 void EnvelopeComponent::drawSelectionArea(juce::Graphics &g) {
     // Semi-transparent fill
     g.setColour(juce::Colour(0x3052bfd9)); // Light blue with 30% opacity
