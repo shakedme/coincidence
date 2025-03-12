@@ -12,6 +12,7 @@ public:
     EnvelopeSectionComponent(PluginEditor& editor, PluginProcessor& processor);
     ~EnvelopeSectionComponent() override = default;
 
+
     void paint(juce::Graphics& g) override;
     void resized() override;
     

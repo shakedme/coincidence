@@ -3,7 +3,6 @@ project(Coincidence)
 
 # First, we'll add the CMake folder, in case we'll need to find_package later:
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake")
-
 # Compile commands, useful for some IDEs like VS-Code
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 enable_language(OBJC)
@@ -39,6 +38,17 @@ endif()
 set(CMAKE_UNITY_BUILD ON)
 set(CMAKE_UNITY_BUILD_BATCH_SIZE 8)
 
+# Ensure consistent symbol visibility for all targets
+if (APPLE)
+    set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+    set(CMAKE_C_VISIBILITY_PRESET hidden)
+    set(CMAKE_VISIBILITY_INLINES_HIDDEN YES)
+elseif(UNIX)
+    set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+    set(CMAKE_C_VISIBILITY_PRESET hidden)
+    set(CMAKE_VISIBILITY_INLINES_HIDDEN YES)
+endif()
+
 # Minimum MacOS target, set globally
 if(${CMAKE_SYSTEM_NAME} STREQUAL "iOS")
     set(CMAKE_OSX_DEPLOYMENT_TARGET 11.0 CACHE STRING "Minimum OS X deployment version" FORCE)
@@ -60,11 +70,41 @@ endif()
 # CMake/Findjuce.cmake, where you can see how JUCE is brought in/configured
 find_package(juce REQUIRED)
 
+# Add compiler flags to handle weak symbol visibility consistently
+if(APPLE)
+    add_compile_options(-fvisibility=hidden -fvisibility-inlines-hidden)
+    # For Clang on macOS, use these options to fix weak symbol warnings
+    add_link_options(-Wl,-weak_reference_mismatches,weak)
+endif()
+
+# Disable unity builds for JUCE modules by excluding their source files
+set(_juce_modules_dir "${CMAKE_CURRENT_SOURCE_DIR}/cmake-build-debug/_deps/juce-src/modules")
+
+if(EXISTS "${_juce_modules_dir}")
+    message(STATUS "Excluding JUCE modules from unity builds: ${_juce_modules_dir}")
+    file(GLOB_RECURSE _juce_module_files CONFIGURE_DEPENDS
+        "${_juce_modules_dir}/*.cpp"
+        "${_juce_modules_dir}/*.c"
+        "${_juce_modules_dir}/*.h"
+        "${_juce_modules_dir}/*.mm"
+        "${_juce_modules_dir}/*.m")
+    
+    list(LENGTH _juce_module_files _juce_file_count)
+    message(STATUS "Found ${_juce_file_count} files to exclude from unity builds")
+    foreach(_file IN LISTS _juce_module_files)
+        set_property(SOURCE ${_file} PROPERTY SKIP_UNITY_BUILD_INCLUSION ON)
+    endforeach()
+else()
+    message(WARNING "Could not locate JUCE modules directory at: ${_juce_modules_dir}")
+endif()
+
 Include(FetchContent)
 FetchContent_Declare(melatonin_inspector
         GIT_REPOSITORY https://github.com/sudara/melatonin_inspector.git
         GIT_TAG origin/main
         SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/melatonin_inspector)
 FetchContent_MakeAvailable(melatonin_inspector)
+
+add_definitions(-w)
 
 add_subdirectory(Source)

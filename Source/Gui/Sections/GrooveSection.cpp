@@ -13,7 +13,6 @@ GrooveSectionComponent::GrooveSectionComponent(PluginEditor &e,
     setupGateControls();
     setupVelocityControls();
     setupDirectionControls();
-
     updateRateLabelsForRhythmMode();
 }
 
