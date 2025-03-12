@@ -21,7 +21,7 @@ void BaseEffect::releaseResources() {
     // Base implementation does nothing
 }
 
-void BaseEffect::setSettings(Params::FxSettings settings) {
+void BaseEffect::setSettings(Config::FxSettings settings) {
     this->settings = settings;
 }
 

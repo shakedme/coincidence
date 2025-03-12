@@ -1,5 +1,5 @@
 #include <juce_audio_utils/juce_audio_utils.h>
-#include "../Shared/TimingManager.h"
+#include "../../Shared/TimingManager.h"
 #include "FxEngine.h"
 #include "../PluginProcessor.h"
 
@@ -35,7 +35,7 @@ void FxEngine::releaseResources() {
     delayEffect->releaseResources();
 }
 
-void FxEngine::setSettings(Params::FxSettings _settings) {
+void FxEngine::setSettings(Config::FxSettings _settings) {
     settings = _settings;
     reverbEffect->setSettings(_settings);
     stutterEffect->setSettings(_settings);

@@ -41,12 +41,12 @@ SampleRow::SampleRow(SampleList *owner, int row, SamplerSound *sound)
     addAndMakeVisible(deleteIcon.get());
 
     // Setup rate icons
-    setupRateIcon(rate1_1Icon, "1/1", Params::RATE_1_1);
-    setupRateIcon(rate1_2Icon, "1/2", Params::RATE_1_2);
-    setupRateIcon(rate1_4Icon, "1/4", Params::RATE_1_4);
-    setupRateIcon(rate1_8Icon, "1/8", Params::RATE_1_8);
-    setupRateIcon(rate1_16Icon, "1/16", Params::RATE_1_16);
-    setupRateIcon(rate1_32Icon, "1/32", Params::RATE_1_32);
+    setupRateIcon(rate1_1Icon, "1/1", Config::RATE_1_1);
+    setupRateIcon(rate1_2Icon, "1/2", Config::RATE_1_2);
+    setupRateIcon(rate1_4Icon, "1/4", Config::RATE_1_4);
+    setupRateIcon(rate1_8Icon, "1/8", Config::RATE_1_8);
+    setupRateIcon(rate1_16Icon, "1/16", Config::RATE_1_16);
+    setupRateIcon(rate1_32Icon, "1/32", Config::RATE_1_32);
 
     updateContent(owner, row, sound);
 }
@@ -97,12 +97,12 @@ void SampleRow::updateContent(SampleList *owner, int row, SamplerSound *sound) {
     };
 
     // Update rate icons
-    updateRateIcon(Params::RATE_1_1);
-    updateRateIcon(Params::RATE_1_2);
-    updateRateIcon(Params::RATE_1_4);
-    updateRateIcon(Params::RATE_1_8);
-    updateRateIcon(Params::RATE_1_16);
-    updateRateIcon(Params::RATE_1_32);
+    updateRateIcon(Config::RATE_1_1);
+    updateRateIcon(Config::RATE_1_2);
+    updateRateIcon(Config::RATE_1_4);
+    updateRateIcon(Config::RATE_1_8);
+    updateRateIcon(Config::RATE_1_16);
+    updateRateIcon(Config::RATE_1_32);
 }
 
 void SampleRow::paint(juce::Graphics &g) {
@@ -240,14 +240,14 @@ void SampleRow::mouseDrag(const juce::MouseEvent &e) {
 }
 
 void SampleRow::setupRateIcon(std::unique_ptr<TextIcon> &icon,
-                              const juce::String &text, Params::RateOption /*rate*/) {
+                              const juce::String &text, Config::RateOption /*rate*/) {
     icon = std::make_unique<TextIcon>(text, rateIconWidth, 16.0f);
     icon->setNormalColour(juce::Colours::lightgrey);
     icon->setTooltip("Toggle " + text + " rate");
     addAndMakeVisible(icon.get());
 }
 
-void SampleRow::updateRateIcon(Params::RateOption rate) {
+void SampleRow::updateRateIcon(Config::RateOption rate) {
     if (auto *icon = getRateIcon(rate)) {
         bool isEnabled = ownerList->processor.getSampleManager().isSampleRateEnabled(rowNumber, rate);
         if (isEnabled) {
@@ -268,19 +268,19 @@ void SampleRow::updateRateIcon(Params::RateOption rate) {
     }
 }
 
-TextIcon *SampleRow::getRateIcon(Params::RateOption rate) {
+TextIcon *SampleRow::getRateIcon(Config::RateOption rate) {
     switch (rate) {
-        case Params::RATE_1_1:
+        case Config::RATE_1_1:
             return rate1_1Icon.get();
-        case Params::RATE_1_2:
+        case Config::RATE_1_2:
             return rate1_2Icon.get();
-        case Params::RATE_1_4:
+        case Config::RATE_1_4:
             return rate1_4Icon.get();
-        case Params::RATE_1_8:
+        case Config::RATE_1_8:
             return rate1_8Icon.get();
-        case Params::RATE_1_16:
+        case Config::RATE_1_16:
             return rate1_16Icon.get();
-        case Params::RATE_1_32:
+        case Config::RATE_1_32:
             return rate1_32Icon.get();
         default:
             return nullptr;

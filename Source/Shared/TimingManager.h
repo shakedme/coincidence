@@ -1,7 +1,7 @@
 #pragma once
 
-#include <juce_audio_utils/juce_audio_utils.h>
-#include "../Params.h"
+#include "juce_audio_utils/juce_audio_utils.h"
+#include "../Audio/Config.h"
 
 /**
  * Class to handle timing-related functionality including BPM, position tracking,
@@ -33,17 +33,17 @@ public:
     void updateSamplePosition(int numSamples);
     
     // Check if a note should be triggered at the current position for a given rate
-    bool shouldTriggerNote(Params::RateOption rate, const Params::GeneratorSettings& settings);
+    bool shouldTriggerNote(Config::RateOption rate, const Config::GeneratorSettings& settings);
     
     // Calculate the duration in samples for a given rate
-    double getNoteDurationInSamples(Params::RateOption rate, const Params::GeneratorSettings& settings);
+    double getNoteDurationInSamples(Config::RateOption rate, const Config::GeneratorSettings& settings);
 
-    double getNextExpectedGridPoint(Params::RateOption selectedRate,
-                                     const Params::GeneratorSettings& settings,
-                                     int rateIndex);
+    double getNextExpectedGridPoint(Config::RateOption selectedRate,
+                                    const Config::GeneratorSettings& settings,
+                                    int rateIndex);
     
     // Update the last trigger time for a rate
-    void updateLastTriggerTime(Params::RateOption rate, double triggerTime);
+    void updateLastTriggerTime(Config::RateOption rate, double triggerTime);
     
     // Check if a loop was just detected
     bool wasLoopDetected() const { return loopJustDetected; }
@@ -51,7 +51,7 @@ public:
     // Clear loop detection state
     void clearLoopDetection() { loopJustDetected = false; }
 
-    double getDurationInQuarters(Params::RateOption rate, const Params::GeneratorSettings& settings);
+    double getDurationInQuarters(Config::RateOption rate, const Config::GeneratorSettings& settings);
     
 private:
     // Timing state
@@ -60,7 +60,7 @@ private:
     double bpm = 120.0;
     double ppqPosition = 0.0;
     double lastPpqPosition = 0.0;
-    double lastTriggerTimes[Params::NUM_RATE_OPTIONS] = {0.0};
+    double lastTriggerTimes[Config::NUM_RATE_OPTIONS] = {0.0};
     bool loopJustDetected = false;
     double lastContinuousPpqPosition = 0.0;  // For detecting transport loops
 };

@@ -1,6 +1,6 @@
-#include "Params.h"
+#include "Config.h"
 
-namespace Params
+namespace Config
 {
 
 juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
@@ -8,9 +8,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
 
     // Rate parameters
-    const char* rateNames[Params::NUM_RATE_OPTIONS] = {"1/2", "1/4", "1/8", "1/16", "1/32"};
+    const char* rateNames[Config::NUM_RATE_OPTIONS] = {"1/2", "1/4", "1/8", "1/16", "1/32"};
 
-    for (int i = 0; i < Params::NUM_RATE_OPTIONS; ++i)
+    for (int i = 0; i < Config::NUM_RATE_OPTIONS; ++i)
     {
         // Rate value parameter (0-100%)
         layout.add(std::make_unique<juce::AudioParameterInt>(

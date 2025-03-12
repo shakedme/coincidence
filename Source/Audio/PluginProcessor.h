@@ -1,8 +1,8 @@
 #pragma once
 
 #include <juce_audio_utils/juce_audio_utils.h>
-#include "Params.h"
-#include "Shared/TimingManager.h"
+#include "Config.h"
+#include "../Shared/TimingManager.h"
 #include "Midi/ScaleManager.h"
 #include "Midi/NoteGenerator.h"
 #include "Sampler/Sampler.h"
@@ -62,11 +62,11 @@ public:
     juce::AudioProcessorValueTreeState parameters;
     
     // Get current settings
-    const Params::GeneratorSettings& getSettings() const { return settings; }
+    const Config::GeneratorSettings& getSettings() const { return settings; }
 
     SampleManager& getSampleManager() const;
     // Get sample direction type for sample selection
-    Params::DirectionType getSampleDirectionType() const;
+    Config::DirectionType getSampleDirectionType() const;
     
     // Access to the note generator
     NoteGenerator& getNoteGenerator() const { return *noteGenerator; }
@@ -79,7 +79,7 @@ public:
     float getCurrentRandomizedVelocity() const { return noteGenerator->getCurrentRandomizedVelocity(); }
 
     void updateFxSettingsFromParameters();
-    const Params::FxSettings& getGlitchSettings() const { return fxSettings; }
+    const Config::FxSettings& getGlitchSettings() const { return fxSettings; }
 
     // Connect the envelope component to receive waveform data
     void connectEnvelopeComponent(EnvelopeComponent* component);
@@ -93,8 +93,8 @@ private:
     void updateMidiSettingsFromParameters();
     
     // Plugin state
-    Params::GeneratorSettings settings;
-    Params::FxSettings fxSettings;
+    Config::GeneratorSettings settings;
+    Config::FxSettings fxSettings;
 
     // Specialized components for handling different aspects of the plugin
     std::unique_ptr<NoteGenerator> noteGenerator;

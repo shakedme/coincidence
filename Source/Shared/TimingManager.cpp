@@ -3,7 +3,7 @@
 TimingManager::TimingManager()
 {
     // Initialize member variables to default values
-    for (int i = 0; i < Params::NUM_RATE_OPTIONS; i++)
+    for (int i = 0; i < Config::NUM_RATE_OPTIONS; i++)
     {
         lastTriggerTimes[i] = 0.0;
     }
@@ -20,7 +20,7 @@ void TimingManager::prepareToPlay(double liveSampleRate)
     lastContinuousPpqPosition = 0.0;
 
     // Reset trigger times
-    for (int i = 0; i < Params::NUM_RATE_OPTIONS; i++)
+    for (int i = 0; i < Config::NUM_RATE_OPTIONS; i++)
     {
         lastTriggerTimes[i] = 0.0;
     }
@@ -56,7 +56,7 @@ void TimingManager::updateTimingInfo(juce::AudioPlayHead* playHead)
                     loopJustDetected = true;
 
                     // Reset timing state for all rates
-                    for (int i = 0; i < Params::NUM_RATE_OPTIONS; i++)
+                    for (int i = 0; i < Config::NUM_RATE_OPTIONS; i++)
                     {
                         lastTriggerTimes[i] = 0.0;
                     }
@@ -75,13 +75,13 @@ void TimingManager::updateSamplePosition(int numSamples)
     samplePosition += numSamples;
 }
 
-void TimingManager::updateLastTriggerTime(Params::RateOption rate, double triggerTime)
+void TimingManager::updateLastTriggerTime(Config::RateOption rate, double triggerTime)
 {
     lastTriggerTimes[static_cast<int>(rate)] = triggerTime;
 }
 
-double TimingManager::getNextExpectedGridPoint(Params::RateOption selectedRate,
-                                               const Params::GeneratorSettings& settings,
+double TimingManager::getNextExpectedGridPoint(Config::RateOption selectedRate,
+                                               const Config::GeneratorSettings& settings,
                                                int rateIndex)
 {
     double durationInQuarters = getDurationInQuarters(selectedRate, settings);
@@ -107,28 +107,28 @@ double TimingManager::getNextExpectedGridPoint(Params::RateOption selectedRate,
     return lastTriggerTime + ((gridsSinceLastTrigger + 1) * durationInQuarters);
 }
 
-double TimingManager::getDurationInQuarters(Params::RateOption rate,
-                                            const Params::GeneratorSettings& settings)
+double TimingManager::getDurationInQuarters(Config::RateOption rate,
+                                            const Config::GeneratorSettings& settings)
 {
     double durationInQuarters;
     switch (rate)
     {
-        case Params::RATE_1_1:
+        case Config::RATE_1_1:
             durationInQuarters = 4.0;
             break;
-        case Params::RATE_1_2:
+        case Config::RATE_1_2:
             durationInQuarters = 2.0;
             break;
-        case Params::RATE_1_4:
+        case Config::RATE_1_4:
             durationInQuarters = 1.0;
             break;
-        case Params::RATE_1_8:
+        case Config::RATE_1_8:
             durationInQuarters = 0.5;
             break;
-        case Params::RATE_1_16:
+        case Config::RATE_1_16:
             durationInQuarters = 0.25;
             break;
-        case Params::RATE_1_32:
+        case Config::RATE_1_32:
             durationInQuarters = 0.125;
             break;
         default:
@@ -139,10 +139,10 @@ double TimingManager::getDurationInQuarters(Params::RateOption rate,
     // Apply rhythm mode modifications
     switch (settings.rhythmMode)
     {
-        case Params::RHYTHM_DOTTED:
+        case Config::RHYTHM_DOTTED:
             durationInQuarters *= 1.5;
             break;
-        case Params::RHYTHM_TRIPLET:
+        case Config::RHYTHM_TRIPLET:
             durationInQuarters *= 2.0 / 3.0;
             break;
         default:
@@ -152,8 +152,8 @@ double TimingManager::getDurationInQuarters(Params::RateOption rate,
     return durationInQuarters;
 }
 
-bool TimingManager::shouldTriggerNote(Params::RateOption rate,
-                                      const Params::GeneratorSettings& settings)
+bool TimingManager::shouldTriggerNote(Config::RateOption rate,
+                                      const Config::GeneratorSettings& settings)
 {
     // Calculate the duration in quarter notes
     double durationInQuarters = getDurationInQuarters(rate, settings);
@@ -229,8 +229,8 @@ bool TimingManager::shouldTriggerNote(Params::RateOption rate,
     return false;
 }
 
-double TimingManager::getNoteDurationInSamples(Params::RateOption rate,
-                                               const Params::GeneratorSettings& settings)
+double TimingManager::getNoteDurationInSamples(Config::RateOption rate,
+                                               const Config::GeneratorSettings& settings)
 {
     // Calculate duration in quarter notes
     double quarterNotesPerSecond = bpm / 60.0;

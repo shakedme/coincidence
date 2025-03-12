@@ -36,7 +36,7 @@ void NoteGenerator::releaseResources()
 void NoteGenerator::processIncomingMidi(const juce::MidiBuffer& midiMessages,
                                         juce::MidiBuffer& processedMidi,
                                         int numSamples,
-                                        Params::GeneratorSettings settings
+                                        Config::GeneratorSettings settings
                                         )
 {
     for (const auto metadata: midiMessages)
@@ -100,16 +100,16 @@ void NoteGenerator::checkActiveNotes(juce::MidiBuffer& midiMessages, int numSamp
 }
 
 std::vector<NoteGenerator::EligibleRate>
-    NoteGenerator::collectEligibleRates(const Params::GeneratorSettings& settings,
+    NoteGenerator::collectEligibleRates(const Config::GeneratorSettings& settings,
                                         float& totalWeight)
 {
     std::vector<EligibleRate> eligibleRates;
     totalWeight = 0.0f;
 
     // Collect all rates that should trigger at this position
-    for (int rateIndex = 0; rateIndex < Params::NUM_RATE_OPTIONS; ++rateIndex)
+    for (int rateIndex = 0; rateIndex < Config::NUM_RATE_OPTIONS; ++rateIndex)
     {
-        auto rate = static_cast<Params::RateOption>(rateIndex);
+        auto rate = static_cast<Config::RateOption>(rateIndex);
 
         // Only consider rates with non-zero value
         if (settings.rates[rateIndex].value > 0.0f)
@@ -129,7 +129,7 @@ std::vector<NoteGenerator::EligibleRate>
     return eligibleRates;
 }
 
-Params::RateOption
+Config::RateOption
     NoteGenerator::selectRateFromEligible(const std::vector<EligibleRate>& eligibleRates,
                                           float totalWeight)
 {
@@ -139,7 +139,7 @@ Params::RateOption
 
     // If no rates are eligible (shouldn't happen, but just in case)
     if (eligibleRates.empty())
-        return Params::RATE_1_4; // Default to quarter notes
+        return Config::RATE_1_4; // Default to quarter notes
 
     // Select a rate based on weighted probability
     float randomValue = juce::Random::getSystemRandom().nextFloat() * totalWeight;
@@ -157,7 +157,7 @@ Params::RateOption
 }
 
 void NoteGenerator::generateNewNotes(juce::MidiBuffer& midiMessages,
-                                     const Params::GeneratorSettings& settings)
+                                     const Config::GeneratorSettings& settings)
 {
     if (!isInputNoteActive || noteIsActive)
     {
@@ -179,7 +179,7 @@ void NoteGenerator::generateNewNotes(juce::MidiBuffer& midiMessages,
         if (shouldPlayNote)
         {
             // Select a rate based on weighted probability
-            Params::RateOption selectedRate =
+            Config::RateOption selectedRate =
                 selectRateFromEligible(eligibleRates, totalWeight);
 
             // Generate and play a new note
@@ -188,9 +188,9 @@ void NoteGenerator::generateNewNotes(juce::MidiBuffer& midiMessages,
     }
 }
 
-void NoteGenerator::playNewNote(Params::RateOption selectedRate,
+void NoteGenerator::playNewNote(Config::RateOption selectedRate,
                                 juce::MidiBuffer& midiMessages,
-                                const Params::GeneratorSettings& settings)
+                                const Config::GeneratorSettings& settings)
 {
     // Calculate next expected grid position
     double nextExpectedGridPoint = timingManager->getNextExpectedGridPoint(
@@ -222,7 +222,7 @@ void NoteGenerator::playNewNote(Params::RateOption selectedRate,
     int sampleIndex = -1;
     if (processor.getSampleManager().isSampleLoaded())
     {
-        Params::DirectionType sampleDirection = processor.getSampleDirectionType();
+        Config::DirectionType sampleDirection = processor.getSampleDirectionType();
         sampleIndex = processor.getSampleManager().getNextSampleIndex(sampleDirection, selectedRate);
     }
 
@@ -350,8 +350,8 @@ void NoteGenerator::processPendingNotes(juce::MidiBuffer& midiMessages, int numS
     }
 }
 
-int NoteGenerator::calculateNoteLength(Params::RateOption rate,
-                                       const Params::GeneratorSettings& settings)
+int NoteGenerator::calculateNoteLength(Config::RateOption rate,
+                                       const Config::GeneratorSettings& settings)
 {
     // Get base duration in samples for this rate
     double baseDuration = timingManager->getNoteDurationInSamples(rate, settings);
@@ -377,7 +377,7 @@ int NoteGenerator::calculateNoteLength(Params::RateOption rate,
     return std::max(lengthInSamples, minLengthSamples);
 }
 
-int NoteGenerator::calculateVelocity(const Params::GeneratorSettings& settings)
+int NoteGenerator::calculateVelocity(const Config::GeneratorSettings& settings)
 {
     // Start with base velocity value (0-127)
     double velocityValue = settings.velocity.value / 100.0 * 127.0;
@@ -398,7 +398,7 @@ int NoteGenerator::calculateVelocity(const Params::GeneratorSettings& settings)
 
 float NoteGenerator::applyRandomization(float value,
                                         float randomizeValue,
-                                        Params::DirectionType direction) const
+                                        Config::DirectionType direction) const
 {
     float maxValue = juce::jmin(100.0f, value + randomizeValue);
     float minValue = juce::jmax(0.0f, value - randomizeValue);
@@ -407,11 +407,11 @@ float NoteGenerator::applyRandomization(float value,
     float leftValue =
         juce::jmap(juce::Random::getSystemRandom().nextFloat(), minValue, value) / 100;
 
-    if (direction == Params::DirectionType::RIGHT)
+    if (direction == Config::DirectionType::RIGHT)
     {
         return rightValue;
     }
-    else if (direction == Params::DirectionType::LEFT)
+    else if (direction == Config::DirectionType::LEFT)
     {
         return leftValue;
     }

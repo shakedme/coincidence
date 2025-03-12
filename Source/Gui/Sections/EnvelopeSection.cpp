@@ -17,54 +17,11 @@ EnvelopeSectionComponent::EnvelopeSectionComponent(PluginEditor &editor, PluginP
     addAndMakeVisible(paramTabs.get());
 
     // Create the envelope component
-    envelopeComponent = std::make_unique<EnvelopeComponent>();
+    envelopeComponent = std::make_unique<EnvelopeComponent>(processor.getTimingManager());
     addAndMakeVisible(envelopeComponent.get());
-
-    // Set up rate combo box
-    setupRateComboBox();
 
     // Set up scale slider
     setupScaleSlider();
-
-    // Initialize with default time range
-    updateTimeRangeFromRate();
-}
-
-void EnvelopeSectionComponent::setupRateComboBox() {
-    rateLabel = std::make_unique<juce::Label>("rateLabel", "Rate:");
-    rateLabel->setFont(juce::Font(14.0f));
-    rateLabel->setJustificationType(juce::Justification::centredRight);
-    addAndMakeVisible(rateLabel.get());
-
-    rateComboBox = std::make_unique<juce::ComboBox>("rateComboBox");
-    rateComboBox->addItem("2/1", static_cast<int>(Rate::TwoWhole) + 1);
-    rateComboBox->addItem("1/1", static_cast<int>(Rate::Whole) + 1);
-    rateComboBox->addItem("1/2", static_cast<int>(Rate::Half) + 1);
-    rateComboBox->addItem("1/4", static_cast<int>(Rate::Quarter) + 1);
-    rateComboBox->addItem("1/8", static_cast<int>(Rate::Eighth) + 1);
-    rateComboBox->addItem("1/16", static_cast<int>(Rate::Sixteenth) + 1);
-    rateComboBox->addItem("1/32", static_cast<int>(Rate::ThirtySecond) + 1);
-    rateComboBox->setSelectedId(static_cast<int>(Rate::Whole) + 1);
-    rateComboBox->onChange = [this] {
-        updateTimeRangeFromRate();
-
-        // Calculate and set the appropriate rate based on selection
-        float newRate = 1.0f;
-        switch (static_cast<Rate>(rateComboBox->getSelectedId() - 1)) {
-            case Rate::TwoWhole:    newRate = 0.125f; break;
-            case Rate::Whole:       newRate = 0.25f; break;
-            case Rate::Half:        newRate = 0.5f; break;
-            case Rate::Quarter:     newRate = 1.0f; break;
-            case Rate::Eighth:      newRate = 2.0f; break;
-            case Rate::Sixteenth:   newRate = 4.0f; break;
-            case Rate::ThirtySecond: newRate = 8.0f; break;
-        }
-
-        if (envelopeComponent != nullptr) {
-            envelopeComponent->setRate(newRate);
-        }
-    };
-    addAndMakeVisible(rateComboBox.get());
 }
 
 void EnvelopeSectionComponent::setupScaleSlider() {
@@ -87,51 +44,6 @@ void EnvelopeSectionComponent::setupScaleSlider() {
     addAndMakeVisible(scaleSlider.get());
 }
 
-void EnvelopeSectionComponent::updateTimeRangeFromRate() {
-    if (envelopeComponent == nullptr || rateComboBox == nullptr)
-        return;
-
-    const double bpm = processor.getTimingManager().getBpm();
-    const double beatsPerSecond = bpm / 60.0;
-
-    // Calculate time range based on selected rate - this should match exactly one envelope cycle
-    float timeRangeInSeconds = 1.0f;
-
-    switch (static_cast<Rate>(rateComboBox->getSelectedId() - 1)) {
-        case Rate::TwoWhole:
-            // Two whole notes = 8 quarter notes
-            timeRangeInSeconds = static_cast<float>(8.0 / beatsPerSecond);
-            break;
-        case Rate::Whole:
-            // One whole note = 4 quarter notes
-            timeRangeInSeconds = static_cast<float>(4.0 / beatsPerSecond);
-            break;
-        case Rate::Half:
-            // One half note = 2 quarter notes
-            timeRangeInSeconds = static_cast<float>(2.0 / beatsPerSecond);
-            break;
-        case Rate::Quarter:
-            // One quarter note
-            timeRangeInSeconds = static_cast<float>(1.0 / beatsPerSecond);
-            break;
-        case Rate::Eighth:
-            // One eighth note = 0.5 quarter notes
-            timeRangeInSeconds = static_cast<float>(0.5 / beatsPerSecond);
-            break;
-        case Rate::Sixteenth:
-            // One sixteenth note = 0.25 quarter notes
-            timeRangeInSeconds = static_cast<float>(0.25 / beatsPerSecond);
-            break;
-        case Rate::ThirtySecond:
-            // One thirty-second note = 0.125 quarter notes
-            timeRangeInSeconds = static_cast<float>(0.125 / beatsPerSecond);
-            break;
-    }
-
-    // Update the envelope component
-    envelopeComponent->setTimeRange(timeRangeInSeconds);
-}
-
 void EnvelopeSectionComponent::paint(juce::Graphics &g) {
     BaseSectionComponent::paint(g);
 }
@@ -148,18 +60,13 @@ void EnvelopeSectionComponent::resized() {
     const int bottomMargin = 10;
     auto controlArea = area.removeFromBottom(controlHeight + bottomMargin);
 
-    // Position rate controls
+    // Position scale slider - we removed rate controls
     const int labelWidth = 40;
-    const int comboWidth = 60;
+    const int sliderWidth = 80;
     const int spacing = 10;
 
-    // Rate controls
-    rateLabel->setBounds(10, controlArea.getY(), labelWidth, controlHeight);
-    rateComboBox->setBounds(rateLabel->getRight(), controlArea.getY(), comboWidth, controlHeight);
-
-    // Scale slider
-    const int sliderWidth = 80;
-    scaleLabel->setBounds(rateComboBox->getRight() + spacing, controlArea.getY(), labelWidth, controlHeight);
+    // Scale slider (now the only control)
+    scaleLabel->setBounds(10, controlArea.getY(), labelWidth, controlHeight);
     scaleSlider->setBounds(scaleLabel->getRight(), controlArea.getY(), sliderWidth, controlHeight);
 
     // Position the envelope component in the remaining space

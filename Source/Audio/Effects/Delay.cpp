@@ -46,7 +46,7 @@ void Delay::releaseResources() {
     delayLineRight.reset();
 }
 
-void Delay::setSettings(Params::FxSettings s) {
+void Delay::setSettings(Config::FxSettings s) {
     BaseEffect::setSettings(s);
 
     // Calculate delay time based on rate parameter

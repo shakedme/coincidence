@@ -41,12 +41,13 @@ target_sources(${BaseTargetName} PRIVATE
         Gui/Components/Toggle.h
         Gui/Components/EnvelopeComponent.cpp
         Gui/Components/HeaderComponent.h
-        Audio/Params.cpp
+        Gui/Components/WaveformComponent.cpp
+        Audio/Config.cpp
         Audio/PluginProcessor.cpp
         Audio/Sampler/SampleManager.cpp
         Audio/Sampler/Sampler.cpp
         Audio/Sampler/OnsetDetector.cpp
-        Audio/Shared/TimingManager.cpp
+        Shared/TimingManager.cpp
         Audio/Midi/ScaleManager.cpp
         Audio/Midi/NoteGenerator.cpp
         Audio/FileLogger.cpp

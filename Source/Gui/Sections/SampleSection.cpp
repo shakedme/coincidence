@@ -156,10 +156,10 @@ void SampleSectionComponent::initComponents(PluginProcessor& processorRef)
 
     if (sampleDirectionParam)
         sampleDirectionSelector->setDirection(
-            static_cast<Params::DirectionType>(sampleDirectionParam->getIndex()));
+            static_cast<Config::DirectionType>(sampleDirectionParam->getIndex()));
 
     sampleDirectionSelector->onDirectionChanged =
-        [&processorRef](Params::DirectionType direction)
+        [&processorRef](Config::DirectionType direction)
     {
         auto* param = processorRef.parameters.getParameter("sample_direction");
         if (param)

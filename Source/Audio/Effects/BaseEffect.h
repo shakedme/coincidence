@@ -1,8 +1,8 @@
 #pragma once
 
 #include <juce_audio_utils/juce_audio_utils.h>
-#include "../Params.h"
-#include "../Shared/TimingManager.h"
+#include "../Config.h"
+#include "../../Shared/TimingManager.h"
 #include "../Sampler/SampleManager.h"
 #include <vector>
 
@@ -18,7 +18,7 @@ public:
 
     virtual void releaseResources();
 
-    virtual void setSettings(Params::FxSettings settings);
+    virtual void setSettings(Config::FxSettings settings);
 
 protected:
 
@@ -37,7 +37,7 @@ protected:
     // Shared resources
     std::shared_ptr<TimingManager> timingManager;
     SampleManager &sampleManager;
-    Params::FxSettings settings;
+    Config::FxSettings settings;
 
     // Common audio properties
     double sampleRate{44100.0};

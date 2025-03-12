@@ -177,8 +177,8 @@ void SampleManager::addSample(const juce::File &file) {
             currentSelectedSample = 0;
 
         // Update valid samples lists for all rates since we added a new sample
-        for (int i = 0; i < Params::NUM_RATE_OPTIONS; ++i) {
-            updateValidSamplesForRate(static_cast<Params::RateOption>(i));
+        for (int i = 0; i < Config::NUM_RATE_OPTIONS; ++i) {
+            updateValidSamplesForRate(static_cast<Config::RateOption>(i));
         }
     }
 }
@@ -213,8 +213,8 @@ void SampleManager::removeSamples(int startIdx, int endIdx) {
     rebuildSounds();
 
     // Update valid samples lists for all rates since we removed samples
-    for (int i = 0; i < Params::NUM_RATE_OPTIONS; ++i) {
-        updateValidSamplesForRate(static_cast<Params::RateOption>(i));
+    for (int i = 0; i < Config::NUM_RATE_OPTIONS; ++i) {
+        updateValidSamplesForRate(static_cast<Config::RateOption>(i));
     }
 }
 
@@ -275,7 +275,7 @@ void SampleManager::clearAllSamples() {
     validSamples_1_16.clear();
 }
 
-int SampleManager::getNextSampleIndex(Params::DirectionType direction, Params::RateOption currentRate) {
+int SampleManager::getNextSampleIndex(Config::DirectionType direction, Config::RateOption currentRate) {
     const auto &validSamples = getValidSamplesForRate(currentRate);
 
     if (validSamples.empty())
@@ -303,13 +303,13 @@ int SampleManager::getNextSampleIndex(Params::DirectionType direction, Params::R
 
     int nextValidIndex = currentValidIndex;
     switch (direction) {
-        case Params::LEFT: // Sequential backward
+        case Config::LEFT: // Sequential backward
         {
             nextValidIndex = (currentValidIndex - 1 + validSamples.size()) % validSamples.size();
             break;
         }
 
-        case Params::BIDIRECTIONAL: // Ping-pong between samples
+        case Config::BIDIRECTIONAL: // Ping-pong between samples
         {
             if (isAscending) {
                 nextValidIndex = currentValidIndex + 1;
@@ -331,13 +331,13 @@ int SampleManager::getNextSampleIndex(Params::DirectionType direction, Params::R
             break;
         }
 
-        case Params::RIGHT: // Sequential forward
+        case Config::RIGHT: // Sequential forward
         {
             nextValidIndex = (currentValidIndex + 1) % validSamples.size();
             break;
         }
 
-        case Params::RANDOM: // Random selection with probability
+        case Config::RANDOM: // Random selection with probability
         {
             int result = selectRandomSampleWithProbability(validSamples);
             // If no valid samples with non-zero probability, return -1 to indicate don't play anything
@@ -612,26 +612,26 @@ void SampleManager::removeSampleFromGroup(int sampleIndex) {
         removeGroup(groupIndex);
 }
 
-void SampleManager::setSampleRateEnabled(int sampleIndex, Params::RateOption rate, bool enabled) {
+void SampleManager::setSampleRateEnabled(int sampleIndex, Config::RateOption rate, bool enabled) {
     if (sampleIndex >= 0 && sampleIndex < sampleList.size()) {
         auto &sample = sampleList[sampleIndex];
         switch (rate) {
-            case Params::RATE_1_1:
+            case Config::RATE_1_1:
                 sample->rate_1_1_enabled = enabled;
                 break;
-            case Params::RATE_1_2:
+            case Config::RATE_1_2:
                 sample->rate_1_2_enabled = enabled;
                 break;
-            case Params::RATE_1_4:
+            case Config::RATE_1_4:
                 sample->rate_1_4_enabled = enabled;
                 break;
-            case Params::RATE_1_8:
+            case Config::RATE_1_8:
                 sample->rate_1_8_enabled = enabled;
                 break;
-            case Params::RATE_1_16:
+            case Config::RATE_1_16:
                 sample->rate_1_16_enabled = enabled;
                 break;
-            case Params::RATE_1_32:
+            case Config::RATE_1_32:
                 sample->rate_1_32_enabled = enabled;
                 break;
             default:
@@ -643,29 +643,29 @@ void SampleManager::setSampleRateEnabled(int sampleIndex, Params::RateOption rat
     }
 }
 
-bool SampleManager::isSampleRateEnabled(int sampleIndex, Params::RateOption rate) const {
+bool SampleManager::isSampleRateEnabled(int sampleIndex, Config::RateOption rate) const {
     if (sampleIndex >= 0 && sampleIndex < sampleList.size()) {
         const auto &sample = sampleList[sampleIndex];
 
         // Get the sample's rate state
         bool sampleRateEnabled = false;
         switch (rate) {
-            case Params::RATE_1_1:
+            case Config::RATE_1_1:
                 sampleRateEnabled = sample->rate_1_1_enabled;
                 break;
-            case Params::RATE_1_2:
+            case Config::RATE_1_2:
                 sampleRateEnabled = sample->rate_1_2_enabled;
                 break;
-            case Params::RATE_1_4:
+            case Config::RATE_1_4:
                 sampleRateEnabled = sample->rate_1_4_enabled;
                 break;
-            case Params::RATE_1_8:
+            case Config::RATE_1_8:
                 sampleRateEnabled = sample->rate_1_8_enabled;
                 break;
-            case Params::RATE_1_16:
+            case Config::RATE_1_16:
                 sampleRateEnabled = sample->rate_1_16_enabled;
                 break;
-            case Params::RATE_1_32:
+            case Config::RATE_1_32:
                 sampleRateEnabled = sample->rate_1_32_enabled;
                 break;
 
@@ -687,25 +687,25 @@ bool SampleManager::isSampleRateEnabled(int sampleIndex, Params::RateOption rate
     return false;
 }
 
-void SampleManager::updateValidSamplesForRate(Params::RateOption rate) {
+void SampleManager::updateValidSamplesForRate(Config::RateOption rate) {
     std::vector<int> *targetList = nullptr;
     switch (rate) {
-        case Params::RATE_1_1:
+        case Config::RATE_1_1:
             targetList = &validSamples_1_1;
             break;
-        case Params::RATE_1_2:
+        case Config::RATE_1_2:
             targetList = &validSamples_1_2;
             break;
-        case Params::RATE_1_4:
+        case Config::RATE_1_4:
             targetList = &validSamples_1_4;
             break;
-        case Params::RATE_1_8:
+        case Config::RATE_1_8:
             targetList = &validSamples_1_8;
             break;
-        case Params::RATE_1_16:
+        case Config::RATE_1_16:
             targetList = &validSamples_1_16;
             break;
-        case Params::RATE_1_32:
+        case Config::RATE_1_32:
             targetList = &validSamples_1_32;
             break;
         default:
@@ -720,19 +720,19 @@ void SampleManager::updateValidSamplesForRate(Params::RateOption rate) {
     }
 }
 
-const std::vector<int> &SampleManager::getValidSamplesForRate(Params::RateOption rate) const {
+const std::vector<int> &SampleManager::getValidSamplesForRate(Config::RateOption rate) const {
     switch (rate) {
-        case Params::RATE_1_1:
+        case Config::RATE_1_1:
             return validSamples_1_1;
-        case Params::RATE_1_2:
+        case Config::RATE_1_2:
             return validSamples_1_2;
-        case Params::RATE_1_4:
+        case Config::RATE_1_4:
             return validSamples_1_4;
-        case Params::RATE_1_8:
+        case Config::RATE_1_8:
             return validSamples_1_8;
-        case Params::RATE_1_16:
+        case Config::RATE_1_16:
             return validSamples_1_16;
-        case Params::RATE_1_32:
+        case Config::RATE_1_32:
             return validSamples_1_32;
         default:
             return validSamples_1_4; // Default to quarter notes
@@ -740,26 +740,26 @@ const std::vector<int> &SampleManager::getValidSamplesForRate(Params::RateOption
 }
 
 // Group rate methods implementation
-void SampleManager::setGroupRateEnabled(int groupIndex, Params::RateOption rate, bool enabled) {
+void SampleManager::setGroupRateEnabled(int groupIndex, Config::RateOption rate, bool enabled) {
     if (groupIndex >= 0 && groupIndex < groups.size()) {
         auto &group = groups[groupIndex];
         switch (rate) {
-            case Params::RATE_1_1:
+            case Config::RATE_1_1:
                 group->rate_1_1_enabled = enabled;
                 break;
-            case Params::RATE_1_2:
+            case Config::RATE_1_2:
                 group->rate_1_2_enabled = enabled;
                 break;
-            case Params::RATE_1_4:
+            case Config::RATE_1_4:
                 group->rate_1_4_enabled = enabled;
                 break;
-            case Params::RATE_1_8:
+            case Config::RATE_1_8:
                 group->rate_1_8_enabled = enabled;
                 break;
-            case Params::RATE_1_16:
+            case Config::RATE_1_16:
                 group->rate_1_16_enabled = enabled;
                 break;
-            case Params::RATE_1_32:
+            case Config::RATE_1_32:
                 group->rate_1_32_enabled = enabled;
                 break;
             default:
@@ -770,21 +770,21 @@ void SampleManager::setGroupRateEnabled(int groupIndex, Params::RateOption rate,
     }
 }
 
-bool SampleManager::isGroupRateEnabled(int groupIndex, Params::RateOption rate) const {
+bool SampleManager::isGroupRateEnabled(int groupIndex, Config::RateOption rate) const {
     if (groupIndex >= 0 && groupIndex < groups.size()) {
         const auto &group = groups[groupIndex];
         switch (rate) {
-            case Params::RATE_1_1:
+            case Config::RATE_1_1:
                 return group->rate_1_1_enabled;
-            case Params::RATE_1_2:
+            case Config::RATE_1_2:
                 return group->rate_1_2_enabled;
-            case Params::RATE_1_4:
+            case Config::RATE_1_4:
                 return group->rate_1_4_enabled;
-            case Params::RATE_1_8:
+            case Config::RATE_1_8:
                 return group->rate_1_8_enabled;
-            case Params::RATE_1_16:
+            case Config::RATE_1_16:
                 return group->rate_1_16_enabled;
-            case Params::RATE_1_32:
+            case Config::RATE_1_32:
                 return group->rate_1_32_enabled;
             default:
                 break;

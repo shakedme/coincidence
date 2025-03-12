@@ -226,10 +226,10 @@ void Stutter::startStutterAtPosition(juce::AudioBuffer<float> &buffer,
                                      int numSamples,
                                      int numChannels) {
     // Choose a rate (1/8, 1/16 note, etc.)
-    Params::RateOption selectedRate = selectRandomRate();
+    Config::RateOption selectedRate = selectRandomRate();
 
     // Calculate stutter length based on musical timing
-    Params::GeneratorSettings settings;
+    Config::GeneratorSettings settings;
     int captureLength =
             static_cast<int>(timingManager->getNoteDurationInSamples(selectedRate, settings));
 
@@ -375,10 +375,10 @@ void Stutter::handleTransportLoopDetection() {
     }
 }
 
-Params::RateOption Stutter::selectRandomRate() {
-    Params::RateOption rates[] = {Params::RATE_1_8,
-                                  Params::RATE_1_16,
-                                  Params::RATE_1_32};
+Config::RateOption Stutter::selectRandomRate() {
+    Config::RateOption rates[] = {Config::RATE_1_8,
+                                  Config::RATE_1_16,
+                                  Config::RATE_1_32};
 
     float randomValue = random.nextFloat();
 
@@ -391,6 +391,6 @@ Params::RateOption Stutter::selectRandomRate() {
     }
 }
 
-void Stutter::setSettings(Params::FxSettings s) {
+void Stutter::setSettings(Config::FxSettings s) {
     BaseEffect::setSettings(s);
 }

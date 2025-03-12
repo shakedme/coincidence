@@ -8,7 +8,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "../../Audio/Params.h"
+#include "../../Audio/Config.h"
 
 class DirectionButton : public juce::Component
 {
@@ -40,19 +40,19 @@ public:
         // Draw the appropriate direction arrows
         switch (type)
         {
-            case Params::DirectionType::LEFT:
+            case Config::DirectionType::LEFT:
                 drawLeftArrow(g, bounds, arrowColor);
                 break;
 
-            case Params::DirectionType::BIDIRECTIONAL:
+            case Config::DirectionType::BIDIRECTIONAL:
                 drawBidirectionalArrows(g, bounds, arrowColor);
                 break;
 
-            case Params::DirectionType::RIGHT:
+            case Config::DirectionType::RIGHT:
                 drawRightArrow(g, bounds, arrowColor);
                 break;
 
-            case Params::DirectionType::RANDOM:
+            case Config::DirectionType::RANDOM:
                 drawQuestionMark(g, bounds, arrowColor);
                 break;
         }
@@ -71,13 +71,13 @@ public:
 
     void mouseExit(const juce::MouseEvent&) override { repaint(); }
 
-    void setType(Params::DirectionType newType)
+    void setType(Config::DirectionType newType)
     {
         type = newType;
         repaint();
     }
 
-    Params::DirectionType getType() const { return type; }
+    Config::DirectionType getType() const { return type; }
 
     void setSelected(bool shouldBeSelected)
     {
@@ -93,7 +93,7 @@ public:
         repaint();
     }
 
-    std::function<void(Params::DirectionType)> onSelectionChanged;
+    std::function<void(Config::DirectionType)> onSelectionChanged;
 
 private:
     void drawLeftArrow(juce::Graphics& g,
@@ -184,7 +184,7 @@ private:
         g.strokePath(rightArrow, juce::PathStrokeType(2.0f));
     }
 
-    Params::DirectionType type = Params::DirectionType::BIDIRECTIONAL;
+    Config::DirectionType type = Config::DirectionType::BIDIRECTIONAL;
     bool isSelected = false;
     juce::Colour highlightColor = juce::Colours::lime;
 };

@@ -4,7 +4,7 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <vector>
 #include <memory>
-#include "../Params.h"
+#include "../Config.h"
 #include "OnsetDetector.h"
 #include <map>
 
@@ -70,7 +70,7 @@ public:
 
     juce::File getSampleFilePath(int index) const;
 
-    int getNextSampleIndex(Params::DirectionType direction, Params::RateOption currentRate);
+    int getNextSampleIndex(Config::DirectionType direction, Config::RateOption currentRate);
 
     void rebuildSounds();
 
@@ -108,14 +108,14 @@ public:
     void prepareToPlay(double sampleRate);
 
     // Sample rate methods
-    void setSampleRateEnabled(int sampleIndex, Params::RateOption rate, bool enabled);
+    void setSampleRateEnabled(int sampleIndex, Config::RateOption rate, bool enabled);
 
-    bool isSampleRateEnabled(int sampleIndex, Params::RateOption rate) const;
+    bool isSampleRateEnabled(int sampleIndex, Config::RateOption rate) const;
 
     // Group rate methods
-    void setGroupRateEnabled(int groupIndex, Params::RateOption rate, bool enabled);
+    void setGroupRateEnabled(int groupIndex, Config::RateOption rate, bool enabled);
 
-    bool isGroupRateEnabled(int groupIndex, Params::RateOption rate) const;
+    bool isGroupRateEnabled(int groupIndex, Config::RateOption rate) const;
 
     // Group effect methods (0=reverb, 1=stutter, 2=delay)
     void setGroupEffectEnabled(int groupIndex, int effectType, bool enabled);
@@ -140,9 +140,9 @@ private:
     std::vector<int> validSamples_1_32;
 
     // Helper methods for managing valid sample lists
-    void updateValidSamplesForRate(Params::RateOption rate);
+    void updateValidSamplesForRate(Config::RateOption rate);
 
-    const std::vector<int> &getValidSamplesForRate(Params::RateOption rate) const;
+    const std::vector<int> &getValidSamplesForRate(Config::RateOption rate) const;
 
     // Random sample selection helper methods
     int selectRandomSampleWithProbability(const std::vector<int> &validSamples);

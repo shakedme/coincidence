@@ -3,7 +3,7 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <memory>
 #include <vector>
-#include "../Params.h"
+#include "../Config.h"
 #include "Reverb.h"
 #include "Delay.h"
 #include "Stutter.h"
@@ -23,7 +23,7 @@ public:
     void processAudio(juce::AudioBuffer<float>& buffer,
                       juce::AudioPlayHead* playHead,
                       const juce::MidiBuffer& midiMessages);
-    void setSettings(Params::FxSettings s);
+    void setSettings(Config::FxSettings s);
 
 private:
     std::vector<juce::int64> getNoteDurations(const std::vector<juce::int64>& triggerPositions);
@@ -32,7 +32,7 @@ private:
 
     std::shared_ptr<TimingManager> timingManager;
     PluginProcessor& processor;
-    Params::FxSettings settings;
+    Config::FxSettings settings;
     
     // Audio effect objects
     std::unique_ptr<Reverb> reverbEffect;

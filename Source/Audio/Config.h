@@ -8,7 +8,7 @@ class PluginProcessor;
 /**
  * Common types and constants for the MIDI Generator plugin
  */
-namespace Params {
+namespace Config {
 
 // Rate options
     enum RateOption {
@@ -21,7 +21,7 @@ namespace Params {
         NUM_RATE_OPTIONS
     };
 
-    static inline const char *rateBaseNames[Params::NUM_RATE_OPTIONS] = {
+    static inline const char *rateBaseNames[Config::NUM_RATE_OPTIONS] = {
             "1/1", "1/2", "1/4", "1/8", "1/16", "1/32"};
 
     struct FxSettings {
@@ -100,7 +100,7 @@ namespace Params {
 // Generator settings
     struct GeneratorSettings {
         // Rhythm settings
-        RateSettings rates[Params::NUM_RATE_OPTIONS];
+        RateSettings rates[Config::NUM_RATE_OPTIONS];
         GateSettings gate;
         RhythmMode rhythmMode = RHYTHM_NORMAL;
         VelocitySettings velocity;

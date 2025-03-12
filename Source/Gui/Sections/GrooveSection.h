@@ -6,7 +6,7 @@
 #define JUCECMAKEREPO_GROOVESECTION_H
 
 #include "BaseSection.h"
-#include "../../Audio/Params.h"
+#include "../../Audio/Config.h"
 #include "../Components/DirectionSelector.h"
 
 class GrooveSectionComponent : public BaseSectionComponent
@@ -25,8 +25,8 @@ public:
 
 private:
     // UI Components
-    std::array<std::unique_ptr<juce::Slider>, Params::NUM_RATE_OPTIONS> rateKnobs;
-    std::array<std::unique_ptr<juce::Label>, Params::NUM_RATE_OPTIONS> rateLabels;
+    std::array<std::unique_ptr<juce::Slider>, Config::NUM_RATE_OPTIONS> rateKnobs;
+    std::array<std::unique_ptr<juce::Label>, Config::NUM_RATE_OPTIONS> rateLabels;
 
     std::unique_ptr<juce::ComboBox> rhythmModeComboBox;
     std::unique_ptr<juce::Label> rhythmModeLabel;

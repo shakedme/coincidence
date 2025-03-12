@@ -2,8 +2,8 @@
 
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <juce_dsp/juce_dsp.h>
-#include "../Params.h"
-#include "../Shared/TimingManager.h"
+#include "../Config.h"
+#include "../../Shared/TimingManager.h"
 #include "../Sampler/SampleManager.h"
 #include "BaseEffect.h"
 #include <vector>
@@ -16,7 +16,7 @@ public:
 
     void prepareToPlay(double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
-    void setSettings(Params::FxSettings s) override;
+    void setSettings(Config::FxSettings s) override;
     void applyReverbEffect(juce::AudioBuffer<float>& buffer, 
                           const std::vector<juce::int64>& triggerSamplePositions,
                           const std::vector<juce::int64>& noteDurations);

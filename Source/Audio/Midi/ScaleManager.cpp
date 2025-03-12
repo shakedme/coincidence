@@ -13,7 +13,7 @@ void ScaleManager::resetArpeggiator()
 }
 
 int ScaleManager::applyScaleAndModifications(int noteNumber,
-                                             const Params::GeneratorSettings& settings)
+                                             const Config::GeneratorSettings& settings)
 {
     // Start with the input note
     int finalNote = noteNumber;
@@ -34,14 +34,14 @@ int ScaleManager::applyScaleAndModifications(int noteNumber,
             // Arpeggiator mode - sequential stepping
             switch (settings.semitones.direction)
             {
-                case Params::DirectionType::LEFT:
+                case Config::DirectionType::LEFT:
                     // Down
                     currentArpStep--;
                     if (currentArpStep < 0)
                         currentArpStep = settings.semitones.value;
                     break;
 
-                case Params::DirectionType::BIDIRECTIONAL:
+                case Config::DirectionType::BIDIRECTIONAL:
                     // Bidirectional (up then down)
                     if (arpDirectionUp)
                     {
@@ -63,14 +63,14 @@ int ScaleManager::applyScaleAndModifications(int noteNumber,
                     }
                     break;
 
-                case Params::DirectionType::RIGHT:
+                case Config::DirectionType::RIGHT:
                     // Up
                     currentArpStep++;
                     if (currentArpStep > settings.semitones.value)
                         currentArpStep = 0;
                     break;
 
-                case Params::DirectionType::RANDOM:
+                case Config::DirectionType::RANDOM:
                     // Random
                     currentArpStep = juce::Random::getSystemRandom().nextInt(
                         settings.semitones.value + 1);
@@ -165,16 +165,16 @@ int ScaleManager::findClosestNoteInScale(int note,
     return closestNote;
 }
 
-juce::Array<int> ScaleManager::getSelectedScale(Params::ScaleType scaleType)
+juce::Array<int> ScaleManager::getSelectedScale(Config::ScaleType scaleType)
 {
     switch (scaleType)
     {
-        case Params::SCALE_MINOR:
-            return Params::minorScale;
-        case Params::SCALE_PENTATONIC:
-            return Params::pentatonicScale;
-        case Params::SCALE_MAJOR:
+        case Config::SCALE_MINOR:
+            return Config::minorScale;
+        case Config::SCALE_PENTATONIC:
+            return Config::pentatonicScale;
+        case Config::SCALE_MAJOR:
         default:
-            return Params::majorScale;
+            return Config::majorScale;
     }
 }

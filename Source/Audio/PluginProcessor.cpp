@@ -2,7 +2,7 @@
 #include "../Gui/PluginEditor.h"
 #include "Effects/FxEngine.h"
 
-using namespace Params;
+using namespace Config;
 
 //==============================================================================
 PluginProcessor::PluginProcessor()
@@ -36,7 +36,7 @@ PluginProcessor::~PluginProcessor() {
 //==============================================================================
 void PluginProcessor::updateMidiSettingsFromParameters() {
     // Update rate settings
-    for (int i = 0; i < Params::NUM_RATE_OPTIONS; ++i) {
+    for (int i = 0; i < Config::NUM_RATE_OPTIONS; ++i) {
         settings.rates[i].value =
                 *parameters.getRawParameterValue("rate_" + juce::String(i) + "_value");
     }
@@ -274,10 +274,10 @@ void PluginProcessor::getStateInformation(juce::MemoryBlock &destData) {
         sampleXml->setAttribute("probability", sampleManager.getSampleProbability(i));
 
         // Save rate toggle values
-        sampleXml->setAttribute("rate_1_2_enabled", sampleManager.isSampleRateEnabled(i, Params::RATE_1_2));
-        sampleXml->setAttribute("rate_1_4_enabled", sampleManager.isSampleRateEnabled(i, Params::RATE_1_4));
-        sampleXml->setAttribute("rate_1_8_enabled", sampleManager.isSampleRateEnabled(i, Params::RATE_1_8));
-        sampleXml->setAttribute("rate_1_16_enabled", sampleManager.isSampleRateEnabled(i, Params::RATE_1_16));
+        sampleXml->setAttribute("rate_1_2_enabled", sampleManager.isSampleRateEnabled(i, Config::RATE_1_2));
+        sampleXml->setAttribute("rate_1_4_enabled", sampleManager.isSampleRateEnabled(i, Config::RATE_1_4));
+        sampleXml->setAttribute("rate_1_8_enabled", sampleManager.isSampleRateEnabled(i, Config::RATE_1_8));
+        sampleXml->setAttribute("rate_1_16_enabled", sampleManager.isSampleRateEnabled(i, Config::RATE_1_16));
 
         samplesXml->addChildElement(sampleXml);
     }
@@ -335,7 +335,7 @@ void PluginProcessor::setStateInformation(const void *data, int sizeInBytes) {
 
         // Check for explicit direction information (in case it wasn't saved in the parameters)
         if (juce::XmlElement *directionXml = xmlState->getChildByName("Direction")) {
-            int directionType = directionXml->getIntAttribute("type", static_cast<int>(Params::BIDIRECTIONAL));
+            int directionType = directionXml->getIntAttribute("type", static_cast<int>(Config::BIDIRECTIONAL));
             auto *param = parameters.getParameter("sample_direction");
             if (param) {
                 param->setValueNotifyingHost(param->convertTo0to1(directionType));
@@ -386,22 +386,22 @@ void PluginProcessor::setStateInformation(const void *data, int sizeInBytes) {
                                 // Restore rate toggle values if they exist
                                 if (sampleXml->hasAttribute("rate_1_2_enabled")) {
                                     bool enabled = sampleXml->getBoolAttribute("rate_1_2_enabled", true);
-                                    sampleManager.setSampleRateEnabled(newSampleIndex, Params::RATE_1_2, enabled);
+                                    sampleManager.setSampleRateEnabled(newSampleIndex, Config::RATE_1_2, enabled);
                                 }
 
                                 if (sampleXml->hasAttribute("rate_1_4_enabled")) {
                                     bool enabled = sampleXml->getBoolAttribute("rate_1_4_enabled", true);
-                                    sampleManager.setSampleRateEnabled(newSampleIndex, Params::RATE_1_4, enabled);
+                                    sampleManager.setSampleRateEnabled(newSampleIndex, Config::RATE_1_4, enabled);
                                 }
 
                                 if (sampleXml->hasAttribute("rate_1_8_enabled")) {
                                     bool enabled = sampleXml->getBoolAttribute("rate_1_8_enabled", true);
-                                    sampleManager.setSampleRateEnabled(newSampleIndex, Params::RATE_1_8, enabled);
+                                    sampleManager.setSampleRateEnabled(newSampleIndex, Config::RATE_1_8, enabled);
                                 }
 
                                 if (sampleXml->hasAttribute("rate_1_16_enabled")) {
                                     bool enabled = sampleXml->getBoolAttribute("rate_1_16_enabled", true);
-                                    sampleManager.setSampleRateEnabled(newSampleIndex, Params::RATE_1_16, enabled);
+                                    sampleManager.setSampleRateEnabled(newSampleIndex, Config::RATE_1_16, enabled);
                                 }
 
                                 // Store group index for later assignment (after all groups are loaded)
@@ -478,13 +478,13 @@ juce::AudioProcessor *JUCE_CALLTYPE createPluginFilter() {
     return new PluginProcessor();
 }
 
-Params::DirectionType PluginProcessor::getSampleDirectionType() const {
+Config::DirectionType PluginProcessor::getSampleDirectionType() const {
     auto *param = parameters.getParameter("sample_direction");
     if (param) {
         auto index = static_cast<juce::AudioParameterChoice *>(param)->getIndex();
-        return static_cast<Params::DirectionType>(index);
+        return static_cast<Config::DirectionType>(index);
     }
-    return Params::RIGHT; // Default to random
+    return Config::RIGHT; // Default to random
 }
 
 void PluginProcessor::connectEnvelopeComponent(EnvelopeComponent *component) {
@@ -493,10 +493,6 @@ void PluginProcessor::connectEnvelopeComponent(EnvelopeComponent *component) {
         // Set up the envelope component with the same points as our amplitude envelope
         envelopeComponent->setParameterType(EnvelopeParams::ParameterType::Amplitude);
         envelopeComponent->setRate(amplitudeEnvelope.getRate());
-
-        // Connect timing manager for transport sync
-        envelopeComponent->setTimingManager(timingManager);
-
         // Set up callback to sync points when they change in the UI
         envelopeComponent->onPointsChanged = [this]() {
             // Get points from the component and update our envelope

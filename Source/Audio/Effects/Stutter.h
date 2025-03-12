@@ -6,8 +6,8 @@
 #define JAMMER_STUTTER_H
 
 #include "juce_audio_utils/juce_audio_utils.h"
-#include "../Params.h"
-#include "../Shared/TimingManager.h"
+#include "../Config.h"
+#include "../../Shared/TimingManager.h"
 #include "../Sampler/SampleManager.h"
 #include "BaseEffect.h"
 
@@ -23,7 +23,7 @@ public:
                             std::vector<juce::int64> triggerSamplePositions);
 
     // Setters
-    void setSettings(Params::FxSettings s) override;
+    void setSettings(Config::FxSettings s) override;
 private:
     // Beat-repeat effect state
     bool isStuttering {false};
@@ -74,7 +74,7 @@ private:
     void captureHistorySegment(int historyTriggerPos, int lengthToCapture);
 
     // Selects a random musical rate for repeat duration
-    Params::RateOption selectRandomRate();
+    Config::RateOption selectRandomRate();
 };
 
 #endif //JAMMER_STUTTER_H

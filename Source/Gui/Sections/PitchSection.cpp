@@ -3,7 +3,7 @@
 //
 
 #include "PitchSection.h"
-#include "../../Audio/Params.h"
+#include "../../Audio/Config.h"
 
 PitchSectionComponent::PitchSectionComponent(PluginEditor& e,
                                              PluginProcessor& p)
@@ -73,9 +73,9 @@ void PitchSectionComponent::setupScaleTypeControls()
 {
     // Create scale type combo box
     scaleTypeComboBox = std::make_unique<juce::ComboBox>();
-    scaleTypeComboBox->addItem("MAJOR", Params::SCALE_MAJOR + 1);
-    scaleTypeComboBox->addItem("MINOR", Params::SCALE_MINOR + 1);
-    scaleTypeComboBox->addItem("PENTATONIC", Params::SCALE_PENTATONIC + 1);
+    scaleTypeComboBox->addItem("MAJOR", Config::SCALE_MAJOR + 1);
+    scaleTypeComboBox->addItem("MINOR", Config::SCALE_MINOR + 1);
+    scaleTypeComboBox->addItem("PENTATONIC", Config::SCALE_PENTATONIC + 1);
     scaleTypeComboBox->setJustificationType(juce::Justification::centred);
     scaleTypeComboBox->setColour(juce::ComboBox::backgroundColourId, juce::Colour(0xff3a3a3a));
     scaleTypeComboBox->setColour(juce::ComboBox::textColourId, juce::Colours::white);
@@ -124,9 +124,9 @@ void PitchSectionComponent::setupSemitoneControls()
         processor.parameters.getParameter("semitones_direction"));
 
     if (semitonesDirectionParam)
-        semitonesDirectionSelector->setDirection(static_cast<Params::DirectionType>(semitonesDirectionParam->getIndex()));
+        semitonesDirectionSelector->setDirection(static_cast<Config::DirectionType>(semitonesDirectionParam->getIndex()));
 
-    semitonesDirectionSelector->onDirectionChanged = [this](Params::DirectionType direction) {
+    semitonesDirectionSelector->onDirectionChanged = [this](Config::DirectionType direction) {
         auto* param = processor.parameters.getParameter("semitones_direction");
         if (param) {
             param->beginChangeGesture();

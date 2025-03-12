@@ -2,44 +2,48 @@
 #include <juce_graphics/juce_graphics.h>
 
 //==============================================================================
-EnvelopeComponent::EnvelopeComponent(EnvelopeParams::ParameterType type)
-        : parameterMapper(type) {
+EnvelopeComponent::EnvelopeComponent(TimingManager &tm, EnvelopeParams::ParameterType type)
+        : timingManager(tm), parameterMapper(type) {
     // Initialize with default points
     points.push_back(std::make_unique<EnvelopePoint>(0.0f, 0.5f, false));
     points.push_back(std::make_unique<EnvelopePoint>(1.0f, 0.5f, false));
 
-    // Set up waveform rendering
-    setupWaveformRendering();
+    // Add the waveform component as a child component
+    addAndMakeVisible(waveformComponent);
 
-    // Start the timer for waveform updates - use higher refresh rate for smoother animation
+    // Configure the waveform component to be transparent so we can draw over it
+    waveformComponent.setBackgroundColour(juce::Colours::transparentBlack);
+    waveformComponent.setWaveformAlpha(0.3f);
+    waveformComponent.setWaveformColour(juce::Colour(0xff52bfd9));
+    waveformComponent.setWaveformScaleFactor(1.0f);
+
+    // Setup the rate UI
+    setupRateUI();
+
+    // Start the timer for envelope updates
     startTimerHz(30); // 30 FPS for smoother visualization
+
+    juce::Timer::callAfterDelay(200, [this]() {
+        updateTimeRangeFromRate();
+    });
 
     setWantsKeyboardFocus(true);
 }
 
 EnvelopeComponent::~EnvelopeComponent() {
     stopTimer();
-
-    // Clean up the audio buffer queue
-    if (audioBufferQueue != nullptr) {
-        delete audioBufferQueue;
-        audioBufferQueue = nullptr;
-    }
 }
 
 void EnvelopeComponent::paint(juce::Graphics &g) {
     // Draw background
     g.fillAll(juce::Colour(0xff222222));
 
-    // Draw waveform first (behind everything else)
-    drawWaveform(g);
-
     // Draw grid
     drawGrid(g);
 
     // Draw envelope line
     drawEnvelopeLine(g);
-    
+
     // Draw current position marker
     drawPositionMarker(g);
 
@@ -53,13 +57,21 @@ void EnvelopeComponent::paint(juce::Graphics &g) {
 }
 
 void EnvelopeComponent::resized() {
-    // Update waveform data buffer when component is resized
-    if (waveformData.size() != static_cast<size_t>(getWidth())) {
-        waveformData.resize(getWidth(), 0.0f);
-        waveformPeaks.resize(getWidth());
-        waveformCache = juce::Image(juce::Image::ARGB, getWidth(), getHeight(), true);
-        waveformNeedsRedraw.store(true);
-    }
+    // Calculate space for the rate controls
+    const int controlHeight = 25;
+    const int labelWidth = 40;
+    const int comboWidth = 60;
+    const int padding = 5;
+    const int topControlArea = controlHeight + (2 * padding);
+
+    // Position rate controls at the top left
+    rateLabel->setBounds(padding, padding, labelWidth, controlHeight);
+    rateComboBox->setBounds(labelWidth + (2 * padding), padding, comboWidth, controlHeight);
+
+    // Position the waveform component below the controls
+    auto waveformBounds = getLocalBounds();
+    waveformBounds.removeFromTop(topControlArea);
+    waveformComponent.setBounds(waveformBounds);
 }
 
 void EnvelopeComponent::mouseDown(const juce::MouseEvent &e) {
@@ -281,18 +293,17 @@ void EnvelopeComponent::mouseDoubleClick(const juce::MouseEvent &e) {
 }
 
 void EnvelopeComponent::setWaveformScaleFactor(float scale) {
-    waveformScaleFactor = scale;
-    repaint();
+    waveformComponent.setWaveformScaleFactor(scale);
 }
 
 void EnvelopeComponent::setSampleRate(float newSampleRate) {
-    sampleRate = newSampleRate;
-    waveformNeedsRedraw.store(true);
+    // Pass the sample rate to the waveform component
+    waveformComponent.setSampleRate(newSampleRate);
 }
 
 void EnvelopeComponent::setTimeRange(float seconds) {
-    timeRangeInSeconds = seconds;
-    waveformNeedsRedraw.store(true);
+    // Pass the time range to the waveform component
+    waveformComponent.setTimeRange(seconds);
 }
 
 void EnvelopeComponent::drawGrid(juce::Graphics &g) {
@@ -335,11 +346,11 @@ void EnvelopeComponent::drawEnvelopeLine(juce::Graphics &g) {
         if (points[i]->curvature != 0.0f) {
             // Calculate control points for a quadratic bezier curve
             const float curvature = points[i]->curvature;
-            
+
             // For visual display, use a large multiplier, but invert the sign to match parameter behavior
             // Negative curvature = bend down, positive curvature = bend up
             const float curveAmount = -100.0f * curvature; // Invert direction for visual consistency
-            
+
             // Calculate control point position
             juce::Point<float> midPoint = startPos + (endPos - startPos) * 0.5f;
             juce::Point<float> perpendicular(-((endPos.y - startPos.y)), (endPos.x - startPos.x));
@@ -491,168 +502,6 @@ float EnvelopeComponent::distanceToCurve(const juce::Point<float> &point, const 
     return minDistance;
 }
 
-void EnvelopeComponent::setupWaveformRendering() {
-    // Create the buffer queue
-    audioBufferQueue = new AudioBufferQueue();
-
-    // Initialize waveform data buffer based on component width
-    waveformData.resize(getWidth(), 0.0f);
-
-    // Create the initial cache image
-    waveformCache = juce::Image(juce::Image::ARGB, getWidth(), getHeight(), true);
-}
-
-void EnvelopeComponent::pushAudioBuffer(const float *audioData, int numSamples) {
-    // This method is called from the audio thread
-    // Add data to the ring buffer in a lock-free manner
-    if (audioBufferQueue != nullptr) {
-        audioBufferQueue->push(audioData, numSamples);
-        waveformNeedsRedraw.store(true);
-    }
-}
-
-void EnvelopeComponent::timerCallback() {
-    // Update transport position if timing manager is available
-    if (timingManager != nullptr) {
-        double ppqPosition = timingManager->getPpqPosition();
-        parameterMapper.setTransportPosition(ppqPosition);
-        
-        // Always repaint to show current envelope position in sync with transport
-        repaint();
-    }
-
-    // Check if we need to update the waveform
-    if (waveformNeedsRedraw.load()) {
-        // Use mutex to protect the cache update, but not the data acquisition
-        updateWaveformCache();
-        waveformNeedsRedraw.store(false);
-        repaint();
-    }
-}
-
-void EnvelopeComponent::updateWaveformCache() {
-    // Check if component has been resized
-    if (waveformData.size() != static_cast<size_t>(getWidth()) && getWidth() > 0 && !waveformData.empty()) {
-        waveformData.resize(getWidth(), 0.0f);
-        waveformCache = juce::Image(juce::Image::ARGB, getWidth(), getHeight(), true);
-    }
-
-    // Fetch the audio data for the visible time range
-    if (audioBufferQueue != nullptr) {
-        // Calculate how many samples we need based on the time range
-        size_t samplesForTimeRange = static_cast<size_t>(timeRangeInSeconds * sampleRate);
-
-        // Resize waveformData if necessary to match time range
-        if (waveformData.size() != samplesForTimeRange) {
-            waveformData.resize(samplesForTimeRange, 0.0f);
-        }
-
-        // Get samples for the visible range - we want the most recent samples, so offset is 0
-        audioBufferQueue->getVisibleSamples(waveformData.data(), waveformData.size(), 0);
-    }
-
-    // Prepare the peak data structure
-    waveformPeaks.resize(getWidth());
-
-    // Process the raw sample data into min-max peaks for each pixel column
-    const float samplesPerPixel = static_cast<float>(waveformData.size()) / getWidth();
-
-    // For each horizontal pixel in our display
-    for (int x = 0; x < getWidth(); ++x) {
-        float min = 0.0f;
-        float max = 0.0f;
-
-        // For left-to-right flow, we need to reverse the x index used to look up samples
-        // This makes newest samples appear on the right and older samples flow left
-        int reverseX = getWidth() - 1 - x;
-
-        // Calculate the range of samples that correspond to this pixel
-        int startSample = static_cast<int>(reverseX * samplesPerPixel);
-        int endSample = static_cast<int>((reverseX + 1) * samplesPerPixel);
-
-        // Ensure we don't exceed the buffer bounds
-        startSample = juce::jlimit(0, static_cast<int>(waveformData.size()) - 1, startSample);
-        endSample = juce::jlimit(0, static_cast<int>(waveformData.size()), endSample);
-
-        // If we have at least one sample, initialize min and max
-        if (startSample < endSample && startSample < waveformData.size()) {
-            min = max = waveformData[startSample];
-
-            // Find min and max values in this sample range
-            for (int i = startSample + 1; i < endSample && i < waveformData.size(); ++i) {
-                float sample = waveformData[i];
-                min = std::min(min, sample);
-                max = std::max(max, sample);
-            }
-        }
-
-        // Store the min-max values for this pixel
-        waveformPeaks[x].min = min;
-        waveformPeaks[x].max = max;
-    }
-
-    // Lock only the cache update portion, not the data fetching
-    std::lock_guard<std::mutex> lock(waveformMutex);
-
-    // Clear the cache
-    juce::Graphics g(waveformCache);
-    g.setColour(juce::Colours::transparentBlack);
-    g.fillAll();
-
-    // Draw the waveform with more transparency
-    g.setColour(waveformColour.withAlpha(0.3f));
-
-    const float midY = getHeight() / 2.0f;
-    const float scaleFactor = midY * waveformScaleFactor;
-
-    // Draw waveform using high-resolution peaks
-    for (int x = 0; x < getWidth(); ++x) {
-        // Get min and max values for this pixel
-        float minVal = waveformPeaks[x].min;
-        float maxVal = waveformPeaks[x].max;
-
-        // Convert to screen coordinates
-        float minY = midY - (minVal * scaleFactor);
-        float maxY = midY - (maxVal * scaleFactor);
-
-        // Draw a vertical line from min to max
-        if (std::abs(maxVal - minVal) > 0.001f) // Only draw if there's a meaningful difference
-        {
-            g.drawLine(static_cast<float>(x), minY, static_cast<float>(x), maxY, 1.0f);
-        } else {
-            // For very small differences, just draw a point
-            g.drawLine(static_cast<float>(x), minY - 1.0f, static_cast<float>(x), maxY + 1.0f, 1.0f);
-        }
-    }
-
-    // For very detailed waveforms, we can also draw a center line connecting average values
-    juce::Path centerPath;
-    bool centerPathStarted = false;
-
-    for (int x = 0; x < getWidth(); ++x) {
-        // Calculate the average value at this point
-        float avgY = midY - ((waveformPeaks[x].min + waveformPeaks[x].max) * 0.5f * scaleFactor);
-
-        if (!centerPathStarted) {
-            centerPath.startNewSubPath(static_cast<float>(x), avgY);
-            centerPathStarted = true;
-        } else {
-            centerPath.lineTo(static_cast<float>(x), avgY);
-        }
-    }
-
-    // Draw the center line with a slightly more visible color
-    g.setColour(waveformColour.withAlpha(0.5f));
-    g.strokePath(centerPath, juce::PathStrokeType(1.0f));
-}
-
-void EnvelopeComponent::drawWaveform(juce::Graphics &g) {
-    std::lock_guard<std::mutex> lock(waveformMutex);
-
-    // Just draw the pre-rendered cache
-    g.drawImageAt(waveformCache, 0, 0);
-}
-
 void EnvelopeComponent::drawSelectionArea(juce::Graphics &g) {
     // Semi-transparent fill
     g.setColour(juce::Colour(0x3052bfd9)); // Light blue with 30% opacity
@@ -745,21 +594,132 @@ EnvelopeParams::ParameterType EnvelopeComponent::getParameterType() const {
 
 // Add this new method to draw the position marker
 void EnvelopeComponent::drawPositionMarker(juce::Graphics &g) {
-    if (timingManager == nullptr)
-        return;
-    
     // Calculate current position in the envelope cycle
-    double ppqPosition = timingManager->getPpqPosition();
+    double ppqPosition = timingManager.getPpqPosition();
     float cycle = std::fmod(static_cast<float>(ppqPosition * parameterMapper.getRate()), 1.0f);
-    
+
     // Convert to screen x-coordinate
     float x = cycle * getWidth();
-    
+
     // Draw vertical line at current position
     g.setColour(juce::Colours::white.withAlpha(0.5f));
     g.drawLine(x, 0, x, static_cast<float>(getHeight()), 1.0f);
-    
+
     // Add a small indicator at the top
     g.setColour(juce::Colours::white);
     g.fillRoundedRectangle(x - 2, 0, 4, 8, 2);
-} 
+}
+
+void EnvelopeComponent::pushAudioBuffer(const float *audioData, int numSamples) {
+    // This method is called from the audio thread
+    // Forward the audio data to the waveform component
+    waveformComponent.pushAudioBuffer(audioData, numSamples);
+}
+
+void EnvelopeComponent::timerCallback() {
+    // Update transport position if timing manager is available
+    double ppqPosition = timingManager.getPpqPosition();
+    parameterMapper.setTransportPosition(ppqPosition);
+    // Always repaint to show current envelope position in sync with transport
+    repaint();
+}
+
+// Add setupRateUI method
+void EnvelopeComponent::setupRateUI() {
+    // Create rate label
+    rateLabel = std::make_unique<juce::Label>("rateLabel", "Rate:");
+    rateLabel->setFont(juce::Font(14.0f));
+    rateLabel->setJustificationType(juce::Justification::centredRight);
+    addAndMakeVisible(rateLabel.get());
+
+    // Create rate combo box
+    rateComboBox = std::make_unique<juce::ComboBox>("rateComboBox");
+    rateComboBox->addItem("2/1", static_cast<int>(Rate::TwoWhole) + 1);
+    rateComboBox->addItem("1/1", static_cast<int>(Rate::Whole) + 1);
+    rateComboBox->addItem("1/2", static_cast<int>(Rate::Half) + 1);
+    rateComboBox->addItem("1/4", static_cast<int>(Rate::Quarter) + 1);
+    rateComboBox->addItem("1/8", static_cast<int>(Rate::Eighth) + 1);
+    rateComboBox->addItem("1/16", static_cast<int>(Rate::Sixteenth) + 1);
+    rateComboBox->addItem("1/32", static_cast<int>(Rate::ThirtySecond) + 1);
+    rateComboBox->setSelectedId(static_cast<int>(Rate::Whole) + 1);
+    rateComboBox->onChange = [this] {
+        updateRateFromComboBox();
+    };
+    addAndMakeVisible(rateComboBox.get());
+}
+
+void EnvelopeComponent::updateRateFromComboBox() {
+    // Update the current rate enum
+    currentRateEnum = static_cast<Rate>(rateComboBox->getSelectedId() - 1);
+
+    // Calculate and set the appropriate rate based on selection
+    float newRate = 1.0f;
+    switch (currentRateEnum) {
+        case Rate::TwoWhole:
+            newRate = 0.125f;
+            break;
+        case Rate::Whole:
+            newRate = 0.25f;
+            break;
+        case Rate::Half:
+            newRate = 0.5f;
+            break;
+        case Rate::Quarter:
+            newRate = 1.0f;
+            break;
+        case Rate::Eighth:
+            newRate = 2.0f;
+            break;
+        case Rate::Sixteenth:
+            newRate = 4.0f;
+            break;
+        case Rate::ThirtySecond:
+            newRate = 8.0f;
+            break;
+    }
+
+    // Set the rate on the parameter mapper
+    setRate(newRate);
+    updateTimeRangeFromRate();
+}
+
+void EnvelopeComponent::updateTimeRangeFromRate() {
+    const double bpm = timingManager.getBpm();
+    const double beatsPerSecond = bpm / 60.0;
+
+    // Calculate time range based on selected rate - this should match exactly one envelope cycle
+    float timeRangeInSeconds = 1.0f;
+
+    switch (currentRateEnum) {
+        case Rate::TwoWhole:
+            timeRangeInSeconds = static_cast<float>(8.0 / beatsPerSecond);
+            break;
+        case Rate::Whole:
+            // One whole note = 4 quarter notes
+            timeRangeInSeconds = static_cast<float>(4.0 / beatsPerSecond);
+            break;
+        case Rate::Half:
+            // One half note = 2 quarter notes
+            timeRangeInSeconds = static_cast<float>(2.0 / beatsPerSecond);
+            break;
+        case Rate::Quarter:
+            // One quarter note
+            timeRangeInSeconds = static_cast<float>(1.0 / beatsPerSecond);
+            break;
+        case Rate::Eighth:
+            // One eighth note = 0.5 quarter notes
+            timeRangeInSeconds = static_cast<float>(0.5 / beatsPerSecond);
+            break;
+        case Rate::Sixteenth:
+            // One sixteenth note = 0.25 quarter notes
+            timeRangeInSeconds = static_cast<float>(0.25 / beatsPerSecond);
+            break;
+        case Rate::ThirtySecond:
+            // One thirty-second note = 0.125 quarter notes
+            timeRangeInSeconds = static_cast<float>(0.125 / beatsPerSecond);
+            break;
+    }
+
+    // Update the waveform component's time range
+    setTimeRange(timeRangeInSeconds);
+}

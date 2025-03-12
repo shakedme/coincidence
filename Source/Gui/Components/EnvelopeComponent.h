@@ -6,12 +6,26 @@
 #include <mutex>
 #include "../../Audio/Envelope/EnvelopeParameterMapper.h"
 #include "../../Audio/Envelope/EnvelopeParameterTypes.h"
-#include "../../Audio/Shared/TimingManager.h"
-#include "../../Audio/Util/AudioBufferQueue.h"
+#include "../../Shared/TimingManager.h"
+#include "WaveformComponent.h"
 
 class EnvelopeComponent : public juce::Component, private juce::Timer {
 public:
-    explicit EnvelopeComponent(EnvelopeParams::ParameterType type = EnvelopeParams::ParameterType::Amplitude);
+    // Rate enum for time signature divisions
+    enum class Rate
+    {
+        TwoWhole = 0,
+        Whole,
+        Half,
+        Quarter,     // 1/4 note - 1 beat
+        Eighth,      // 1/8 note - 1/2 beat
+        Sixteenth,   // 1/16 note - 1/4 beat
+        ThirtySecond // 1/32 note - 1/8 beat
+    };
+
+    explicit EnvelopeComponent(
+            TimingManager& tm,
+            EnvelopeParams::ParameterType type = EnvelopeParams::ParameterType::Amplitude);
 
     ~EnvelopeComponent() override;
 
@@ -30,9 +44,6 @@ public:
 
     bool keyPressed(const juce::KeyPress &key) override;
 
-    // Set the factor to scale the waveform by
-    void setWaveformScaleFactor(float scale);
-
     // Set the sample rate for audio visualization
     void setSampleRate(float newSampleRate);
 
@@ -42,6 +53,9 @@ public:
     // Add audio samples for visualization
     void pushAudioBuffer(const float *audioData, int numSamples);
 
+    // Get the waveform component
+    WaveformComponent* getWaveformComponent() { return &waveformComponent; }
+
     // Callbacks for parameter change notifications
     std::function<void()> onPointsChanged;
     std::function<void(float)> onRateChanged;
@@ -50,6 +64,8 @@ public:
     void setParameterRange(float min, float max, bool exponential = false);
 
     void setParameterType(EnvelopeParams::ParameterType type);
+
+    void setWaveformScaleFactor(float scale);
 
     EnvelopeParams::ParameterType getParameterType() const;
 
@@ -67,8 +83,11 @@ public:
     // Access envelope points
     const std::vector<std::unique_ptr<EnvelopePoint>> &getPoints() const { return points; }
 
-    // Set the TimingManager to get transport position
-    void setTimingManager(std::shared_ptr<TimingManager> manager) { timingManager = manager; }
+    // Set the rate using the Rate enum
+    void setRateFromEnum(Rate rate);
+    
+    // Get the current Rate enum value
+    Rate getCurrentRateEnum() const;
 
 private:
     // Draw helper methods
@@ -77,8 +96,6 @@ private:
     void drawEnvelopeLine(juce::Graphics &g);
 
     void drawPoints(juce::Graphics &g);
-
-    void drawWaveform(juce::Graphics &g);
 
     void drawSelectionArea(juce::Graphics &g);
 
@@ -100,15 +117,20 @@ private:
 
     int getSelectedPointsCount() const;
 
-    // Waveform rendering
-    void setupWaveformRendering();
-
-    void updateWaveformCache();
-
     void timerCallback() override;
 
     // Point change notification
     void notifyPointsChanged();
+
+    // Setup and update rate UI
+    void setupRateUI();
+    void updateTimeRangeFromRate();
+    void updateRateFromComboBox();
+
+    // Rate UI components
+    std::unique_ptr<juce::ComboBox> rateComboBox;
+    std::unique_ptr<juce::Label> rateLabel;
+    Rate currentRateEnum = Rate::Quarter;
 
     // Envelope data
     std::vector<std::unique_ptr<EnvelopePoint>> points;
@@ -131,27 +153,13 @@ private:
     juce::Point<float> selectionStart;
     juce::Rectangle<float> selectionArea;
 
-    // Waveform visualization
-    AudioBufferQueue *audioBufferQueue = nullptr;
-    std::vector<float> waveformData;
-    struct PeakData {
-        float min = 0.0f;
-        float max = 0.0f;
-    };
-    std::vector<PeakData> waveformPeaks;
-    juce::Image waveformCache;
-    std::atomic<bool> waveformNeedsRedraw{false};
-    std::mutex waveformMutex;
-    float sampleRate = 44100.0f;
-    float timeRangeInSeconds = 1.0f;
-    float waveformScaleFactor = 1.0f;
-    juce::Colour waveformColour = juce::Colour(0xff52bfd9);
+    // Waveform component for visualization
+    WaveformComponent waveformComponent;
 
     // Parameter mapper
     EnvelopeParameterMapper parameterMapper;
 
-    // Timing manager reference (for transport sync)
-    std::shared_ptr<TimingManager> timingManager;
+    TimingManager& timingManager;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(EnvelopeComponent)
 }; 

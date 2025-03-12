@@ -21,7 +21,7 @@ Reverb::Reverb(std::shared_ptr<TimingManager> t, SampleManager &sm)
     activeReverb = {};
 }
 
-void Reverb::setSettings(Params::FxSettings s) {
+void Reverb::setSettings(Config::FxSettings s) {
     BaseEffect::setSettings(s);
 
     // Update JUCE reverb parameters based on our settings
