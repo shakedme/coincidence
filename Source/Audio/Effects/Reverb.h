@@ -2,7 +2,7 @@
 
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <juce_dsp/juce_dsp.h>
-#include "../../Shared/Config.h"
+#include "../../Shared/Models.h"
 #include "../../Shared/TimingManager.h"
 #include "../Sampler/SampleManager.h"
 #include "BaseEffect.h"

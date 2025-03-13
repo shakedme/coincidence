@@ -6,7 +6,7 @@
 #define JUCECMAKEREPO_GROOVESECTION_H
 
 #include "BaseSection.h"
-#include "../../Shared/Config.h"
+#include "../../Shared/Models.h"
 #include "../Components/DirectionSelector.h"
 
 class GrooveSectionComponent : public BaseSectionComponent

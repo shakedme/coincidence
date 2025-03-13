@@ -6,7 +6,7 @@
 #define COINCIDENCE_STATEMANAGER_H
 
 #include <juce_audio_utils/juce_audio_utils.h>
-#include "Config.h"
+#include "Models.h"
 #include "ParameterBinding.h"
 
 namespace AppState {

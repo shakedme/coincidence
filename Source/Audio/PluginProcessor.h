@@ -1,7 +1,7 @@
 #pragma once
 
 #include <juce_audio_utils/juce_audio_utils.h>
-#include "../Shared/Config.h"
+#include "../Shared/Models.h"
 #include "../Shared/StateManager.h"
 #include "../Shared/TimingManager.h"
 #include "Midi/ScaleManager.h"

@@ -8,7 +8,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "../../Shared/Config.h"
+#include "../../Shared/Models.h"
 
 class DirectionButton : public juce::Component
 {

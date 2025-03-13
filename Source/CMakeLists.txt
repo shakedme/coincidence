@@ -42,7 +42,7 @@ target_sources(${BaseTargetName} PRIVATE
         Gui/Components/EnvelopeComponent.cpp
         Gui/Components/HeaderComponent.h
         Gui/Components/WaveformComponent.cpp
-        Shared/Config.h
+        Shared/Models.h
         Shared/StateManager.cpp
         Shared/ParameterBinding.h
         Shared/TimingManager.cpp

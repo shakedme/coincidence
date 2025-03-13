@@ -3,7 +3,7 @@
 //
 
 #include "PitchSection.h"
-#include "../../Shared/Config.h"
+#include "../../Shared/Models.h"
 
 PitchSectionComponent::PitchSectionComponent(PluginEditor& e,
                                              PluginProcessor& p)
