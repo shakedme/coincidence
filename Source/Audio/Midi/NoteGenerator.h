@@ -1,7 +1,7 @@
 #pragma once
 
 #include <juce_audio_utils/juce_audio_utils.h>
-#include "../Config.h"
+#include "../../Shared/Config.h"
 #include "../../Shared/TimingManager.h"
 #include "ScaleManager.h"
 
@@ -40,8 +40,7 @@ public:
     // Process MIDI in for note tracking
     void processIncomingMidi(const juce::MidiBuffer &midiMessages,
                              juce::MidiBuffer &processedMidi,
-                             int numSamples,
-                             Config::GeneratorSettings settings);
+                             int numSamples);
 
     // Accessors
     float getCurrentRandomizedGate() const { return currentRandomizedGate; }
@@ -61,6 +60,8 @@ private:
     // Reference to the main processor
     PluginProcessor &processor;
 
+    std::unique_ptr<AppState::ParameterBinding<Config::MidiSettings>> paramBinding;
+    Config::MidiSettings settings;
 
     // Managers for specific functionality
     ScaleManager scaleManager;
@@ -103,26 +104,25 @@ private:
     void checkActiveNotes(juce::MidiBuffer &midiMessages, int numSamples);
 
     // Generate new notes based on settings
-    void generateNewNotes(juce::MidiBuffer &midiMessages, const Config::GeneratorSettings &settings);
+    void generateNewNotes(juce::MidiBuffer &midiMessages);
 
     // Collect all rates that should trigger
-    std::vector<EligibleRate> collectEligibleRates(const Config::GeneratorSettings &settings, float &totalWeight);
+    std::vector<EligibleRate> collectEligibleRates(float &totalWeight);
 
     // Select a rate from eligible rates based on weighted probability
     Config::RateOption selectRateFromEligible(const std::vector<EligibleRate> &eligibleRates, float totalWeight);
 
     // Play a new note at the specified rate
-    void playNewNote(Config::RateOption selectedRate, juce::MidiBuffer &midiMessages,
-                     const Config::GeneratorSettings &settings);
+    void playNewNote(Config::RateOption selectedRate, juce::MidiBuffer &midiMessages);
 
     // Process pending notes (scheduled for future buffers)
     void processPendingNotes(juce::MidiBuffer &midiMessages, int numSamples);
 
     // Calculate the note length in samples
-    int calculateNoteLength(Config::RateOption rate, const Config::GeneratorSettings &settings);
+    int calculateNoteLength(Config::RateOption rate);
 
     // Calculate velocity based on settings
-    int calculateVelocity(const Config::GeneratorSettings &settings);
+    int calculateVelocity();
 
     // Apply randomization to a value
     float applyRandomization(float value, float randomizeValue, Config::DirectionType direction) const;

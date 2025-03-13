@@ -140,7 +140,7 @@ void Delay::applyDelayEffect(juce::AudioBuffer<float> &buffer,
     delayLineRight->setDelay(safeDelayTime);
 
     // Calculate feedback amount
-    float feedbackAmount = settings.delayFeedback / 100.0f;
+    float feedbackAmount = settings.delayFeedback;
 
     // Process the delay through the delay lines
     if (settings.delayPingPong && numChannels > 1) {
@@ -156,7 +156,7 @@ void Delay::applyDelayEffect(juce::AudioBuffer<float> &buffer,
     }
 
     // Now mix the dry and wet signals based on probability
-    float wetMix = settings.delayMix / 100.0f;
+    float wetMix = settings.delayMix;
 
     if (settings.delayProbability >= 99.9f) {
         // Apply to entire buffer

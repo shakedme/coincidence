@@ -3,7 +3,7 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <memory>
 #include <vector>
-#include "../Config.h"
+#include "../../Shared/Config.h"
 #include "Reverb.h"
 #include "Delay.h"
 #include "Stutter.h"

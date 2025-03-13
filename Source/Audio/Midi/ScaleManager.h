@@ -1,7 +1,8 @@
 #pragma once
 
 #include <juce_audio_utils/juce_audio_utils.h>
-#include "../Config.h"
+#include "../../Shared/Config.h"
+#include "../../Shared/StateManager.h"
 
 /**
  * Class to manage musical scales and note modifications
@@ -13,7 +14,7 @@ public:
     ~ScaleManager() = default;
     
     // Apply scale and modifications to a note according to the settings
-    int applyScaleAndModifications(int noteNumber, const Config::GeneratorSettings& settings);
+    int applyScaleAndModifications(int noteNumber);
     
     // Check if a note is in the specified scale
     bool isNoteInScale(int note, const juce::Array<int>& scale);
@@ -28,6 +29,9 @@ public:
     void resetArpeggiator();
     
 private:
+    std::unique_ptr<AppState::ParameterBinding<Config::MelodySettings>> paramBinding;
+    Config::MelodySettings settings;
+
     // Arpeggiator state
     int currentArpStep = 0;
     bool arpDirectionUp = true;

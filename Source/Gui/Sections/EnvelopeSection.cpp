@@ -11,7 +11,7 @@ EnvelopeSectionComponent::EnvelopeSectionComponent(PluginEditor &editor, PluginP
 
     // Add empty content components for now - we'll implement the actual parameter tabs later
     paramTabs->addTab("Amplitude", juce::Colours::transparentBlack, new juce::Component(), true);
-    paramTabs->addTab("Filter", juce::Colours::transparentBlack, new juce::Component(), true);
+    paramTabs->addTab("EQ", juce::Colours::transparentBlack, new juce::Component(), true);
     paramTabs->addTab("Pitch", juce::Colours::transparentBlack, new juce::Component(), true);
 
     addAndMakeVisible(paramTabs.get());

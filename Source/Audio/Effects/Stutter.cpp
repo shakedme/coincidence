@@ -229,9 +229,8 @@ void Stutter::startStutterAtPosition(juce::AudioBuffer<float> &buffer,
     Config::RateOption selectedRate = selectRandomRate();
 
     // Calculate stutter length based on musical timing
-    Config::GeneratorSettings settings;
     int captureLength =
-            static_cast<int>(timingManager->getNoteDurationInSamples(selectedRate, settings));
+            static_cast<int>(timingManager->getNoteDurationInSamples(selectedRate));
 
     // Limit to a reasonable value (and log any adjustment)
     int originalLength = captureLength;

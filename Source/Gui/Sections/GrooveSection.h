@@ -6,7 +6,7 @@
 #define JUCECMAKEREPO_GROOVESECTION_H
 
 #include "BaseSection.h"
-#include "../../Audio/Config.h"
+#include "../../Shared/Config.h"
 #include "../Components/DirectionSelector.h"
 
 class GrooveSectionComponent : public BaseSectionComponent
@@ -31,8 +31,8 @@ private:
     std::unique_ptr<juce::ComboBox> rhythmModeComboBox;
     std::unique_ptr<juce::Label> rhythmModeLabel;
 
-    std::unique_ptr<juce::Slider> densityKnob;
-    std::unique_ptr<juce::Label> densityLabel;
+    std::unique_ptr<juce::Slider> probabilityKnob;
+    std::unique_ptr<juce::Label> probabilityLabel;
 
     std::unique_ptr<juce::Slider> gateKnob;
     std::unique_ptr<juce::Slider> gateRandomKnob;

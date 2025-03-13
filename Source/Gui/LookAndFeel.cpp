@@ -168,7 +168,7 @@ void LookAndFeel::drawRotarySlider(juce::Graphics& g,
             if (randomizedValue > 0.0f)
             {
                 // Calculate randomized angle
-                float randomizedPos = randomizedValue / 100.0f;
+                float randomizedPos = randomizedValue;
                 auto randomizedAngle =
                     rotaryStartAngle
                     + randomizedPos * (rotaryEndAngle - rotaryStartAngle);

@@ -1,7 +1,8 @@
 #pragma once
 
 #include <juce_audio_utils/juce_audio_utils.h>
-#include "Config.h"
+#include "../Shared/Config.h"
+#include "../Shared/StateManager.h"
 #include "../Shared/TimingManager.h"
 #include "Midi/ScaleManager.h"
 #include "Midi/NoteGenerator.h"
@@ -11,7 +12,9 @@
 
 // Forward declarations
 class PluginEditor;
+
 class FxEngine;
+
 class EnvelopeComponent;
 
 /**
@@ -19,82 +22,96 @@ class EnvelopeComponent;
  * Delegates specific functionality to specialized classes.
  */
 class PluginProcessor
-    : public juce::AudioProcessor
-    , private juce::Timer
-{
+        : public juce::AudioProcessor {
 public:
     //==============================================================================
     PluginProcessor();
+
     ~PluginProcessor() override;
 
     //==============================================================================
     // AudioProcessor overrides
     void prepareToPlay(double sampleRate, int samplesPerBlock) override;
-    void releaseResources() override;
-    void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
 
-    juce::AudioProcessorEditor* createEditor() override;
+    void releaseResources() override;
+
+    void processBlock(juce::AudioBuffer<float> &, juce::MidiBuffer &) override;
+
+    juce::AudioProcessorEditor *createEditor() override;
+
     bool hasEditor() const override;
 
     const juce::String getName() const override;
+
     bool acceptsMidi() const override;
+
     bool producesMidi() const override;
+
     bool isMidiEffect() const override;
+
     double getTailLengthSeconds() const override;
 
     int getNumPrograms() override;
+
     int getCurrentProgram() override;
+
     void setCurrentProgram(int index) override;
+
     const juce::String getProgramName(int index) override;
-    void changeProgramName(int index, const juce::String& newName) override;
 
-    void getStateInformation(juce::MemoryBlock& destData) override;
-    void setStateInformation(const void* data, int sizeInBytes) override;
+    void changeProgramName(int index, const juce::String &newName) override;
 
-    //==============================================================================
-    // Timer callback for any background tasks
-    void timerCallback() override;
-    
+    void getStateInformation(juce::MemoryBlock &destData) override;
+
+    void setStateInformation(const void *data, int sizeInBytes) override;
+
     // MIDI note state tracking
     bool isNoteActive() const { return noteGenerator->isNoteActive(); }
 
-    // Parameters
-    juce::AudioProcessorValueTreeState parameters;
-    
-    // Get current settings
-    const Config::GeneratorSettings& getSettings() const { return settings; }
 
-    SampleManager& getSampleManager() const;
+    // Get current settings
+    const Config::MidiSettings &getSettings() const { return settings; }
+
+    SampleManager &getSampleManager() const;
+
     // Get sample direction type for sample selection
     Config::DirectionType getSampleDirectionType() const;
-    
+
     // Access to the note generator
-    NoteGenerator& getNoteGenerator() const { return *noteGenerator; }
+    NoteGenerator &getNoteGenerator() const { return *noteGenerator; }
 
     // Access to the timing manager
-    TimingManager& getTimingManager() const { return *timingManager; }
-    
+    TimingManager &getTimingManager() const { return *timingManager; }
+
     // Current state values for UI visualization
     float getCurrentRandomizedGate() const { return noteGenerator->getCurrentRandomizedGate(); }
+
     float getCurrentRandomizedVelocity() const { return noteGenerator->getCurrentRandomizedVelocity(); }
 
     void updateFxSettingsFromParameters();
-    const Config::FxSettings& getGlitchSettings() const { return fxSettings; }
+
+    const Config::FxSettings &getGlitchSettings() const { return fxSettings; }
 
     // Connect the envelope component to receive waveform data
-    void connectEnvelopeComponent(EnvelopeComponent* component);
+    void connectEnvelopeComponent(EnvelopeComponent *component);
 
     // Envelope component management
-    void setEnvelopeComponent(EnvelopeComponent* component);
-    EnvelopeComponent* getEnvelopeComponent() const { return envelopeComponent; }
+    void setEnvelopeComponent(EnvelopeComponent *component);
 
+    EnvelopeComponent *getEnvelopeComponent() const { return envelopeComponent; }
+
+
+    // Parameters
+    juce::AudioProcessorValueTreeState parameters;
 private:
     // Update settings from parameters
     void updateMidiSettingsFromParameters();
-    
+
     // Plugin state
-    Config::GeneratorSettings settings;
+    Config::MidiSettings settings;
     Config::FxSettings fxSettings;
+
+    AppState::StateManager stateManager;
 
     // Specialized components for handling different aspects of the plugin
     std::unique_ptr<NoteGenerator> noteGenerator;
@@ -106,17 +123,17 @@ private:
     EnvelopeParameterMapper amplitudeEnvelope;
 
     // Pointer to the envelope component for waveform visualization
-    EnvelopeComponent* envelopeComponent = nullptr;
+    EnvelopeComponent *envelopeComponent = nullptr;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginProcessor)
 };
 
 // For debug logging if needed
-class FileLogger : public juce::Logger
-{
+class FileLogger : public juce::Logger {
 public:
     FileLogger();
-    void logMessage(const juce::String& message) override;
+
+    void logMessage(const juce::String &message) override;
 
 private:
     juce::File logFile;

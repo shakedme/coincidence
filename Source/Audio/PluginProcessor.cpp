@@ -9,94 +9,22 @@ PluginProcessor::PluginProcessor()
         : AudioProcessor(BusesProperties()
                                  .withInput("Input", juce::AudioChannelSet::stereo(), true)
                                  .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
-          parameters(*this, nullptr, "PARAMETERS", createParameterLayout()),
+          parameters(*this, nullptr, "PARAMETERS", AppState::createParameterLayout()),
           timingManager(std::make_shared<TimingManager>()),
           amplitudeEnvelope(EnvelopeParams::ParameterType::Amplitude) {
+
+    AppState::StateManager::getInstance().setAudioParametersTree(&parameters);
 
     // Create specialized components
     sampleManager = std::make_unique<::SampleManager>(*this);
     noteGenerator = std::make_unique<NoteGenerator>(*this, timingManager);
     fxEngine = std::make_unique<FxEngine>(timingManager, *this);
 
-    // Update settings from parameters
-    updateMidiSettingsFromParameters();
-    updateFxSettingsFromParameters();
-
-    // Start timer for any background tasks
-    startTimerHz(50);
-//
-    auto *fileLogger = new FileLogger();
-    juce::Logger::setCurrentLogger(fileLogger);
+//    auto *fileLogger = new FileLogger();
+//    juce::Logger::setCurrentLogger(fileLogger);
 }
 
 PluginProcessor::~PluginProcessor() {
-    stopTimer();
-}
-
-//==============================================================================
-void PluginProcessor::updateMidiSettingsFromParameters() {
-    // Update rate settings
-    for (int i = 0; i < Config::NUM_RATE_OPTIONS; ++i) {
-        settings.rates[i].value =
-                *parameters.getRawParameterValue("rate_" + juce::String(i) + "_value");
-    }
-
-    // Update probability/density setting
-    settings.probability = *parameters.getRawParameterValue("density");
-
-    // Update gate settings
-    settings.gate.value = *parameters.getRawParameterValue("gate");
-    settings.gate.randomize = *parameters.getRawParameterValue("gate_randomize");
-    settings.gate.direction = static_cast<DirectionType>(
-            static_cast<int>(*parameters.getRawParameterValue("gate_direction")));
-
-    // Update velocity settings
-    settings.velocity.value = *parameters.getRawParameterValue("velocity");
-    settings.velocity.randomize = *parameters.getRawParameterValue("velocity_randomize");
-    settings.velocity.direction = static_cast<DirectionType>(
-            static_cast<int>(*parameters.getRawParameterValue("velocity_direction")));
-
-    // Update scale settings
-    settings.scaleType = static_cast<ScaleType>(
-            static_cast<int>(*parameters.getRawParameterValue("scale_type")));
-
-    settings.semitones.value =
-            static_cast<int>(*parameters.getRawParameterValue("semitones"));
-    settings.semitones.probability = *parameters.getRawParameterValue("semitones_prob");
-    settings.semitones.direction = static_cast<DirectionType>(
-            static_cast<int>(*parameters.getRawParameterValue("semitones_direction")));
-
-    // Update octave settings
-    settings.octaves.value =
-            static_cast<int>(*parameters.getRawParameterValue("octaves"));
-    settings.octaves.probability = *parameters.getRawParameterValue("octaves_prob");
-
-    settings.rhythmMode = static_cast<RhythmMode>(
-            static_cast<int>(*parameters.getRawParameterValue("rhythm_mode")));
-
-    bool pitchFollowEnabled = static_cast<bool>(*parameters.getRawParameterValue("sample_pitch_follow"));
-    SamplerVoice::setPitchFollowEnabled(pitchFollowEnabled);
-}
-
-void PluginProcessor::updateFxSettingsFromParameters() {
-    // Update glitch settings from parameters
-    fxSettings.stutterProbability = *parameters.getRawParameterValue("glitch_stutter");
-
-    // Update reverb settings from parameters
-    fxSettings.reverbMix = *parameters.getRawParameterValue("reverb_mix");
-    fxSettings.reverbProbability = *parameters.getRawParameterValue("reverb_probability");
-    fxSettings.reverbTime = *parameters.getRawParameterValue("reverb_time");
-    fxSettings.reverbWidth = *parameters.getRawParameterValue("reverb_width");
-
-    // Update delay settings from parameters
-    fxSettings.delayMix = *parameters.getRawParameterValue("delay_mix");
-    fxSettings.delayProbability = *parameters.getRawParameterValue("delay_probability");
-    fxSettings.delayRate = *parameters.getRawParameterValue("delay_rate");
-    fxSettings.delayFeedback = *parameters.getRawParameterValue("delay_feedback");
-    fxSettings.delayPingPong = *parameters.getRawParameterValue("delay_ping_pong") > 0.5f;
-    fxSettings.delayBpmSync = *parameters.getRawParameterValue("delay_bpm_sync") > 0.5f;
-
-    fxEngine->setSettings(fxSettings);
 }
 
 //==============================================================================
@@ -172,9 +100,6 @@ void PluginProcessor::releaseResources() {
 
 void PluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                                    juce::MidiBuffer &midiMessages) {
-    // Update plugin settings from parameters
-    updateMidiSettingsFromParameters();
-    updateFxSettingsFromParameters();
 
     // Clear audio
     buffer.clear();
@@ -186,34 +111,34 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
 
     // Process incoming MIDI messages
     noteGenerator->processIncomingMidi(
-            midiMessages, processedMidi, buffer.getNumSamples(), settings);
+            midiMessages, processedMidi, buffer.getNumSamples());
 
     // If samples are loaded, uses generated midi to trigger samples
     if (sampleManager->isSampleLoaded()) {
         sampleManager->processAudio(buffer, processedMidi, midiMessages);
         fxEngine->processAudio(buffer, playHead, processedMidi);
+
+        // Apply amplitude envelope to the final buffer
+        const int numChannels = buffer.getNumChannels();
+        const int numSamples = buffer.getNumSamples();
+
+        // Apply envelope to each sample in all channels
+        for (int sample = 0; sample < numSamples; ++sample) {
+            // Get current envelope value
+            float envelopeValue = amplitudeEnvelope.getCurrentValue();
+
+            // Apply to all channels
+            for (int channel = 0; channel < numChannels; ++channel) {
+                float *channelData = buffer.getWritePointer(channel);
+                channelData[sample] *= envelopeValue;
+            }
+        }
+    } else {
+        midiMessages.swapWith(processedMidi);
     }
 
     // Update amplitude envelope with transport position
     amplitudeEnvelope.setTransportPosition(timingManager->getPpqPosition());
-
-    // Apply amplitude envelope to the final buffer
-    const int numChannels = buffer.getNumChannels();
-    const int numSamples = buffer.getNumSamples();
-//    const float sampleDeltaTime = 1.0f / getSampleRate();
-
-    // Apply envelope to each sample in all channels
-    for (int sample = 0; sample < numSamples; ++sample) {
-        // Get current envelope value
-        float envelopeValue = amplitudeEnvelope.getCurrentValue();
-
-        // Apply to all channels
-        for (int channel = 0; channel < numChannels; ++channel) {
-            float *channelData = buffer.getWritePointer(channel);
-            channelData[sample] *= envelopeValue;
-        }
-    }
-
     timingManager->updateSamplePosition(buffer.getNumSamples());
 
     // After processing is done, send the processed audio data to the envelope component
@@ -237,7 +162,7 @@ juce::AudioProcessorEditor *PluginProcessor::createEditor() {
 //==============================================================================
 void PluginProcessor::getStateInformation(juce::MemoryBlock &destData) {
     // Create a fresh XmlElement for our state (not using parameters.copyState() directly)
-    auto mainXml = std::make_unique<juce::XmlElement>("JAMMER_STATE");
+    auto mainXml = std::make_unique<juce::XmlElement>("COINCIDENCE_STATE");
 
     // Add parameter state as a child
     auto paramsXml = parameters.copyState().createXml();
@@ -320,7 +245,7 @@ void PluginProcessor::setStateInformation(const void *data, int sizeInBytes) {
         // Handle both formats - either direct parameters or our custom container
         juce::XmlElement *paramsXml = nullptr;
 
-        if (xmlState->hasTagName("JAMMER_STATE")) {
+        if (xmlState->hasTagName("COINCIDENCE_STATE")) {
             // New format - find the parameters element (first child)
             paramsXml = xmlState->getFirstChildElement();
         } else if (xmlState->hasTagName(parameters.state.getType())) {
@@ -462,13 +387,6 @@ void PluginProcessor::setStateInformation(const void *data, int sizeInBytes) {
 
     }
 }
-
-//==============================================================================
-void PluginProcessor::timerCallback() {
-    // This timer is used for non-critical timing tasks if needed
-}
-
-//==============================================================================
 
 SampleManager &PluginProcessor::getSampleManager() const {
     return *sampleManager;

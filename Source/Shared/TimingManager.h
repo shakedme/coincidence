@@ -1,58 +1,62 @@
 #pragma once
 
 #include "juce_audio_utils/juce_audio_utils.h"
-#include "../Audio/Config.h"
+#include "Config.h"
+#include "ParameterBinding.h"
 
 /**
  * Class to handle timing-related functionality including BPM, position tracking,
  * note trigger timing, and synchronization with DAW.
  */
-class TimingManager
-{
+class TimingManager {
 public:
     TimingManager();
+
     ~TimingManager() = default;
 
     // Initialize timing variables
     void prepareToPlay(double sampleRate);
-    
+
     // Update timing information from playhead
-    void updateTimingInfo(juce::AudioPlayHead* playHead);
-    
+    void updateTimingInfo(juce::AudioPlayHead *playHead);
+
     // Get current timing information
     double getBpm() const { return bpm; }
+
     double getPpqPosition() const { return ppqPosition; }
+
     double getLastPpqPosition() const { return lastPpqPosition; }
+
     double getSampleRate() const { return sampleRate; }
+
     juce::int64 getSamplePosition() const { return samplePosition; }
-    
+
     // Access to the last trigger times array
-    const double* getLastTriggerTimes() const { return lastTriggerTimes; }
-    
+    const double *getLastTriggerTimes() const { return lastTriggerTimes; }
+
     // Update sample position after processing a buffer
     void updateSamplePosition(int numSamples);
-    
+
     // Check if a note should be triggered at the current position for a given rate
-    bool shouldTriggerNote(Config::RateOption rate, const Config::GeneratorSettings& settings);
-    
+    bool shouldTriggerNote(Config::RateOption rate);
+
     // Calculate the duration in samples for a given rate
-    double getNoteDurationInSamples(Config::RateOption rate, const Config::GeneratorSettings& settings);
+    double getNoteDurationInSamples(Config::RateOption rate);
 
     double getNextExpectedGridPoint(Config::RateOption selectedRate,
-                                    const Config::GeneratorSettings& settings,
                                     int rateIndex);
-    
+
     // Update the last trigger time for a rate
     void updateLastTriggerTime(Config::RateOption rate, double triggerTime);
-    
+
     // Check if a loop was just detected
     bool wasLoopDetected() const { return loopJustDetected; }
-    
+
     // Clear loop detection state
     void clearLoopDetection() { loopJustDetected = false; }
 
-    double getDurationInQuarters(Config::RateOption rate, const Config::GeneratorSettings& settings);
-    
+    double getDurationInQuarters(Config::RateOption rate);
+
 private:
     // Timing state
     double sampleRate = 44100.0;

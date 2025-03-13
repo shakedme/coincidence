@@ -67,8 +67,8 @@ void GrooveSectionComponent::resized() {
                                          knobSize + 30,
                                          25);
 
-    densityKnob->setBounds(area.getCentreX() - knobSize / 2, middleRowY, knobSize, knobSize);
-    densityLabel->setBounds(area.getCentreX() - knobSize / 2, middleRowY + knobSize, knobSize, labelHeight);
+    probabilityKnob->setBounds(area.getCentreX() - knobSize / 2, middleRowY, knobSize, knobSize);
+    probabilityLabel->setBounds(area.getCentreX() - knobSize / 2, middleRowY + knobSize, knobSize, labelHeight);
 
     const int rhythmComboWidth = 90;
     const int rhythmComboHeight = 25;
@@ -84,7 +84,7 @@ void GrooveSectionComponent::resized() {
 
 void GrooveSectionComponent::setupRateControls() {
     for (size_t i = 0; i < Config::NUM_RATE_OPTIONS; ++i) {
-        // Create rate knob
+        auto rateName = Config::rateBaseNames[i];
         rateKnobs[i] = std::unique_ptr<juce::Slider>(
                 createRotarySlider("Rate " + juce::String(Config::rateBaseNames[i]) + " intensity"));
         rateKnobs[i]->setName("rate_" + juce::String(i));
@@ -102,7 +102,7 @@ void GrooveSectionComponent::setupRateControls() {
         sliderAttachments.push_back(
                 std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
                         processor.parameters,
-                        "rate_" + juce::String(i) + "_value",
+                        rateName,
                         *rateKnobs[i]));
     }
 }
@@ -134,23 +134,23 @@ void GrooveSectionComponent::setupRhythmModeControls() {
 
 void GrooveSectionComponent::setupDensityControls() {
     // Create density knob
-    densityKnob =
-            std::unique_ptr<juce::Slider>(createRotarySlider("Overall density/probability"));
-    densityKnob->setName("density");
-    densityKnob->setRange(0.0, 100.0, 0.1);
-    densityKnob->setTextValueSuffix("%");
-    addAndMakeVisible(densityKnob.get());
+    probabilityKnob =
+            std::unique_ptr<juce::Slider>(createRotarySlider("Overall probability to play a note"));
+    probabilityKnob->setName("probability");
+    probabilityKnob->setRange(0.0, 100.0, 0.1);
+    probabilityKnob->setTextValueSuffix("%");
+    addAndMakeVisible(probabilityKnob.get());
 
     // Create density label
-    densityLabel = std::unique_ptr<juce::Label>(
-            createLabel("DENSITY", juce::Justification::centred));
-    densityLabel->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
-    addAndMakeVisible(densityLabel.get());
+    probabilityLabel = std::unique_ptr<juce::Label>(
+            createLabel("PROBABILITY", juce::Justification::centred));
+    probabilityLabel->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
+    addAndMakeVisible(probabilityLabel.get());
 
     // Create parameter attachment
     sliderAttachments.push_back(
             std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-                    processor.parameters, "density", *densityKnob));
+                    processor.parameters, "probability", *probabilityKnob));
 }
 
 void GrooveSectionComponent::setupGateControls() {

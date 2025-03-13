@@ -1,20 +1,21 @@
 #include "ScaleManager.h"
 
-ScaleManager::ScaleManager()
-{
+using namespace AppState;
+
+ScaleManager::ScaleManager() {
     // Initialize member variables
     resetArpeggiator();
+
+    paramBinding = StateManager::getInstance().createParameterBinding<Config::MelodySettings>(settings);
+    paramBinding->registerParameters(createMelodyParameters());
 }
 
-void ScaleManager::resetArpeggiator()
-{
+void ScaleManager::resetArpeggiator() {
     currentArpStep = 0;
     arpDirectionUp = true;
 }
 
-int ScaleManager::applyScaleAndModifications(int noteNumber,
-                                             const Config::GeneratorSettings& settings)
-{
+int ScaleManager::applyScaleAndModifications(int noteNumber) {
     // Start with the input note
     int finalNote = noteNumber;
 
@@ -25,38 +26,30 @@ int ScaleManager::applyScaleAndModifications(int noteNumber,
     juce::Array<int> scale = getSelectedScale(settings.scaleType);
 
     // First check if we need to apply semitone variation
-    if (settings.semitones.value > 0 && settings.semitones.probability > 0.0f)
-    {
+    if (settings.semitoneValue > 0 && settings.semitoneProbability > 0.0f) {
         // Roll for semitone variation
-        if (juce::Random::getSystemRandom().nextFloat() * 100.0f
-            < settings.semitones.probability)
-        {
+        if (juce::Random::getSystemRandom().nextFloat()
+            < settings.semitoneProbability) {
             // Arpeggiator mode - sequential stepping
-            switch (settings.semitones.direction)
-            {
+            switch (settings.semitoneDirection) {
                 case Config::DirectionType::LEFT:
                     // Down
                     currentArpStep--;
                     if (currentArpStep < 0)
-                        currentArpStep = settings.semitones.value;
+                        currentArpStep = settings.semitoneValue;
                     break;
 
                 case Config::DirectionType::BIDIRECTIONAL:
                     // Bidirectional (up then down)
-                    if (arpDirectionUp)
-                    {
+                    if (arpDirectionUp) {
                         currentArpStep++;
-                        if (currentArpStep >= settings.semitones.value)
-                        {
-                            currentArpStep = settings.semitones.value;
+                        if (currentArpStep >= settings.semitoneValue) {
+                            currentArpStep = settings.semitoneValue;
                             arpDirectionUp = false;
                         }
-                    }
-                    else
-                    {
+                    } else {
                         currentArpStep--;
-                        if (currentArpStep <= 0)
-                        {
+                        if (currentArpStep <= 0) {
                             currentArpStep = 0;
                             arpDirectionUp = true;
                         }
@@ -66,14 +59,14 @@ int ScaleManager::applyScaleAndModifications(int noteNumber,
                 case Config::DirectionType::RIGHT:
                     // Up
                     currentArpStep++;
-                    if (currentArpStep > settings.semitones.value)
+                    if (currentArpStep > settings.semitoneValue)
                         currentArpStep = 0;
                     break;
 
                 case Config::DirectionType::RANDOM:
                     // Random
                     currentArpStep = juce::Random::getSystemRandom().nextInt(
-                        settings.semitones.value + 1);
+                            settings.semitoneValue + 1);
                     break;
             }
 
@@ -82,34 +75,27 @@ int ScaleManager::applyScaleAndModifications(int noteNumber,
 
             // Map to the closest note in scale
             finalNote = findClosestNoteInScale(finalNote, scale, noteRoot);
-        }
-        else if (!isNoteInScale(finalNote, scale))
-        {
+        } else if (!isNoteInScale(finalNote, scale)) {
             // Even if we don't add semitones, still ensure the note is in scale
             finalNote = findClosestNoteInScale(finalNote, scale, noteRoot);
         }
-    }
-    else if (!isNoteInScale(finalNote, scale))
-    {
+    } else if (!isNoteInScale(finalNote, scale)) {
         // Make sure the note is in the scale even if semitones are off
         finalNote = findClosestNoteInScale(finalNote, scale, noteRoot);
     }
 
     // Check if we need to apply octave variation (after semitones)
-    if (settings.octaves.value > 0 && settings.octaves.probability > 0.0f)
-    {
+    if (settings.octaveValue > 0 && settings.octaveProbability > 0.0f) {
         // Roll for octave variation
-        if (juce::Random::getSystemRandom().nextFloat() * 100.0f
-            < settings.octaves.probability)
-        {
+        if (juce::Random::getSystemRandom().nextFloat()
+            < settings.octaveProbability) {
             // Calculate the octave variation (1 to max)
             int octaveAmount =
-                1 + juce::Random::getSystemRandom().nextInt(settings.octaves.value);
+                    1 + juce::Random::getSystemRandom().nextInt(settings.octaveValue);
 
             // If bidirectional, randomly choose up or down
-            if (settings.octaves.bidirectional
-                && juce::Random::getSystemRandom().nextBool())
-            {
+            if (settings.octaveBidirectional
+                && juce::Random::getSystemRandom().nextBool()) {
                 octaveAmount = -octaveAmount;
             }
 
@@ -122,8 +108,7 @@ int ScaleManager::applyScaleAndModifications(int noteNumber,
     return juce::jlimit(0, 127, finalNote);
 }
 
-bool ScaleManager::isNoteInScale(int note, const juce::Array<int>& scale)
-{
+bool ScaleManager::isNoteInScale(int note, const juce::Array<int> &scale) {
     // Convert note to scale degree (0-11)
     int scaleDegree = (note % 12);
 
@@ -132,9 +117,8 @@ bool ScaleManager::isNoteInScale(int note, const juce::Array<int>& scale)
 }
 
 int ScaleManager::findClosestNoteInScale(int note,
-                                         const juce::Array<int>& scale,
-                                         int root)
-{
+                                         const juce::Array<int> &scale,
+                                         int root) {
     // If the note is already in the scale, return it
     if (isNoteInScale(note, scale))
         return note;
@@ -146,8 +130,7 @@ int ScaleManager::findClosestNoteInScale(int note,
     int closestDistance = 12;
     int closestNote = note;
 
-    for (int scaleDegree: scale)
-    {
+    for (int scaleDegree: scale) {
         // Calculate the actual MIDI note number
         int scaleNote = (octave * 12) + scaleDegree;
 
@@ -155,8 +138,7 @@ int ScaleManager::findClosestNoteInScale(int note,
         int distance = std::abs(note - scaleNote);
 
         // Update closest if this is closer
-        if (distance < closestDistance)
-        {
+        if (distance < closestDistance) {
             closestDistance = distance;
             closestNote = scaleNote;
         }
@@ -165,10 +147,8 @@ int ScaleManager::findClosestNoteInScale(int note,
     return closestNote;
 }
 
-juce::Array<int> ScaleManager::getSelectedScale(Config::ScaleType scaleType)
-{
-    switch (scaleType)
-    {
+juce::Array<int> ScaleManager::getSelectedScale(Config::ScaleType scaleType) {
+    switch (scaleType) {
         case Config::SCALE_MINOR:
             return Config::minorScale;
         case Config::SCALE_PENTATONIC:

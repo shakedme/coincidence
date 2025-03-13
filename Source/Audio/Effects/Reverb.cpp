@@ -25,8 +25,8 @@ void Reverb::setSettings(Config::FxSettings s) {
     BaseEffect::setSettings(s);
 
     // Update JUCE reverb parameters based on our settings
-    juceReverbParams.roomSize = settings.reverbTime / 100.0f;
-    juceReverbParams.width = settings.reverbWidth / 100.0f;
+    juceReverbParams.roomSize = settings.reverbTime;
+    juceReverbParams.width = settings.reverbWidth;
     juceReverb.setParameters(juceReverbParams);
 }
 
@@ -65,7 +65,7 @@ void Reverb::applyReverbEffect(juce::AudioBuffer<float> &buffer,
                                    reverbBuffer.getNumSamples());
         }
 
-        float wetMix = settings.reverbMix / 100.0f;
+        float wetMix = settings.reverbMix;
 
         if (settings.reverbProbability >= 99.9f) {
             // Apply to entire buffer

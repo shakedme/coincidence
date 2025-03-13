@@ -4,7 +4,7 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <vector>
 #include <memory>
-#include "../Config.h"
+#include "../../Shared/Config.h"
 #include "OnsetDetector.h"
 #include <map>
 

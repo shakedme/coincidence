@@ -1,16 +1,16 @@
 #include "TimingManager.h"
 
-TimingManager::TimingManager()
-{
+using namespace AppState;
+using namespace Config;
+
+TimingManager::TimingManager() {
     // Initialize member variables to default values
-    for (int i = 0; i < Config::NUM_RATE_OPTIONS; i++)
-    {
+    for (int i = 0; i < Config::NUM_RATE_OPTIONS; i++) {
         lastTriggerTimes[i] = 0.0;
     }
 }
 
-void TimingManager::prepareToPlay(double liveSampleRate)
-{
+void TimingManager::prepareToPlay(double liveSampleRate) {
     this->sampleRate = liveSampleRate;
     samplePosition = 0;
 
@@ -20,49 +20,40 @@ void TimingManager::prepareToPlay(double liveSampleRate)
     lastContinuousPpqPosition = 0.0;
 
     // Reset trigger times
-    for (int i = 0; i < Config::NUM_RATE_OPTIONS; i++)
-    {
+    for (int i = 0; i < Config::NUM_RATE_OPTIONS; i++) {
         lastTriggerTimes[i] = 0.0;
     }
 
     loopJustDetected = false;
 }
 
-void TimingManager::updateTimingInfo(juce::AudioPlayHead* playHead)
-{
+void TimingManager::updateTimingInfo(juce::AudioPlayHead *playHead) {
     // Store the previous ppq position
     lastPpqPosition = ppqPosition;
     lastContinuousPpqPosition = ppqPosition; // Save before updates
 
     // Get current playhead information
-    if (playHead != nullptr)
-    {
+    if (playHead != nullptr) {
         juce::Optional<juce::AudioPlayHead::PositionInfo> posInfo =
-            playHead->getPosition();
+                playHead->getPosition();
 
-        if (posInfo.hasValue())
-        {
+        if (posInfo.hasValue()) {
             if (posInfo->getBpm().hasValue())
                 bpm = *posInfo->getBpm();
 
-            if (posInfo->getPpqPosition().hasValue())
-            {
+            if (posInfo->getPpqPosition().hasValue()) {
                 ppqPosition = *posInfo->getPpqPosition();
 
                 // Detect a loop - PPQ position has jumped backward significantly
                 // Small jumps backward (less than a quarter note) could be jitter, ignore those
-                if (ppqPosition < lastContinuousPpqPosition - 0.25)
-                {
+                if (ppqPosition < lastContinuousPpqPosition - 0.25) {
                     loopJustDetected = true;
 
                     // Reset timing state for all rates
-                    for (int i = 0; i < Config::NUM_RATE_OPTIONS; i++)
-                    {
+                    for (int i = 0; i < Config::NUM_RATE_OPTIONS; i++) {
                         lastTriggerTimes[i] = 0.0;
                     }
-                }
-                else
-                {
+                } else {
                     loopJustDetected = false;
                 }
             }
@@ -70,28 +61,24 @@ void TimingManager::updateTimingInfo(juce::AudioPlayHead* playHead)
     }
 }
 
-void TimingManager::updateSamplePosition(int numSamples)
-{
+void TimingManager::updateSamplePosition(int numSamples) {
     samplePosition += numSamples;
 }
 
-void TimingManager::updateLastTriggerTime(Config::RateOption rate, double triggerTime)
-{
+void TimingManager::updateLastTriggerTime(Config::RateOption rate, double triggerTime) {
     lastTriggerTimes[static_cast<int>(rate)] = triggerTime;
 }
 
 double TimingManager::getNextExpectedGridPoint(Config::RateOption selectedRate,
-                                               const Config::GeneratorSettings& settings,
-                                               int rateIndex)
-{
-    double durationInQuarters = getDurationInQuarters(selectedRate, settings);
+
+                                               int rateIndex) {
+    double durationInQuarters = getDurationInQuarters(selectedRate);
     double lastTriggerTime = getLastTriggerTimes()[rateIndex];
 
-    if (wasLoopDetected() || lastTriggerTime <= 0.0)
-    {
+    if (wasLoopDetected() || lastTriggerTime <= 0.0) {
         // At loop points, align with the closest grid
         double gridStartPpq =
-            std::floor(ppqPosition / durationInQuarters) * durationInQuarters;
+                std::floor(ppqPosition / durationInQuarters) * durationInQuarters;
 
         // If we're very close to a grid point, use that
         double ppqSinceGrid = ppqPosition - gridStartPpq;
@@ -101,18 +88,16 @@ double TimingManager::getNextExpectedGridPoint(Config::RateOption selectedRate,
     }
     // Calculate how many grid units have passed since the last trigger
     double gridsSinceLastTrigger =
-        std::floor((ppqPosition - lastTriggerTime) / durationInQuarters);
+            std::floor((ppqPosition - lastTriggerTime) / durationInQuarters);
 
     // The next grid point should be exactly on a grid division from the last trigger
     return lastTriggerTime + ((gridsSinceLastTrigger + 1) * durationInQuarters);
 }
 
-double TimingManager::getDurationInQuarters(Config::RateOption rate,
-                                            const Config::GeneratorSettings& settings)
-{
+double TimingManager::getDurationInQuarters(Config::RateOption rate
+) {
     double durationInQuarters;
-    switch (rate)
-    {
+    switch (rate) {
         case Config::RATE_1_1:
             durationInQuarters = 4.0;
             break;
@@ -136,35 +121,19 @@ double TimingManager::getDurationInQuarters(Config::RateOption rate,
             break;
     }
 
-    // Apply rhythm mode modifications
-    switch (settings.rhythmMode)
-    {
-        case Config::RHYTHM_DOTTED:
-            durationInQuarters *= 1.5;
-            break;
-        case Config::RHYTHM_TRIPLET:
-            durationInQuarters *= 2.0 / 3.0;
-            break;
-        default:
-            break;
-    }
-
     return durationInQuarters;
 }
 
-bool TimingManager::shouldTriggerNote(Config::RateOption rate,
-                                      const Config::GeneratorSettings& settings)
-{
+bool TimingManager::shouldTriggerNote(Config::RateOption rate) {
     // Calculate the duration in quarter notes
-    double durationInQuarters = getDurationInQuarters(rate, settings);
+    double durationInQuarters = getDurationInQuarters(rate);
     int rateIndex = static_cast<int>(rate);
 
     // If we just detected a loop or it's the first trigger for this rate
-    if (loopJustDetected || lastTriggerTimes[rateIndex] <= 0.0)
-    {
+    if (loopJustDetected || lastTriggerTimes[rateIndex] <= 0.0) {
         // Find the closest grid point at or before current position
         double gridStartPpq =
-            std::floor(ppqPosition / durationInQuarters) * durationInQuarters;
+                std::floor(ppqPosition / durationInQuarters) * durationInQuarters;
 
         // Calculate a reasonable window for triggering (adaptive to tempo)
         double triggerWindowInPPQ = 0.05 * std::max(1.0, bpm / 120.0);
@@ -173,8 +142,7 @@ bool TimingManager::shouldTriggerNote(Config::RateOption rate,
         double ppqSinceGrid = ppqPosition - gridStartPpq;
 
         // Trigger if we're very close to a grid point
-        if (ppqSinceGrid < triggerWindowInPPQ)
-        {
+        if (ppqSinceGrid < triggerWindowInPPQ) {
             return true;
         }
 
@@ -184,8 +152,7 @@ bool TimingManager::shouldTriggerNote(Config::RateOption rate,
         double ppqSpanOfCurrentBuffer = (blockSize / sampleRate) * (bpm / 60.0);
         double ppqUntilNextGrid = nextGridPpq - ppqPosition;
 
-        if (ppqUntilNextGrid >= 0 && ppqUntilNextGrid <= ppqSpanOfCurrentBuffer)
-        {
+        if (ppqUntilNextGrid >= 0 && ppqUntilNextGrid <= ppqSpanOfCurrentBuffer) {
             return true;
         }
 
@@ -201,7 +168,7 @@ bool TimingManager::shouldTriggerNote(Config::RateOption rate,
 
     // Calculate the number of whole grid units since the last trigger
     double gridsSinceLastTrigger =
-        std::floor((ppqPosition - lastTriggerTime) / durationInQuarters);
+            std::floor((ppqPosition - lastTriggerTime) / durationInQuarters);
 
     // Calculate the next grid point after our last trigger
     nextGridPoint = lastTriggerTime + ((gridsSinceLastTrigger + 1) * durationInQuarters);
@@ -215,28 +182,24 @@ bool TimingManager::shouldTriggerNote(Config::RateOption rate,
     double ppqSpanOfCurrentBuffer = (blockSize / sampleRate) * (bpm / 60.0);
 
     // Grid point is coming up in this buffer
-    if (ppqUntilNextGrid >= 0 && ppqUntilNextGrid <= ppqSpanOfCurrentBuffer)
-    {
+    if (ppqUntilNextGrid >= 0 && ppqUntilNextGrid <= ppqSpanOfCurrentBuffer) {
         return true;
     }
 
     // We already passed the grid point slightly (timing issue)
-    if (ppqUntilNextGrid < 0 && ppqUntilNextGrid > -triggerWindowInPPQ)
-    {
+    if (ppqUntilNextGrid < 0 && ppqUntilNextGrid > -triggerWindowInPPQ) {
         return true;
     }
 
     return false;
 }
 
-double TimingManager::getNoteDurationInSamples(Config::RateOption rate,
-                                               const Config::GeneratorSettings& settings)
-{
+double TimingManager::getNoteDurationInSamples(Config::RateOption rate) {
     // Calculate duration in quarter notes
     double quarterNotesPerSecond = bpm / 60.0;
     double secondsPerQuarterNote = 1.0 / quarterNotesPerSecond;
 
-    double durationInQuarters = getDurationInQuarters(rate, settings);
+    double durationInQuarters = getDurationInQuarters(rate);
     double durationInSeconds = secondsPerQuarterNote * durationInQuarters;
     double durationInSamples = durationInSeconds * sampleRate;
 
