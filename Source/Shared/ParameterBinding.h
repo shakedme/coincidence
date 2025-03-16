@@ -7,6 +7,7 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <functional>
 #include <map>
+#include <utility>
 #include <vector>
 
 namespace AppState {
@@ -18,16 +19,16 @@ namespace AppState {
         std::function<void(SettingsType &, float)> setter;
 
         // Standard constructor
-        ParameterDescriptor(const juce::String &id,
+        ParameterDescriptor(juce::String id,
                             std::function<void(SettingsType &, float)> setterFunc)
-                : paramID(id), setter(setterFunc) {}
+                : paramID(std::move(id)), setter(setterFunc) {}
 
         // Member pointer constructor with converter
         template<typename ValueType>
-        ParameterDescriptor(const juce::String &id,
+        ParameterDescriptor(juce::String id,
                             ValueType SettingsType::* memberPtr,
                             std::function<ValueType(float)> converter)
-                : paramID(id),
+                : paramID(std::move(id)),
                   setter([memberPtr, converter](SettingsType &settings, float value) {
                       settings.*memberPtr = converter(value);
                   }) {}
@@ -98,7 +99,7 @@ namespace AppState {
     template<typename SettingsType>
     class ParameterBinding : public juce::AudioProcessorValueTreeState::Listener {
     public:
-        ParameterBinding(SettingsType &settingsStruct, juce::AudioProcessorValueTreeState *apvts)
+        ParameterBinding(SettingsType &settingsStruct, juce::AudioProcessorValueTreeState &apvts)
                 : settings(settingsStruct), audioParamsTree(apvts) {
         }
 
@@ -108,14 +109,11 @@ namespace AppState {
 
         // Register a single parameter descriptor
         void registerParameter(const ParameterDescriptor<SettingsType> &descriptor) {
-            if (!audioParamsTree)
-                return;
-
             parameterMap[descriptor.paramID] = descriptor.setter;
-            audioParamsTree->addParameterListener(descriptor.paramID, this);
+            audioParamsTree.addParameterListener(descriptor.paramID, this);
 
             // Initialize with current value
-            if (auto *param = audioParamsTree->getParameter(descriptor.paramID))
+            if (auto *param = audioParamsTree.getParameter(descriptor.paramID))
                 descriptor.setter(settings, param->getValue());
         }
 
@@ -133,81 +131,92 @@ namespace AppState {
         }
 
         void removeAllListeners() {
-            if (audioParamsTree) {
-                for (const auto &mapping: parameterMap)
-                    audioParamsTree->removeParameterListener(mapping.first, this);
-                parameterMap.clear();
-            }
+            for (const auto &mapping: parameterMap)
+                audioParamsTree.removeParameterListener(mapping.first, this);
+            parameterMap.clear();
         }
 
     private:
         SettingsType &settings;
-        juce::AudioProcessorValueTreeState *audioParamsTree;
+        juce::AudioProcessorValueTreeState &audioParamsTree;
         std::map<juce::String, std::function<void(SettingsType &, float)>> parameterMap;
     };
 
+    template<typename SettingsType>
+    std::unique_ptr<ParameterBinding<SettingsType>>
+    createParameterBinding(SettingsType &settings, juce::AudioProcessorValueTreeState &apvts) {
+        return std::make_unique<ParameterBinding<SettingsType>>(settings, apvts);
+    }
+
+    // Create a set of stutter parameters
+    inline std::vector<ParameterDescriptor<Models::StutterSettings>> createStutterParameters() {
+        return {
+                createPercentageParam<Models::StutterSettings>("stutter_probability",
+                                                               &Models::StutterSettings::stutterProbability),
+        };
+    }
 
 // Create a set of delay parameters
-    inline std::vector<ParameterDescriptor<Config::FxSettings>> createDelayParameters() {
+    inline std::vector<ParameterDescriptor<Models::DelaySettings>> createDelayParameters() {
         return {
-                createPercentageParam<Config::FxSettings>("delay_mix", &Config::FxSettings::delayMix),
-                createPercentageParam<Config::FxSettings>("delay_feedback", &Config::FxSettings::delayFeedback),
-                createPercentageParam<Config::FxSettings>("delay_rate", &Config::FxSettings::delayRate),
-                createBoolParam<Config::FxSettings>("delay_ping_pong", &Config::FxSettings::delayPingPong),
-                createBoolParam<Config::FxSettings>("delay_bpm_sync", &Config::FxSettings::delayBpmSync)
+                createPercentageParam<Models::DelaySettings>("delay_mix", &Models::DelaySettings::delayMix),
+                createPercentageParam<Models::DelaySettings>("delay_feedback", &Models::DelaySettings::delayFeedback),
+                createPercentageParam<Models::DelaySettings>("delay_rate", &Models::DelaySettings::delayRate),
+                createBoolParam<Models::DelaySettings>("delay_ping_pong", &Models::DelaySettings::delayPingPong),
+                createBoolParam<Models::DelaySettings>("delay_bpm_sync", &Models::DelaySettings::delayBpmSync)
         };
     }
 
 // Create a set of reverb parameters
-    inline std::vector<ParameterDescriptor<Config::FxSettings>> createReverbParameters() {
+    inline std::vector<ParameterDescriptor<Models::ReverbSettings>> createReverbParameters() {
         return {
-                createPercentageParam<Config::FxSettings>("reverb_mix", &Config::FxSettings::reverbMix),
-                createPercentageParam<Config::FxSettings>("reverb_time", &Config::FxSettings::reverbTime),
-                createPercentageParam<Config::FxSettings>("reverb_width", &Config::FxSettings::reverbWidth)
+                createPercentageParam<Models::ReverbSettings>("reverb_mix", &Models::ReverbSettings::reverbMix),
+                createPercentageParam<Models::ReverbSettings>("reverb_time", &Models::ReverbSettings::reverbTime),
+                createPercentageParam<Models::ReverbSettings>("reverb_width", &Models::ReverbSettings::reverbWidth)
         };
     }
 
     // Create melody parameters
-    inline std::vector<ParameterDescriptor<Config::MelodySettings>> createMelodyParameters() {
+    inline std::vector<ParameterDescriptor<Models::MelodySettings>> createMelodyParameters() {
         return {
-                createIntParam<Config::MelodySettings>("semitones", &Config::MelodySettings::semitoneValue),
-                createIntParam<Config::MelodySettings>("octaves", &Config::MelodySettings::octaveValue),
-                createPercentageParam<Config::MelodySettings>("semitones_prob",
-                                                              &Config::MelodySettings::semitoneProbability),
-                createPercentageParam<Config::MelodySettings>("octaves_prob",
-                                                              &Config::MelodySettings::octaveProbability),
-                createEnumParam<Config::MelodySettings, Config::DirectionType>("semitones_direction",
-                                                                               &Config::MelodySettings::semitoneDirection),
-                createEnumParam<Config::MelodySettings, Config::ScaleType>("scaleType",
-                                                                           &Config::MelodySettings::scaleType)
+                createIntParam<Models::MelodySettings>("semitones", &Models::MelodySettings::semitoneValue),
+                createIntParam<Models::MelodySettings>("octaves", &Models::MelodySettings::octaveValue),
+                createPercentageParam<Models::MelodySettings>("semitones_prob",
+                                                              &Models::MelodySettings::semitoneProbability),
+                createPercentageParam<Models::MelodySettings>("octaves_prob",
+                                                              &Models::MelodySettings::octaveProbability),
+                createEnumParam<Models::MelodySettings, Models::DirectionType>("semitones_direction",
+                                                                               &Models::MelodySettings::semitoneDirection),
+                createEnumParam<Models::MelodySettings, Models::ScaleType>("scaleType",
+                                                                           &Models::MelodySettings::scaleType)
         };
     }
 
-    inline std::vector<ParameterDescriptor<Config::MidiSettings>> createMidiParameters() {
+    inline std::vector<ParameterDescriptor<Models::MidiSettings>> createMidiParameters() {
         return {
-                createPercentageParam<Config::MidiSettings>("gate", &Config::MidiSettings::gateValue),
-                createPercentageParam<Config::MidiSettings>("gate_randomize", &Config::MidiSettings::gateRandomize),
-                createEnumParam<Config::MidiSettings, Config::DirectionType>("gate_direction",
-                                                                             &Config::MidiSettings::gateDirection),
-                createPercentageParam<Config::MidiSettings>("velocity", &Config::MidiSettings::velocityValue),
-                createPercentageParam<Config::MidiSettings>("velocity_randomize",
-                                                            &Config::MidiSettings::velocityRandomize),
-                createEnumParam<Config::MidiSettings, Config::DirectionType>("velocity_direction",
-                                                                             &Config::MidiSettings::velocityDirection),
-                createPercentageParam<Config::MidiSettings>("probability", &Config::MidiSettings::probability),
-                createEnumParam<Config::MidiSettings, Config::RhythmMode>("rhythm_mode",
-                                                                          &Config::MidiSettings::rhythmMode),
-                createPercentageParam<Config::MidiSettings>("1/1", &Config::MidiSettings::barProbability),
-                createPercentageParam<Config::MidiSettings>("1/2",
-                                                            &Config::MidiSettings::halfBarProbability),
-                createPercentageParam<Config::MidiSettings>("1/4",
-                                                            &Config::MidiSettings::quarterBarProbability),
-                createPercentageParam<Config::MidiSettings>("1/8",
-                                                            &Config::MidiSettings::eighthBarProbability),
-                createPercentageParam<Config::MidiSettings>("1/16",
-                                                            &Config::MidiSettings::sixteenthBarProbability),
-                createPercentageParam<Config::MidiSettings>("1/32",
-                                                            &Config::MidiSettings::thirtySecondBarProbability)
+                createPercentageParam<Models::MidiSettings>("gate", &Models::MidiSettings::gateValue),
+                createPercentageParam<Models::MidiSettings>("gate_randomize", &Models::MidiSettings::gateRandomize),
+                createEnumParam<Models::MidiSettings, Models::DirectionType>("gate_direction",
+                                                                             &Models::MidiSettings::gateDirection),
+                createPercentageParam<Models::MidiSettings>("velocity", &Models::MidiSettings::velocityValue),
+                createPercentageParam<Models::MidiSettings>("velocity_randomize",
+                                                            &Models::MidiSettings::velocityRandomize),
+                createEnumParam<Models::MidiSettings, Models::DirectionType>("velocity_direction",
+                                                                             &Models::MidiSettings::velocityDirection),
+                createPercentageParam<Models::MidiSettings>("probability", &Models::MidiSettings::probability),
+                createEnumParam<Models::MidiSettings, Models::RhythmMode>("rhythm_mode",
+                                                                          &Models::MidiSettings::rhythmMode),
+                createPercentageParam<Models::MidiSettings>("1/1", &Models::MidiSettings::barProbability),
+                createPercentageParam<Models::MidiSettings>("1/2",
+                                                            &Models::MidiSettings::halfBarProbability),
+                createPercentageParam<Models::MidiSettings>("1/4",
+                                                            &Models::MidiSettings::quarterBarProbability),
+                createPercentageParam<Models::MidiSettings>("1/8",
+                                                            &Models::MidiSettings::eighthBarProbability),
+                createPercentageParam<Models::MidiSettings>("1/16",
+                                                            &Models::MidiSettings::sixteenthBarProbability),
+                createPercentageParam<Models::MidiSettings>("1/32",
+                                                            &Models::MidiSettings::thirtySecondBarProbability)
         };
     }
 

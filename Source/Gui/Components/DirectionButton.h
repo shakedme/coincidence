@@ -40,19 +40,19 @@ public:
         // Draw the appropriate direction arrows
         switch (type)
         {
-            case Config::DirectionType::LEFT:
+            case Models::DirectionType::LEFT:
                 drawLeftArrow(g, bounds, arrowColor);
                 break;
 
-            case Config::DirectionType::BIDIRECTIONAL:
+            case Models::DirectionType::BIDIRECTIONAL:
                 drawBidirectionalArrows(g, bounds, arrowColor);
                 break;
 
-            case Config::DirectionType::RIGHT:
+            case Models::DirectionType::RIGHT:
                 drawRightArrow(g, bounds, arrowColor);
                 break;
 
-            case Config::DirectionType::RANDOM:
+            case Models::DirectionType::RANDOM:
                 drawQuestionMark(g, bounds, arrowColor);
                 break;
         }
@@ -71,13 +71,13 @@ public:
 
     void mouseExit(const juce::MouseEvent&) override { repaint(); }
 
-    void setType(Config::DirectionType newType)
+    void setType(Models::DirectionType newType)
     {
         type = newType;
         repaint();
     }
 
-    Config::DirectionType getType() const { return type; }
+    Models::DirectionType getType() const { return type; }
 
     void setSelected(bool shouldBeSelected)
     {
@@ -93,7 +93,7 @@ public:
         repaint();
     }
 
-    std::function<void(Config::DirectionType)> onSelectionChanged;
+    std::function<void(Models::DirectionType)> onSelectionChanged;
 
 private:
     void drawLeftArrow(juce::Graphics& g,
@@ -184,7 +184,7 @@ private:
         g.strokePath(rightArrow, juce::PathStrokeType(2.0f));
     }
 
-    Config::DirectionType type = Config::DirectionType::BIDIRECTIONAL;
+    Models::DirectionType type = Models::DirectionType::BIDIRECTIONAL;
     bool isSelected = false;
     juce::Colour highlightColor = juce::Colours::lime;
 };

@@ -68,14 +68,8 @@ public:
     // MIDI note state tracking
     bool isNoteActive() const { return noteGenerator->isNoteActive(); }
 
-
-    // Get current settings
-    const Config::MidiSettings &getSettings() const { return settings; }
-
-    SampleManager &getSampleManager() const;
-
     // Get sample direction type for sample selection
-    Config::DirectionType getSampleDirectionType() const;
+    Models::DirectionType getSampleDirectionType() const;
 
     // Access to the note generator
     NoteGenerator &getNoteGenerator() const { return *noteGenerator; }
@@ -83,41 +77,32 @@ public:
     // Access to the timing manager
     TimingManager &getTimingManager() const { return *timingManager; }
 
+    SampleManager &getSampleManager() const { return *sampleManager; }
+
+    juce::AudioProcessorValueTreeState &getAPVTS() { return apvts; }
+
     // Current state values for UI visualization
     float getCurrentRandomizedGate() const { return noteGenerator->getCurrentRandomizedGate(); }
 
     float getCurrentRandomizedVelocity() const { return noteGenerator->getCurrentRandomizedVelocity(); }
 
-    void updateFxSettingsFromParameters();
-
-    const Config::FxSettings &getGlitchSettings() const { return fxSettings; }
-
     // Connect the envelope component to receive waveform data
     void connectEnvelopeComponent(EnvelopeComponent *component);
 
-    // Envelope component management
-    void setEnvelopeComponent(EnvelopeComponent *component);
-
     EnvelopeComponent *getEnvelopeComponent() const { return envelopeComponent; }
 
+    // Force all parameter listeners to update with current values
+    void forceParameterUpdates();
 
-    // Parameters
-    juce::AudioProcessorValueTreeState parameters;
 private:
-    // Update settings from parameters
-    void updateMidiSettingsFromParameters();
-
-    // Plugin state
-    Config::MidiSettings settings;
-    Config::FxSettings fxSettings;
-
-    AppState::StateManager stateManager;
+    // State
+    juce::AudioProcessorValueTreeState apvts;
 
     // Specialized components for handling different aspects of the plugin
     std::unique_ptr<NoteGenerator> noteGenerator;
     std::unique_ptr<SampleManager> sampleManager;
     std::unique_ptr<FxEngine> fxEngine;
-    std::shared_ptr<TimingManager> timingManager;
+    std::unique_ptr<TimingManager> timingManager;
 
     // Envelope parameter mapper for amplitude control
     EnvelopeParameterMapper amplitudeEnvelope;

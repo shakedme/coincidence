@@ -6,7 +6,7 @@
 #include "ScaleManager.h"
 
 class PluginProcessor;
-
+class ScaleManager;
 class PluginEditor;
 
 /**
@@ -15,7 +15,7 @@ class PluginEditor;
 class NoteGenerator {
 public:
     struct EligibleRate {
-        Config::RateOption rate;
+        Models::RateOption rate;
         float weight;
     };
 
@@ -27,7 +27,7 @@ public:
         int sampleIndex = -1; // For sample playback
     };
 
-    NoteGenerator(PluginProcessor &p, std::shared_ptr<TimingManager> t);
+    NoteGenerator(PluginProcessor &p);
 
     ~NoteGenerator() = default;
 
@@ -60,12 +60,12 @@ private:
     // Reference to the main processor
     PluginProcessor &processor;
 
-    std::unique_ptr<AppState::ParameterBinding<Config::MidiSettings>> paramBinding;
-    Config::MidiSettings settings;
+    std::unique_ptr<AppState::ParameterBinding<Models::MidiSettings>> paramBinding;
+    Models::MidiSettings settings;
 
     // Managers for specific functionality
-    ScaleManager scaleManager;
-    std::shared_ptr<TimingManager> timingManager;
+    std::unique_ptr<ScaleManager> scaleManager;
+    TimingManager &timingManager;
 
     // MIDI generation state
     // Monophonic note tracking
@@ -110,22 +110,22 @@ private:
     std::vector<EligibleRate> collectEligibleRates(float &totalWeight);
 
     // Select a rate from eligible rates based on weighted probability
-    Config::RateOption selectRateFromEligible(const std::vector<EligibleRate> &eligibleRates, float totalWeight);
+    Models::RateOption selectRateFromEligible(const std::vector<EligibleRate> &eligibleRates, float totalWeight);
 
     // Play a new note at the specified rate
-    void playNewNote(Config::RateOption selectedRate, juce::MidiBuffer &midiMessages);
+    void playNewNote(Models::RateOption selectedRate, juce::MidiBuffer &midiMessages);
 
     // Process pending notes (scheduled for future buffers)
     void processPendingNotes(juce::MidiBuffer &midiMessages, int numSamples);
 
     // Calculate the note length in samples
-    int calculateNoteLength(Config::RateOption rate);
+    int calculateNoteLength(Models::RateOption rate);
 
     // Calculate velocity based on settings
     int calculateVelocity();
 
     // Apply randomization to a value
-    float applyRandomization(float value, float randomizeValue, Config::DirectionType direction) const;
+    float applyRandomization(float value, float randomizeValue, Models::DirectionType direction) const;
 
     // Stop an active note
     void stopActiveNote(juce::MidiBuffer &midiMessages, int currentSamplePosition);

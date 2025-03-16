@@ -38,16 +38,16 @@ public:
     void updateSamplePosition(int numSamples);
 
     // Check if a note should be triggered at the current position for a given rate
-    bool shouldTriggerNote(Config::RateOption rate);
+    bool shouldTriggerNote(Models::RateOption rate);
 
     // Calculate the duration in samples for a given rate
-    double getNoteDurationInSamples(Config::RateOption rate);
+    double getNoteDurationInSamples(Models::RateOption rate);
 
-    double getNextExpectedGridPoint(Config::RateOption selectedRate,
+    double getNextExpectedGridPoint(Models::RateOption selectedRate,
                                     int rateIndex);
 
     // Update the last trigger time for a rate
-    void updateLastTriggerTime(Config::RateOption rate, double triggerTime);
+    void updateLastTriggerTime(Models::RateOption rate, double triggerTime);
 
     // Check if a loop was just detected
     bool wasLoopDetected() const { return loopJustDetected; }
@@ -55,7 +55,7 @@ public:
     // Clear loop detection state
     void clearLoopDetection() { loopJustDetected = false; }
 
-    double getDurationInQuarters(Config::RateOption rate);
+    double getDurationInQuarters(Models::RateOption rate);
 
 private:
     // Timing state
@@ -64,7 +64,7 @@ private:
     double bpm = 120.0;
     double ppqPosition = 0.0;
     double lastPpqPosition = 0.0;
-    double lastTriggerTimes[Config::NUM_RATE_OPTIONS] = {0.0};
+    double lastTriggerTimes[Models::NUM_RATE_OPTIONS] = {0.0};
     bool loopJustDetected = false;
     double lastContinuousPpqPosition = 0.0;  // For detecting transport loops
 };

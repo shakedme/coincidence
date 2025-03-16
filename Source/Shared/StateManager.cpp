@@ -6,56 +6,48 @@
 
 namespace AppState {
 
-    StateManager &StateManager::getInstance() {
-        static StateManager instance;
-        return instance;
-    }
 
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout() {
         juce::AudioProcessorValueTreeState::ParameterLayout layout;
 
         // Rate parameters
-        const char *rateNames[Config::NUM_RATE_OPTIONS] = {"1/1", "1/2", "1/4", "1/8", "1/16", "1/32"};
-
-        for (int i = 0; i < Config::NUM_RATE_OPTIONS; ++i) {
-            // Rate value parameter (0-100%)
-            auto rateName = rateNames[i];
+        for (auto &rateName: Models::rateBaseNames) {
             layout.add(std::make_unique<juce::AudioParameterInt>(
                     rateName,
-                    "Rate " + juce::String(rateNames[i]) + " Value",
+                    "Rate " + juce::String(rateName) + " Value",
                     0.0f,
                     100.0f,
-                    0.0f)); // Default: 0%
+                    0.0f));
         }
 
         // Density parameter (overall probability)
         layout.add(std::make_unique<juce::AudioParameterInt>(
-                "probability", "Probability", 0.0f, 100.0f, 50.0f));
+                ID_PROBABILITY, "Probability", 0.0f, 100.0f, 100.0f));
 
         // Gate parameters
         layout.add(
                 std::make_unique<juce::AudioParameterInt>(
-                        "gate", "Gate", 0.0f, 100.0f, 50.0f));
+                        ID_GATE, "Gate", 0.0f, 100.0f, 100.0f));
 
         layout.add(std::make_unique<juce::AudioParameterInt>(
-                "gate_randomize", "Gate Randomize", 0.0f, 100.0f, 0.0f));
+                ID_GATE_RANDOMIZE, "Gate Randomize", 0.0f, 100.0f, 0.0f));
 
         // Velocity parameters
         layout.add(std::make_unique<juce::AudioParameterInt>(
-                "velocity", "Velocity", 0.0f, 100.0f, 100.0f));
+                ID_VELOCITY, "Velocity", 0.0f, 100.0f, 100.0f));
 
         layout.add(std::make_unique<juce::AudioParameterInt>(
-                "velocity_randomize", "Velocity Randomize", 0.0f, 100.0f, 0.0f));
+                ID_VELOCITY_RANDOMIZE, "Velocity Randomize", 0.0f, 100.0f, 0.0f));
 
         layout.add(std::make_unique<juce::AudioParameterChoice>(
-                "rhythm_mode",
+                ID_RHYTHM_MODE,
                 "Rhythm Mode",
                 juce::StringArray("Normal", "Dotted", "Triplet"),
-                Config::RHYTHM_NORMAL));
+                Models::RHYTHM_NORMAL));
 
         // Scale parameters
         layout.add(std::make_unique<juce::AudioParameterChoice>(
-                "scale_type",
+                ID_SCALE_TYPE,
                 "Scale Type",
                 juce::StringArray("Major", "Minor", "Pentatonic"),
                 0));
@@ -63,80 +55,80 @@ namespace AppState {
         // Semitone parameters
         layout.add(
                 std::make_unique<juce::AudioParameterInt>(
-                        "semitones", "Semitones", 0, 12, 0));
+                        ID_SEMITONES, "Semitones", 0, 12, 0));
 
         layout.add(std::make_unique<juce::AudioParameterInt>(
-                "semitones_prob", "Semitones Probability", 0.0f, 100.0f, 0.0f));
+                ID_SEMITONES_PROB, "Semitones Probability", 0.0f, 100.0f, 0.0f));
 
         // Octave parameters
         layout.add(std::make_unique<juce::AudioParameterInt>(
-                "octaves", "Octaves", 0, 3, 0));
+                ID_OCTAVES, "Octaves", 0, 3, 0));
 
         layout.add(std::make_unique<juce::AudioParameterInt>(
-                "octaves_prob", "Octaves Probability", 0.0f, 100.0f, 0.0f));
+                ID_OCTAVES_PROB, "Octaves Probability", 0.0f, 100.0f, 0.0f));
 
         // Sample direction parameter
         layout.add(std::make_unique<juce::AudioParameterChoice>(
-                "sample_direction",
+                ID_SAMPLE_DIRECTION,
                 "Sample Direction",
                 juce::StringArray("Left", "Bidirectional", "Right", "Random"),
-                Config::BIDIRECTIONAL)); // Default to bidirectional
+                Models::BIDIRECTIONAL)); // Default to bidirectional
 
         layout.add(std::make_unique<juce::AudioParameterChoice>(
-                "gate_direction",
+                ID_GATE_DIRECTION,
                 "Gate Direction",
                 juce::StringArray("Left", "Bidirectional", "Right", "Random"),
-                Config::BIDIRECTIONAL)); // Default to bidirectional
+                Models::BIDIRECTIONAL)); // Default to bidirectional
 
         layout.add(std::make_unique<juce::AudioParameterChoice>(
-                "velocity_direction",
+                ID_VELOCITY_DIRECTION,
                 "Velocity Direction",
                 juce::StringArray("Left", "Bidirectional", "Right", "Random"),
-                Config::BIDIRECTIONAL)); // Default to bidirectional
+                Models::BIDIRECTIONAL)); // Default to bidirectional
 
         layout.add(std::make_unique<juce::AudioParameterChoice>(
-                "semitones_direction",
+                ID_SEMITONES_DIRECTION,
                 "Semitones Direction",
                 juce::StringArray("Left", "Bidirectional", "Right", "Random"),
-                Config::BIDIRECTIONAL)); // Default to bidirectional
+                Models::BIDIRECTIONAL)); // Default to bidirectional
 
         layout.add(std::make_unique<juce::AudioParameterFloat>(
-                "glitch_stutter", "Stutter Amount", 0.0f, 100.0f, 0.0f));
+                ID_STUTTER_PROBABILITY, "Stutter Amount", 0.0f, 100.0f, 0.0f));
 
         layout.add(std::make_unique<juce::AudioParameterBool>(
-                "sample_pitch_follow", "Sample Pitch Follow", false)); // Default: original pitch
+                ID_SAMPLE_PITCH_FOLLOW, "Sample Pitch Follow", false)); // Default: original pitch
 
         // Reverb parameters
         layout.add(std::make_unique<juce::AudioParameterFloat>(
-                "reverb_mix", "Reverb Mix", 0.0f, 100.0f, 15.0f));
+                ID_REVERB_MIX, "Reverb Mix", 0.0f, 100.0f, 15.0f));
 
         layout.add(std::make_unique<juce::AudioParameterFloat>(
-                "reverb_probability", "Reverb Probability", 0.0f, 100.0f, 0.0f));
+                ID_REVERB_PROBABILITY, "Reverb Probability", 0.0f, 100.0f, 0.0f));
 
         layout.add(std::make_unique<juce::AudioParameterFloat>(
-                "reverb_time", "Reverb Time", 0.0f, 100.0f, 20.0f));
+                ID_REVERB_TIME, "Reverb Time", 0.0f, 100.0f, 20.0f));
 
         layout.add(std::make_unique<juce::AudioParameterFloat>(
-                "reverb_width", "Reverb Width", 0.0f, 100.0f, 50.0f));
+                ID_REVERB_WIDTH, "Reverb Width", 0.0f, 100.0f, 50.0f));
 
         // Delay parameters
         layout.add(std::make_unique<juce::AudioParameterFloat>(
-                "delay_mix", "Delay Mix", 0.0f, 100.0f, 50.0f));
+                ID_DELAY_MIX, "Delay Mix", 0.0f, 100.0f, 50.0f));
 
         layout.add(std::make_unique<juce::AudioParameterFloat>(
-                "delay_probability", "Delay Probability", 0.0f, 100.0f, 0.0f));
+                ID_DELAY_PROBABILITY, "Delay Probability", 0.0f, 100.0f, 0.0f));
 
         layout.add(std::make_unique<juce::AudioParameterFloat>(
-                "delay_rate", "Delay Rate", 0.0f, 100.0f, 50.0f));
+                ID_DELAY_RATE, "Delay Rate", 0.0f, 100.0f, 50.0f));
 
         layout.add(std::make_unique<juce::AudioParameterFloat>(
-                "delay_feedback", "Delay Feedback", 0.0f, 100.0f, 50.0f));
+                ID_DELAY_FEEDBACK, "Delay Feedback", 0.0f, 100.0f, 50.0f));
 
         layout.add(std::make_unique<juce::AudioParameterBool>(
-                "delay_ping_pong", "Delay Ping Pong", false));
+                ID_DELAY_PING_PONG, "Delay Ping Pong", false));
 
         layout.add(std::make_unique<juce::AudioParameterBool>(
-                "delay_bpm_sync", "Delay BPM Sync", true));
+                ID_DELAY_BPM_SYNC, "Delay BPM Sync", true));
 
         return layout;
     }

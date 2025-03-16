@@ -5,9 +5,11 @@
 #include "Stutter.h"
 #include "../Sampler/Sampler.h"
 
-Stutter::Stutter(std::shared_ptr<TimingManager> tm, SampleManager &sm)
-        : BaseEffect(tm, sm, 3.0) // 2.0 seconds between triggers
-{
+Stutter::Stutter(PluginProcessor &p)
+        : BaseEffect(p, 3.0) {
+    paramBinding = AppState::createParameterBinding<Models::StutterSettings>(settings, processor.getAPVTS());
+    paramBinding->registerParameters(AppState::createStutterParameters());
+
     // Initialize stutter state
     isStuttering = false;
     stutterPosition = 0;
@@ -19,9 +21,7 @@ Stutter::Stutter(std::shared_ptr<TimingManager> tm, SampleManager &sm)
 void Stutter::prepareToPlay(double sampleRate, int samplesPerBlock) {
     BaseEffect::prepareToPlay(sampleRate, samplesPerBlock);
 
-    // Initialize buffers with a much larger size (similar to the working GlitchEngine implementation)
-    // Use 8 seconds of audio for stutter buffer instead of just samplesPerBlock
-    int maxStutterSamples = static_cast<int>(sampleRate * 8.0); // 8 seconds of audio
+    int maxStutterSamples = static_cast<int>(sampleRate * 5.0); // 5 seconds of audio
     stutterBuffer.setSize(2, maxStutterSamples);
     stutterBuffer.clear();
 
@@ -209,7 +209,7 @@ void Stutter::endStutterEffect() {
 
     // Mark that we've completed all repeats to trigger final crossfade
     stutterRepeatCount = stutterRepeatsTotal;
-    lastTriggerSample = timingManager->getSamplePosition();
+    lastTriggerSample = timingManager.getSamplePosition();
 }
 
 void Stutter::resetStutterState() {
@@ -226,11 +226,11 @@ void Stutter::startStutterAtPosition(juce::AudioBuffer<float> &buffer,
                                      int numSamples,
                                      int numChannels) {
     // Choose a rate (1/8, 1/16 note, etc.)
-    Config::RateOption selectedRate = selectRandomRate();
+    Models::RateOption selectedRate = selectRandomRate();
 
     // Calculate stutter length based on musical timing
     int captureLength =
-            static_cast<int>(timingManager->getNoteDurationInSamples(selectedRate));
+            static_cast<int>(timingManager.getNoteDurationInSamples(selectedRate));
 
     // Limit to a reasonable value (and log any adjustment)
     int originalLength = captureLength;
@@ -361,7 +361,7 @@ void Stutter::captureFromHistory(juce::int64 triggerSamplePosition, int lengthTo
 
 void Stutter::handleTransportLoopDetection() {
     // Check if we've detected a loop in the transport (from TimingManager)
-    if (timingManager->wasLoopDetected()) {
+    if (timingManager.wasLoopDetected()) {
         // Reset stuttering state when transport loops
         isStuttering = false;
         stutterPosition = 0;
@@ -370,14 +370,14 @@ void Stutter::handleTransportLoopDetection() {
         stutterRepeatsTotal = 0;
 
         // Clear the loop detection flag
-        timingManager->clearLoopDetection();
+        timingManager.clearLoopDetection();
     }
 }
 
-Config::RateOption Stutter::selectRandomRate() {
-    Config::RateOption rates[] = {Config::RATE_1_8,
-                                  Config::RATE_1_16,
-                                  Config::RATE_1_32};
+Models::RateOption Stutter::selectRandomRate() {
+    Models::RateOption rates[] = {Models::RATE_1_8,
+                                  Models::RATE_1_16,
+                                  Models::RATE_1_32};
 
     float randomValue = random.nextFloat();
 
@@ -388,8 +388,4 @@ Config::RateOption Stutter::selectRandomRate() {
     } else {
         return rates[2]; // 1/32 note
     }
-}
-
-void Stutter::setSettings(Config::FxSettings s) {
-    BaseEffect::setSettings(s);
 }

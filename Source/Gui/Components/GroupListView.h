@@ -58,12 +58,12 @@ public:
             addAndMakeVisible(rateLabel.get());
 
             // Create rate icons 
-            setupRateIcon(rateIcons1_1[i], "1/1", Config::RATE_1_1, i);
-            setupRateIcon(rateIcons1_2[i], "1/2", Config::RATE_1_2, i);
-            setupRateIcon(rateIcons1_4[i], "1/4", Config::RATE_1_4, i);
-            setupRateIcon(rateIcons1_8[i], "1/8", Config::RATE_1_8, i);
-            setupRateIcon(rateIcons1_16[i], "1/16", Config::RATE_1_16, i);
-            setupRateIcon(rateIcons1_32[i], "1/32", Config::RATE_1_32, i);
+            setupRateIcon(rateIcons1_1[i], "1/1", Models::RATE_1_1, i);
+            setupRateIcon(rateIcons1_2[i], "1/2", Models::RATE_1_2, i);
+            setupRateIcon(rateIcons1_4[i], "1/4", Models::RATE_1_4, i);
+            setupRateIcon(rateIcons1_8[i], "1/8", Models::RATE_1_8, i);
+            setupRateIcon(rateIcons1_16[i], "1/16", Models::RATE_1_16, i);
+            setupRateIcon(rateIcons1_32[i], "1/32", Models::RATE_1_32, i);
 
             // Create effect icons with shorter names like in the screenshot
             setupEffectIcon(reverbIcons[i], "R", i, EffectType::Reverb);
@@ -304,12 +304,12 @@ public:
                         probabilitySliders[i]->setValue(group->probability * 100.0, juce::dontSendNotification);
 
                         // Update rate icon states
-                        updateRateIconState(rateIcons1_1[i].get(), i, Config::RATE_1_1);
-                        updateRateIconState(rateIcons1_2[i].get(), i, Config::RATE_1_2);
-                        updateRateIconState(rateIcons1_4[i].get(), i, Config::RATE_1_4);
-                        updateRateIconState(rateIcons1_8[i].get(), i, Config::RATE_1_8);
-                        updateRateIconState(rateIcons1_16[i].get(), i, Config::RATE_1_16);
-                        updateRateIconState(rateIcons1_32[i].get(), i, Config::RATE_1_32);
+                        updateRateIconState(rateIcons1_1[i].get(), i, Models::RATE_1_1);
+                        updateRateIconState(rateIcons1_2[i].get(), i, Models::RATE_1_2);
+                        updateRateIconState(rateIcons1_4[i].get(), i, Models::RATE_1_4);
+                        updateRateIconState(rateIcons1_8[i].get(), i, Models::RATE_1_8);
+                        updateRateIconState(rateIcons1_16[i].get(), i, Models::RATE_1_16);
+                        updateRateIconState(rateIcons1_32[i].get(), i, Models::RATE_1_32);
 
                         // Update effect icon states
                         updateEffectIconState(reverbIcons[i].get(), i, EffectType::Reverb);
@@ -413,7 +413,7 @@ private:
     }
 
     void
-    setupRateIcon(std::unique_ptr<TextIcon> &icon, const juce::String &text, Config::RateOption rate, int groupIndex) {
+    setupRateIcon(std::unique_ptr<TextIcon> &icon, const juce::String &text, Models::RateOption rate, int groupIndex) {
         // Increase width from 27.0f to 35.0f to ensure text fits
         icon = std::make_unique<TextIcon>(text, rateIconWidth, rateIconHeight);
 
@@ -466,21 +466,21 @@ private:
         addAndMakeVisible(icon.get());
     }
 
-    TextIcon *getGroupRateIcon(int groupIndex, Config::RateOption rate) {
+    TextIcon *getGroupRateIcon(int groupIndex, Models::RateOption rate) {
         if (groupIndex < 0 || groupIndex >= MAX_GROUPS) return nullptr;
 
         switch (rate) {
-            case Config::RATE_1_1:
+            case Models::RATE_1_1:
                 return rateIcons1_1[groupIndex].get();
-            case Config::RATE_1_2:
+            case Models::RATE_1_2:
                 return rateIcons1_2[groupIndex].get();
-            case Config::RATE_1_4:
+            case Models::RATE_1_4:
                 return rateIcons1_4[groupIndex].get();
-            case Config::RATE_1_8:
+            case Models::RATE_1_8:
                 return rateIcons1_8[groupIndex].get();
-            case Config::RATE_1_16:
+            case Models::RATE_1_16:
                 return rateIcons1_16[groupIndex].get();
-            case Config::RATE_1_32:
+            case Models::RATE_1_32:
                 return rateIcons1_32[groupIndex].get();
             default:
                 return nullptr;
@@ -502,7 +502,7 @@ private:
         }
     }
 
-    void updateRateIconState(TextIcon *icon, int groupIndex, Config::RateOption rate) {
+    void updateRateIconState(TextIcon *icon, int groupIndex, Models::RateOption rate) {
         if (icon == nullptr) return;
 
         bool isEnabled = processor.getSampleManager().isGroupRateEnabled(groupIndex, rate);

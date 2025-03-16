@@ -2,23 +2,21 @@
 #include "../Gui/PluginEditor.h"
 #include "Effects/FxEngine.h"
 
-using namespace Config;
+using namespace Models;
 
 //==============================================================================
 PluginProcessor::PluginProcessor()
         : AudioProcessor(BusesProperties()
                                  .withInput("Input", juce::AudioChannelSet::stereo(), true)
                                  .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
-          parameters(*this, nullptr, "PARAMETERS", AppState::createParameterLayout()),
-          timingManager(std::make_shared<TimingManager>()),
+          apvts(*this, nullptr, "PARAMETERS", AppState::createParameterLayout()),
           amplitudeEnvelope(EnvelopeParams::ParameterType::Amplitude) {
 
-    AppState::StateManager::getInstance().setAudioParametersTree(&parameters);
-
     // Create specialized components
+    timingManager = std::make_unique<TimingManager>();
     sampleManager = std::make_unique<::SampleManager>(*this);
-    noteGenerator = std::make_unique<NoteGenerator>(*this, timingManager);
-    fxEngine = std::make_unique<FxEngine>(timingManager, *this);
+    noteGenerator = std::make_unique<NoteGenerator>(*this);
+    fxEngine = std::make_unique<FxEngine>(*this);
 
 //    auto *fileLogger = new FileLogger();
 //    juce::Logger::setCurrentLogger(fileLogger);
@@ -116,7 +114,7 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     // If samples are loaded, uses generated midi to trigger samples
     if (sampleManager->isSampleLoaded()) {
         sampleManager->processAudio(buffer, processedMidi, midiMessages);
-        fxEngine->processAudio(buffer, playHead, processedMidi);
+        fxEngine->processAudio(buffer, processedMidi);
 
         // Apply amplitude envelope to the final buffer
         const int numChannels = buffer.getNumChannels();
@@ -165,7 +163,7 @@ void PluginProcessor::getStateInformation(juce::MemoryBlock &destData) {
     auto mainXml = std::make_unique<juce::XmlElement>("COINCIDENCE_STATE");
 
     // Add parameter state as a child
-    auto paramsXml = parameters.copyState().createXml();
+    auto paramsXml = apvts.copyState().createXml();
     mainXml->addChildElement(paramsXml.release());
 
     // Add direction information explicitly
@@ -199,10 +197,10 @@ void PluginProcessor::getStateInformation(juce::MemoryBlock &destData) {
         sampleXml->setAttribute("probability", sampleManager.getSampleProbability(i));
 
         // Save rate toggle values
-        sampleXml->setAttribute("rate_1_2_enabled", sampleManager.isSampleRateEnabled(i, Config::RATE_1_2));
-        sampleXml->setAttribute("rate_1_4_enabled", sampleManager.isSampleRateEnabled(i, Config::RATE_1_4));
-        sampleXml->setAttribute("rate_1_8_enabled", sampleManager.isSampleRateEnabled(i, Config::RATE_1_8));
-        sampleXml->setAttribute("rate_1_16_enabled", sampleManager.isSampleRateEnabled(i, Config::RATE_1_16));
+        sampleXml->setAttribute("rate_1_2_enabled", sampleManager.isSampleRateEnabled(i, Models::RATE_1_2));
+        sampleXml->setAttribute("rate_1_4_enabled", sampleManager.isSampleRateEnabled(i, Models::RATE_1_4));
+        sampleXml->setAttribute("rate_1_8_enabled", sampleManager.isSampleRateEnabled(i, Models::RATE_1_8));
+        sampleXml->setAttribute("rate_1_16_enabled", sampleManager.isSampleRateEnabled(i, Models::RATE_1_16));
 
         samplesXml->addChildElement(sampleXml);
     }
@@ -237,6 +235,17 @@ void PluginProcessor::getStateInformation(juce::MemoryBlock &destData) {
     copyXmlToBinary(*mainXml, destData);
 }
 
+// Force an update of all parameters by triggering the callbacks for each parameter
+void PluginProcessor::forceParameterUpdates() {
+    // Iterate through all parameters
+    for (auto *param: getParameters()) {
+        if (auto *juceParam = dynamic_cast<juce::AudioProcessorParameter *>(param)) {
+            float value = juceParam->getValue();
+            juceParam->sendValueChangedMessageToListeners(value);
+        }
+    }
+}
+
 void PluginProcessor::setStateInformation(const void *data, int sizeInBytes) {
     std::unique_ptr<juce::XmlElement> xmlState(getXmlFromBinary(data, sizeInBytes));
 
@@ -248,20 +257,20 @@ void PluginProcessor::setStateInformation(const void *data, int sizeInBytes) {
         if (xmlState->hasTagName("COINCIDENCE_STATE")) {
             // New format - find the parameters element (first child)
             paramsXml = xmlState->getFirstChildElement();
-        } else if (xmlState->hasTagName(parameters.state.getType())) {
+        } else if (xmlState->hasTagName(apvts.state.getType())) {
             // Old format - the root element is the parameters
             paramsXml = xmlState.get();
         }
 
         // Restore parameters if found
-        if (paramsXml != nullptr && paramsXml->hasTagName(parameters.state.getType())) {
-            parameters.replaceState(juce::ValueTree::fromXml(*paramsXml));
+        if (paramsXml != nullptr && paramsXml->hasTagName(apvts.state.getType())) {
+            apvts.replaceState(juce::ValueTree::fromXml(*paramsXml));
         }
 
         // Check for explicit direction information (in case it wasn't saved in the parameters)
         if (juce::XmlElement *directionXml = xmlState->getChildByName("Direction")) {
-            int directionType = directionXml->getIntAttribute("type", static_cast<int>(Config::BIDIRECTIONAL));
-            auto *param = parameters.getParameter("sample_direction");
+            int directionType = directionXml->getIntAttribute("type", static_cast<int>(Models::BIDIRECTIONAL));
+            auto *param = apvts.getParameter("sample_direction");
             if (param) {
                 param->setValueNotifyingHost(param->convertTo0to1(directionType));
             }
@@ -311,22 +320,22 @@ void PluginProcessor::setStateInformation(const void *data, int sizeInBytes) {
                                 // Restore rate toggle values if they exist
                                 if (sampleXml->hasAttribute("rate_1_2_enabled")) {
                                     bool enabled = sampleXml->getBoolAttribute("rate_1_2_enabled", true);
-                                    sampleManager.setSampleRateEnabled(newSampleIndex, Config::RATE_1_2, enabled);
+                                    sampleManager.setSampleRateEnabled(newSampleIndex, Models::RATE_1_2, enabled);
                                 }
 
                                 if (sampleXml->hasAttribute("rate_1_4_enabled")) {
                                     bool enabled = sampleXml->getBoolAttribute("rate_1_4_enabled", true);
-                                    sampleManager.setSampleRateEnabled(newSampleIndex, Config::RATE_1_4, enabled);
+                                    sampleManager.setSampleRateEnabled(newSampleIndex, Models::RATE_1_4, enabled);
                                 }
 
                                 if (sampleXml->hasAttribute("rate_1_8_enabled")) {
                                     bool enabled = sampleXml->getBoolAttribute("rate_1_8_enabled", true);
-                                    sampleManager.setSampleRateEnabled(newSampleIndex, Config::RATE_1_8, enabled);
+                                    sampleManager.setSampleRateEnabled(newSampleIndex, Models::RATE_1_8, enabled);
                                 }
 
                                 if (sampleXml->hasAttribute("rate_1_16_enabled")) {
                                     bool enabled = sampleXml->getBoolAttribute("rate_1_16_enabled", true);
-                                    sampleManager.setSampleRateEnabled(newSampleIndex, Config::RATE_1_16, enabled);
+                                    sampleManager.setSampleRateEnabled(newSampleIndex, Models::RATE_1_16, enabled);
                                 }
 
                                 // Store group index for later assignment (after all groups are loaded)
@@ -385,24 +394,23 @@ void PluginProcessor::setStateInformation(const void *data, int sizeInBytes) {
             }
         }
 
+        // After all state is loaded, force parameter updates to ensure all components
+        // receive the correct initial values
+        forceParameterUpdates();
     }
-}
-
-SampleManager &PluginProcessor::getSampleManager() const {
-    return *sampleManager;
 }
 
 juce::AudioProcessor *JUCE_CALLTYPE createPluginFilter() {
     return new PluginProcessor();
 }
 
-Config::DirectionType PluginProcessor::getSampleDirectionType() const {
-    auto *param = parameters.getParameter("sample_direction");
+Models::DirectionType PluginProcessor::getSampleDirectionType() const {
+    auto *param = apvts.getParameter("sample_direction");
     if (param) {
         auto index = static_cast<juce::AudioParameterChoice *>(param)->getIndex();
-        return static_cast<Config::DirectionType>(index);
+        return static_cast<Models::DirectionType>(index);
     }
-    return Config::RIGHT; // Default to random
+    return Models::RIGHT; // Default to random
 }
 
 void PluginProcessor::connectEnvelopeComponent(EnvelopeComponent *component) {

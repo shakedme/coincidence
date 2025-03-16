@@ -1,11 +1,11 @@
 #include "TimingManager.h"
 
 using namespace AppState;
-using namespace Config;
+using namespace Models;
 
 TimingManager::TimingManager() {
     // Initialize member variables to default values
-    for (int i = 0; i < Config::NUM_RATE_OPTIONS; i++) {
+    for (int i = 0; i < Models::NUM_RATE_OPTIONS; i++) {
         lastTriggerTimes[i] = 0.0;
     }
 }
@@ -20,7 +20,7 @@ void TimingManager::prepareToPlay(double liveSampleRate) {
     lastContinuousPpqPosition = 0.0;
 
     // Reset trigger times
-    for (int i = 0; i < Config::NUM_RATE_OPTIONS; i++) {
+    for (int i = 0; i < Models::NUM_RATE_OPTIONS; i++) {
         lastTriggerTimes[i] = 0.0;
     }
 
@@ -50,7 +50,7 @@ void TimingManager::updateTimingInfo(juce::AudioPlayHead *playHead) {
                     loopJustDetected = true;
 
                     // Reset timing state for all rates
-                    for (int i = 0; i < Config::NUM_RATE_OPTIONS; i++) {
+                    for (int i = 0; i < Models::NUM_RATE_OPTIONS; i++) {
                         lastTriggerTimes[i] = 0.0;
                     }
                 } else {
@@ -65,11 +65,11 @@ void TimingManager::updateSamplePosition(int numSamples) {
     samplePosition += numSamples;
 }
 
-void TimingManager::updateLastTriggerTime(Config::RateOption rate, double triggerTime) {
+void TimingManager::updateLastTriggerTime(Models::RateOption rate, double triggerTime) {
     lastTriggerTimes[static_cast<int>(rate)] = triggerTime;
 }
 
-double TimingManager::getNextExpectedGridPoint(Config::RateOption selectedRate,
+double TimingManager::getNextExpectedGridPoint(Models::RateOption selectedRate,
 
                                                int rateIndex) {
     double durationInQuarters = getDurationInQuarters(selectedRate);
@@ -94,26 +94,26 @@ double TimingManager::getNextExpectedGridPoint(Config::RateOption selectedRate,
     return lastTriggerTime + ((gridsSinceLastTrigger + 1) * durationInQuarters);
 }
 
-double TimingManager::getDurationInQuarters(Config::RateOption rate
+double TimingManager::getDurationInQuarters(Models::RateOption rate
 ) {
     double durationInQuarters;
     switch (rate) {
-        case Config::RATE_1_1:
+        case Models::RATE_1_1:
             durationInQuarters = 4.0;
             break;
-        case Config::RATE_1_2:
+        case Models::RATE_1_2:
             durationInQuarters = 2.0;
             break;
-        case Config::RATE_1_4:
+        case Models::RATE_1_4:
             durationInQuarters = 1.0;
             break;
-        case Config::RATE_1_8:
+        case Models::RATE_1_8:
             durationInQuarters = 0.5;
             break;
-        case Config::RATE_1_16:
+        case Models::RATE_1_16:
             durationInQuarters = 0.25;
             break;
-        case Config::RATE_1_32:
+        case Models::RATE_1_32:
             durationInQuarters = 0.125;
             break;
         default:
@@ -124,7 +124,7 @@ double TimingManager::getDurationInQuarters(Config::RateOption rate
     return durationInQuarters;
 }
 
-bool TimingManager::shouldTriggerNote(Config::RateOption rate) {
+bool TimingManager::shouldTriggerNote(Models::RateOption rate) {
     // Calculate the duration in quarter notes
     double durationInQuarters = getDurationInQuarters(rate);
     int rateIndex = static_cast<int>(rate);
@@ -194,7 +194,7 @@ bool TimingManager::shouldTriggerNote(Config::RateOption rate) {
     return false;
 }
 
-double TimingManager::getNoteDurationInSamples(Config::RateOption rate) {
+double TimingManager::getNoteDurationInSamples(Models::RateOption rate) {
     // Calculate duration in quarter notes
     double quarterNotesPerSecond = bpm / 60.0;
     double secondsPerQuarterNote = 1.0 / quarterNotesPerSecond;

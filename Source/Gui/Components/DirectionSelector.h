@@ -17,31 +17,31 @@ public:
     {
         // Create the three direction buttons
         leftButton = std::make_unique<DirectionButton>();
-        leftButton->setType(Config::DirectionType::LEFT);
+        leftButton->setType(Models::DirectionType::LEFT);
         leftButton->setHighlightColor(highlightColour);
-        leftButton->onSelectionChanged = [this](Config::DirectionType type)
+        leftButton->onSelectionChanged = [this](Models::DirectionType type)
         { handleSelectionChanged(type); };
         addAndMakeVisible(leftButton.get());
 
         bidirectionalButton = std::make_unique<DirectionButton>();
-        bidirectionalButton->setType(Config::DirectionType::BIDIRECTIONAL);
+        bidirectionalButton->setType(Models::DirectionType::BIDIRECTIONAL);
         bidirectionalButton->setHighlightColor(highlightColour);
-        bidirectionalButton->onSelectionChanged = [this](Config::DirectionType type)
+        bidirectionalButton->onSelectionChanged = [this](Models::DirectionType type)
         { handleSelectionChanged(type); };
         bidirectionalButton->setSelected(true); // Default selection
         addAndMakeVisible(bidirectionalButton.get());
 
         rightButton = std::make_unique<DirectionButton>();
-        rightButton->setType(Config::DirectionType::RIGHT);
+        rightButton->setType(Models::DirectionType::RIGHT);
         rightButton->setHighlightColor(highlightColour);
-        rightButton->onSelectionChanged = [this](Config::DirectionType type)
+        rightButton->onSelectionChanged = [this](Models::DirectionType type)
         { handleSelectionChanged(type); };
         addAndMakeVisible(rightButton.get());
 
         randomButton = std::make_unique<DirectionButton>();
-        randomButton->setType(Config::DirectionType::RANDOM);
+        randomButton->setType(Models::DirectionType::RANDOM);
         randomButton->setHighlightColor(highlightColour);
-        randomButton->onSelectionChanged = [this](Config::DirectionType type)
+        randomButton->onSelectionChanged = [this](Models::DirectionType type)
         { handleSelectionChanged(type); };
         addAndMakeVisible(randomButton.get());
         // Set initial size
@@ -69,32 +69,32 @@ public:
                                 bounds.getHeight());
     }
 
-    void setDirection(Config::DirectionType direction)
+    void setDirection(Models::DirectionType direction)
     {
         currentDirection = direction;
 
-        leftButton->setSelected(direction == Config::DirectionType::LEFT);
+        leftButton->setSelected(direction == Models::DirectionType::LEFT);
         bidirectionalButton->setSelected(direction
-                                         == Config::DirectionType::BIDIRECTIONAL);
-        rightButton->setSelected(direction == Config::DirectionType::RIGHT);
-        randomButton->setSelected(direction == Config::DirectionType::RANDOM);
+                                         == Models::DirectionType::BIDIRECTIONAL);
+        rightButton->setSelected(direction == Models::DirectionType::RIGHT);
+        randomButton->setSelected(direction == Models::DirectionType::RANDOM);
 
         repaint();
     }
 
-    Config::DirectionType getDirection() const { return currentDirection; }
+    Models::DirectionType getDirection() const { return currentDirection; }
 
     // Callback for when the selection changes
-    std::function<void(Config::DirectionType)> onDirectionChanged;
+    std::function<void(Models::DirectionType)> onDirectionChanged;
 
 private:
-    void handleSelectionChanged(Config::DirectionType type)
+    void handleSelectionChanged(Models::DirectionType type)
     {
         // Update all buttons
-        leftButton->setSelected(type == Config::DirectionType::LEFT);
-        bidirectionalButton->setSelected(type == Config::DirectionType::BIDIRECTIONAL);
-        rightButton->setSelected(type == Config::DirectionType::RIGHT);
-        randomButton->setSelected(type == Config::DirectionType::RANDOM);
+        leftButton->setSelected(type == Models::DirectionType::LEFT);
+        bidirectionalButton->setSelected(type == Models::DirectionType::BIDIRECTIONAL);
+        rightButton->setSelected(type == Models::DirectionType::RIGHT);
+        randomButton->setSelected(type == Models::DirectionType::RANDOM);
 
         currentDirection = type;
 
@@ -110,7 +110,7 @@ private:
 
     juce::String selectorName;
     juce::Colour highlightColour;
-    Config::DirectionType currentDirection = Config::DirectionType::BIDIRECTIONAL;
+    Models::DirectionType currentDirection = Models::DirectionType::BIDIRECTIONAL;
 };
 
 #endif //JUCECMAKEREPO_DIRECTIONSELECTOR_H

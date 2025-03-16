@@ -3,27 +3,30 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <juce_dsp/juce_dsp.h>
 #include "../../Shared/Models.h"
+#include "../../Shared/StateManager.h"
 #include "../../Shared/TimingManager.h"
 #include "../Sampler/SampleManager.h"
 #include "BaseEffect.h"
 #include <vector>
 
-class Reverb : public BaseEffect
+class Reverb : public BaseEffect, juce::Timer
 {
 public:
-    Reverb(std::shared_ptr<TimingManager> t, SampleManager& sm);
+    Reverb(PluginProcessor& processor);
     ~Reverb() override = default;
 
     void prepareToPlay(double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
-    void setSettings(Config::FxSettings s) override;
-    void applyReverbEffect(juce::AudioBuffer<float>& buffer, 
-                          const std::vector<juce::int64>& triggerSamplePositions,
-                          const std::vector<juce::int64>& noteDurations);
+    void applyReverbEffect(juce::AudioBuffer<float>& buffer,
+                          const std::vector<juce::int64>& triggerSamplePositions);
 
     bool shouldApplyReverb();
+    void timerCallback() override;
 
 private:
+    std::unique_ptr<AppState::ParameterBinding<Models::ReverbSettings>> paramBinding;
+    Models::ReverbSettings settings;
+
     struct ActiveReverb
     {
         juce::int64 startSample;
@@ -43,6 +46,5 @@ private:
     void processNewReverbTrigger(juce::AudioBuffer<float>& buffer,
                                 const juce::AudioBuffer<float>& reverbBuffer,
                                 const std::vector<juce::int64>& triggerSamplePositions,
-                                const std::vector<juce::int64>& noteDurations,
                                 float wetMix);
 };

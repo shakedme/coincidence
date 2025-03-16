@@ -2,21 +2,19 @@
 #include "../PluginProcessor.h"
 #include "../../Gui/PluginEditor.h"
 
-NoteGenerator::NoteGenerator(PluginProcessor &processorRef,
-                             std::shared_ptr<TimingManager> timingManagerRef)
-        : processor(processorRef), timingManager(timingManagerRef) {
+NoteGenerator::NoteGenerator(PluginProcessor &processorRef)
+        : processor(processorRef),
+          timingManager(processorRef.getTimingManager()) {
     // Initialize state
     releaseResources();
 
-    paramBinding = AppState::StateManager::getInstance().createParameterBinding<Config::MidiSettings>(settings);
+    scaleManager = std::make_unique<ScaleManager>(processor);
+
+    paramBinding = AppState::createParameterBinding<Models::MidiSettings>(settings, processor.getAPVTS());
     paramBinding->registerParameters(AppState::createMidiParameters());
 }
 
 void NoteGenerator::prepareToPlay(double sampleRate, int) {
-    // Initialize timing manager
-    timingManager->prepareToPlay(sampleRate);
-
-    // Reset note state
     releaseResources();
 }
 
@@ -75,7 +73,7 @@ void NoteGenerator::checkActiveNotes(juce::MidiBuffer &midiMessages, int numSamp
     {
         // Calculate when the note should end (in samples relative to the start of this buffer)
         juce::int64 noteEndPosition = (noteStartPosition + noteDurationInSamples)
-                                      - timingManager->getSamplePosition();
+                                      - timingManager.getSamplePosition();
 
         // If the note should end during this buffer
         if (noteEndPosition >= 0 && noteEndPosition < numSamples) {
@@ -94,13 +92,13 @@ std::vector<NoteGenerator::EligibleRate> NoteGenerator::collectEligibleRates(flo
     totalWeight = 0.0f;
 
     // Collect all rates that should trigger at this position
-    for (int rateIndex = 0; rateIndex < Config::NUM_RATE_OPTIONS; ++rateIndex) {
-        auto rate = static_cast<Config::RateOption>(rateIndex);
+    for (int rateIndex = 0; rateIndex < Models::NUM_RATE_OPTIONS; ++rateIndex) {
+        auto rate = static_cast<Models::RateOption>(rateIndex);
         auto rateValue = settings.getRateValueByIdx(rateIndex);
         // Only consider rates with non-zero value
         if (rateValue > 0.0f) {
             // Check if we should trigger a note at this rate
-            if (timingManager->shouldTriggerNote(rate)) {
+            if (processor.getTimingManager().shouldTriggerNote(rate)) {
                 eligibleRates.push_back({rate, rateValue});
                 totalWeight += rateValue;
             }
@@ -110,7 +108,7 @@ std::vector<NoteGenerator::EligibleRate> NoteGenerator::collectEligibleRates(flo
     return eligibleRates;
 }
 
-Config::RateOption NoteGenerator::selectRateFromEligible(const std::vector<EligibleRate> &eligibleRates,
+Models::RateOption NoteGenerator::selectRateFromEligible(const std::vector<EligibleRate> &eligibleRates,
                                                          float totalWeight) {
     // Safety check - if only one rate is eligible, use it
     if (eligibleRates.size() == 1)
@@ -118,7 +116,7 @@ Config::RateOption NoteGenerator::selectRateFromEligible(const std::vector<Eligi
 
     // If no rates are eligible (shouldn't happen, but just in case)
     if (eligibleRates.empty())
-        return Config::RATE_1_4; // Default to quarter notes
+        return Models::RATE_1_4; // Default to quarter notes
 
     // Select a rate based on weighted probability
     float randomValue = juce::Random::getSystemRandom().nextFloat() * totalWeight;
@@ -152,7 +150,7 @@ void NoteGenerator::generateNewNotes(juce::MidiBuffer &midiMessages) {
 
         if (shouldPlayNote) {
             // Select a rate based on weighted probability
-            Config::RateOption selectedRate =
+            Models::RateOption selectedRate =
                     selectRateFromEligible(eligibleRates, totalWeight);
 
             // Generate and play a new note
@@ -161,16 +159,16 @@ void NoteGenerator::generateNewNotes(juce::MidiBuffer &midiMessages) {
     }
 }
 
-void NoteGenerator::playNewNote(Config::RateOption selectedRate,
+void NoteGenerator::playNewNote(Models::RateOption selectedRate,
                                 juce::MidiBuffer &midiMessages) {
     // Calculate next expected grid position
-    double nextExpectedGridPoint = timingManager->getNextExpectedGridPoint(
+    double nextExpectedGridPoint = timingManager.getNextExpectedGridPoint(
             selectedRate, static_cast<int>(selectedRate));
-    double ppqPosition = timingManager->getPpqPosition();
-    double bpm = timingManager->getBpm();
+    double ppqPosition = timingManager.getPpqPosition();
+    double bpm = timingManager.getBpm();
 
     // Calculate precise sample position for this grid point
-    double samplesPerQuarterNote = (60.0 / bpm) * timingManager->getSampleRate();
+    double samplesPerQuarterNote = (60.0 / bpm) * timingManager.getSampleRate();
     double ppqOffsetFromCurrent = nextExpectedGridPoint - ppqPosition;
 
     // Convert to sample offset - this ensures grid alignment
@@ -181,17 +179,17 @@ void NoteGenerator::playNewNote(Config::RateOption selectedRate,
         sampleOffset = 0;
     }
 
-    juce::int64 absoluteNotePosition = timingManager->getSamplePosition() + sampleOffset;
+    juce::int64 absoluteNotePosition = timingManager.getSamplePosition() + sampleOffset;
 
     // Calculate note properties
     int noteLengthSamples = calculateNoteLength(selectedRate);
-    int noteToPlay = scaleManager.applyScaleAndModifications(currentInputNote);
+    int noteToPlay = scaleManager->applyScaleAndModifications(currentInputNote);
     int velocity = calculateVelocity();
 
     // Determine which sample to use
     int sampleIndex = -1;
     if (processor.getSampleManager().isSampleLoaded()) {
-        Config::DirectionType sampleDirection = processor.getSampleDirectionType();
+        Models::DirectionType sampleDirection = processor.getSampleDirectionType();
         sampleIndex = processor.getSampleManager().getNextSampleIndex(sampleDirection, selectedRate);
     }
 
@@ -213,10 +211,10 @@ void NoteGenerator::playNewNote(Config::RateOption selectedRate,
 
     // Update lastTriggerTimes to exactly the grid point we just played
     // This ensures the next note will be spaced exactly one grid interval away
-    timingManager->updateLastTriggerTime(selectedRate, nextExpectedGridPoint);
+    timingManager.updateLastTriggerTime(selectedRate, nextExpectedGridPoint);
 
     // If we were in a loop, we're now past that state
-    timingManager->clearLoopDetection();
+    timingManager.clearLoopDetection();
 }
 
 void NoteGenerator::addPendingNote(int noteToPlay,
@@ -270,7 +268,7 @@ void NoteGenerator::processPendingNotes(juce::MidiBuffer &midiMessages, int numS
     while (it != pendingNotes.end()) {
         // Calculate local buffer position
         juce::int64 localPosition =
-                it->startSamplePosition - timingManager->getSamplePosition();
+                it->startSamplePosition - timingManager.getSamplePosition();
 
         // If the note start position is in this buffer
         if (localPosition >= 0 && localPosition < numSamples) {
@@ -306,9 +304,9 @@ void NoteGenerator::processPendingNotes(juce::MidiBuffer &midiMessages, int numS
     }
 }
 
-int NoteGenerator::calculateNoteLength(Config::RateOption rate) {
+int NoteGenerator::calculateNoteLength(Models::RateOption rate) {
     // Get base duration in samples for this rate
-    double baseDuration = timingManager->getNoteDurationInSamples(rate);
+    double baseDuration = timingManager.getNoteDurationInSamples(rate);
 
     // Apply gate percentage (0-100%)
     double gateValue = settings.gateValue; // Convert to 0.0-1.0
@@ -326,7 +324,7 @@ int NoteGenerator::calculateNoteLength(Config::RateOption rate) {
     int lengthInSamples = static_cast<int>(baseDuration * gateValue);
 
     // Minimum length safety check - at least 5ms
-    int minLengthSamples = static_cast<int>(timingManager->getSampleRate() * 0.005);
+    int minLengthSamples = static_cast<int>(timingManager.getSampleRate() * 0.005);
     return std::max(lengthInSamples, minLengthSamples);
 }
 
@@ -349,7 +347,7 @@ int NoteGenerator::calculateVelocity() {
 
 float NoteGenerator::applyRandomization(float value,
                                         float randomizeValue,
-                                        Config::DirectionType direction) const {
+                                        Models::DirectionType direction) const {
     float maxValue = juce::jmin(100.0f, value + randomizeValue);
     float minValue = juce::jmax(0.0f, value - randomizeValue);
     float rightValue =
@@ -357,9 +355,9 @@ float NoteGenerator::applyRandomization(float value,
     float leftValue =
             juce::jmap(juce::Random::getSystemRandom().nextFloat(), minValue, value);
 
-    if (direction == Config::DirectionType::RIGHT) {
+    if (direction == Models::DirectionType::RIGHT) {
         return rightValue;
-    } else if (direction == Config::DirectionType::LEFT) {
+    } else if (direction == Models::DirectionType::LEFT) {
         return leftValue;
     } else {
         return juce::Random::getSystemRandom().nextFloat() > 0.5 ? rightValue : leftValue;

@@ -2,14 +2,13 @@
 
 #include <juce_audio_utils/juce_audio_utils.h>
 #include "../../Shared/Models.h"
-#include "../../Shared/TimingManager.h"
-#include "../Sampler/SampleManager.h"
+#include "../PluginProcessor.h"
 #include <vector>
 
 // Base class for all audio effects
 class BaseEffect {
 public:
-    BaseEffect(std::shared_ptr<TimingManager> t, SampleManager &sm,
+    BaseEffect(PluginProcessor &processor,
                float minTimeBetweenTriggers = 3.0);
 
     virtual ~BaseEffect() = default;
@@ -18,9 +17,9 @@ public:
 
     virtual void releaseResources();
 
-    virtual void setSettings(Config::FxSettings settings);
-
 protected:
+    PluginProcessor &processor;
+    TimingManager &timingManager;
 
     // Common utility methods
     bool shouldApplyEffect(float probability);
@@ -33,11 +32,6 @@ protected:
                           float fadeOut = 1.0f);
 
     void applyFadeOut(float &fadeOut, float progress, float startFadePoint = 0.7f);
-
-    // Shared resources
-    std::shared_ptr<TimingManager> timingManager;
-    SampleManager &sampleManager;
-    Config::FxSettings settings;
 
     // Common audio properties
     double sampleRate{44100.0};

@@ -12,34 +12,33 @@
 // Forward declarations
 class PluginProcessor;
 
-class FxEngine
-{
+class FxEngine {
 public:
-    FxEngine(std::shared_ptr<TimingManager> timingManager, PluginProcessor& processorRef);
+    FxEngine(PluginProcessor &processorRef);
+
     ~FxEngine();
 
     void prepareToPlay(double sampleRate, int samplesPerBlock);
+
     void releaseResources();
-    void processAudio(juce::AudioBuffer<float>& buffer,
-                      juce::AudioPlayHead* playHead,
-                      const juce::MidiBuffer& midiMessages);
-    void setSettings(Config::FxSettings s);
+
+    void processAudio(juce::AudioBuffer<float> &buffer,
+                      const juce::MidiBuffer &midiMessages);
 
 private:
-    std::vector<juce::int64> getNoteDurations(const std::vector<juce::int64>& triggerPositions);
-    void updateTimingInfo(juce::AudioPlayHead* playHead);
-    std::vector<juce::int64> checkForMidiTriggers(const juce::MidiBuffer& midiMessages);
+    PluginProcessor &processor;
 
-    std::shared_ptr<TimingManager> timingManager;
-    PluginProcessor& processor;
-    Config::FxSettings settings;
-    
     // Audio effect objects
     std::unique_ptr<Reverb> reverbEffect;
     std::unique_ptr<Delay> delayEffect;
     std::unique_ptr<Stutter> stutterEffect;
-    
+
     // Audio settings
-    double sampleRate {44100.0};
-    int bufferSize {512};
+    double sampleRate{44100.0};
+    int bufferSize{512};
+
+    std::vector<juce::int64> getNoteDurations(const std::vector<juce::int64> &triggerPositions);
+
+    std::vector<juce::int64> checkForMidiTriggers(const juce::MidiBuffer &midiMessages);
+
 };

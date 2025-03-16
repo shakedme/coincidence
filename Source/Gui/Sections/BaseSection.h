@@ -8,6 +8,7 @@
 #include "juce_audio_utils/juce_audio_utils.h"
 #include "../../Audio/PluginProcessor.h"
 #include "../LookAndFeel.h"
+#include "../../Shared/StateManager.h"
 
 static constexpr int HEADER_HEIGHT = 30;
 static constexpr int TITLE_FONT_SIZE = 20;

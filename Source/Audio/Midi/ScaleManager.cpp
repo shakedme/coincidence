@@ -2,11 +2,11 @@
 
 using namespace AppState;
 
-ScaleManager::ScaleManager() {
+ScaleManager::ScaleManager(PluginProcessor &p) : processor(p) {
     // Initialize member variables
     resetArpeggiator();
 
-    paramBinding = StateManager::getInstance().createParameterBinding<Config::MelodySettings>(settings);
+    paramBinding = AppState::createParameterBinding<Models::MelodySettings>(settings, processor.getAPVTS());
     paramBinding->registerParameters(createMelodyParameters());
 }
 
@@ -32,14 +32,14 @@ int ScaleManager::applyScaleAndModifications(int noteNumber) {
             < settings.semitoneProbability) {
             // Arpeggiator mode - sequential stepping
             switch (settings.semitoneDirection) {
-                case Config::DirectionType::LEFT:
+                case Models::DirectionType::LEFT:
                     // Down
                     currentArpStep--;
                     if (currentArpStep < 0)
                         currentArpStep = settings.semitoneValue;
                     break;
 
-                case Config::DirectionType::BIDIRECTIONAL:
+                case Models::DirectionType::BIDIRECTIONAL:
                     // Bidirectional (up then down)
                     if (arpDirectionUp) {
                         currentArpStep++;
@@ -56,14 +56,14 @@ int ScaleManager::applyScaleAndModifications(int noteNumber) {
                     }
                     break;
 
-                case Config::DirectionType::RIGHT:
+                case Models::DirectionType::RIGHT:
                     // Up
                     currentArpStep++;
                     if (currentArpStep > settings.semitoneValue)
                         currentArpStep = 0;
                     break;
 
-                case Config::DirectionType::RANDOM:
+                case Models::DirectionType::RANDOM:
                     // Random
                     currentArpStep = juce::Random::getSystemRandom().nextInt(
                             settings.semitoneValue + 1);
@@ -147,14 +147,14 @@ int ScaleManager::findClosestNoteInScale(int note,
     return closestNote;
 }
 
-juce::Array<int> ScaleManager::getSelectedScale(Config::ScaleType scaleType) {
+juce::Array<int> ScaleManager::getSelectedScale(Models::ScaleType scaleType) {
     switch (scaleType) {
-        case Config::SCALE_MINOR:
-            return Config::minorScale;
-        case Config::SCALE_PENTATONIC:
-            return Config::pentatonicScale;
-        case Config::SCALE_MAJOR:
+        case Models::SCALE_MINOR:
+            return Models::minorScale;
+        case Models::SCALE_PENTATONIC:
+            return Models::pentatonicScale;
+        case Models::SCALE_MAJOR:
         default:
-            return Config::majorScale;
+            return Models::majorScale;
     }
 }

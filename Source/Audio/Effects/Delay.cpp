@@ -1,12 +1,16 @@
 #include "Delay.h"
-#include "../Sampler/Sampler.h"
 #include <random>
 
-Delay::Delay(std::shared_ptr<TimingManager> t, SampleManager &sm)
-        : BaseEffect(t, sm, 5.0) // 5.0 seconds between triggers
+Delay::Delay(PluginProcessor &p)
+        : BaseEffect(p, 5.0) // 5.0 seconds between triggers
 {
+    paramBinding = AppState::createParameterBinding<Models::DelaySettings>(settings, processor.getAPVTS());
+    paramBinding->registerParameters(AppState::createDelayParameters());
+
     // Initialize active delay state
     activeDelay = {};
+
+    startTimer(1000);
 }
 
 void Delay::prepareToPlay(double sampleRate, int samplesPerBlock) {
@@ -46,13 +50,11 @@ void Delay::releaseResources() {
     delayLineRight.reset();
 }
 
-void Delay::setSettings(Config::FxSettings s) {
-    BaseEffect::setSettings(s);
-
+void Delay::timerCallback() {
     // Calculate delay time based on rate parameter
     float delayTimeMs;
 
-    if (settings.delayBpmSync && timingManager->getBpm() > 0) {
+    if (settings.delayBpmSync && timingManager.getBpm() > 0) {
         // BPM sync mode - calculate from musical note values
         delayTimeMs = calculateDelayTimeFromBPM(settings.delayRate);
     } else {
@@ -72,7 +74,7 @@ void Delay::setSettings(Config::FxSettings s) {
 
 float Delay::calculateDelayTimeFromBPM(float rate) {
     // Calculate delay time based on BPM
-    const double bpm = timingManager->getBpm();
+    const double bpm = timingManager.getBpm();
     if (bpm <= 0)
         return 500.0f; // Default to 500ms if BPM is invalid
 
@@ -116,8 +118,7 @@ bool Delay::isDelayEnabledForSample() {
 }
 
 void Delay::applyDelayEffect(juce::AudioBuffer<float> &buffer,
-                             const std::vector<juce::int64> &triggerSamplePositions,
-                             const std::vector<juce::int64> &noteDurations) {
+                             const std::vector<juce::int64> &triggerSamplePositions) {
     if (!delayLineLeft || !delayLineRight || buffer.getNumChannels() == 0 || settings.delayMix <= 0.0f)
         return;
 
@@ -173,7 +174,7 @@ void Delay::applyDelayEffect(juce::AudioBuffer<float> &buffer,
         }
             // Handle new trigger position
         else if (!triggerSamplePositions.empty() && isDelayEnabledForSample() && hasMinTimePassed()) {
-            processNewDelayTrigger(buffer, delayBuffer, triggerSamplePositions, noteDurations, wetMix);
+            processNewDelayTrigger(buffer, delayBuffer, triggerSamplePositions, wetMix);
         }
     }
 }
@@ -219,14 +220,14 @@ void Delay::processActiveDelay(juce::AudioBuffer<float> &buffer,
 void Delay::processNewDelayTrigger(juce::AudioBuffer<float> &buffer,
                                    const juce::AudioBuffer<float> &delayBuffer,
                                    const std::vector<juce::int64> &triggerSamplePositions,
-                                   const std::vector<juce::int64> &noteDurations,
                                    float wetMix) {
     int startSample = triggerSamplePositions[0];
     if (startSample >= 0 && startSample < buffer.getNumSamples()) {
         // Update the last trigger time
-        lastTriggerSample = timingManager->getSamplePosition() + startSample;
+        lastTriggerSample = timingManager.getSamplePosition() + startSample;
 
-        juce::int64 noteDuration = noteDurations[0] * 3;
+//      3 seconds duration
+        auto noteDuration = static_cast<juce::int64>(sampleRate * 3.0);
 
         // Start a new delay effect
         activeDelay = {

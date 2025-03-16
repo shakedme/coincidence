@@ -1,12 +1,14 @@
 #include "Reverb.h"
-#include "../Sampler/Sampler.h"
 #include <juce_dsp/juce_dsp.h>
 #include <cmath>
 #include <random>
 
-Reverb::Reverb(std::shared_ptr<TimingManager> t, SampleManager &sm)
-        : BaseEffect(t, sm, 3.0) // 3.0 seconds between triggers
+Reverb::Reverb(PluginProcessor &p)
+        : BaseEffect(p, 3.0) // 3.0 seconds between triggers
 {
+    paramBinding = AppState::createParameterBinding<Models::ReverbSettings>(settings, processor.getAPVTS());
+    paramBinding->registerParameters(AppState::createReverbParameters());
+
     // Initialize JUCE reverb parameters with good default values
     juceReverbParams.roomSize = 0.8f;      // Large room size
     juceReverbParams.damping = 0.5f;       // Moderate damping
@@ -15,16 +17,14 @@ Reverb::Reverb(std::shared_ptr<TimingManager> t, SampleManager &sm)
     juceReverbParams.width = 1.0f;         // Full stereo width
     juceReverbParams.freezeMode = 0.0f;    // No freeze
 
-    juceReverb.setParameters(juceReverbParams);
-
     // Initialize active reverb state
     activeReverb = {};
+
+    // Start the timer for updating reverb parameters
+    startTimer(1000);
 }
 
-void Reverb::setSettings(Config::FxSettings s) {
-    BaseEffect::setSettings(s);
-
-    // Update JUCE reverb parameters based on our settings
+void Reverb::timerCallback() {
     juceReverbParams.roomSize = settings.reverbTime;
     juceReverbParams.width = settings.reverbWidth;
     juceReverb.setParameters(juceReverbParams);
@@ -46,8 +46,7 @@ void Reverb::releaseResources() {
 }
 
 void Reverb::applyReverbEffect(juce::AudioBuffer<float> &buffer,
-                               const std::vector<juce::int64> &triggerSamplePositions,
-                               const std::vector<juce::int64> &noteDurations) {
+                               const std::vector<juce::int64> &triggerSamplePositions) {
 
     // Check if we should apply reverb based on probability
     if (shouldApplyReverb()) {
@@ -81,9 +80,9 @@ void Reverb::applyReverbEffect(juce::AudioBuffer<float> &buffer,
                 processActiveReverb(buffer, reverbBuffer, wetMix);
             }
                 // Handle new trigger
-            else if (!triggerSamplePositions.empty() && !noteDurations.empty() && isReverbEnabledForSample() &&
+            else if (!triggerSamplePositions.empty() && isReverbEnabledForSample() &&
                      hasMinTimePassed()) {
-                processNewReverbTrigger(buffer, reverbBuffer, triggerSamplePositions, noteDurations, wetMix);
+                processNewReverbTrigger(buffer, reverbBuffer, triggerSamplePositions, wetMix);
             }
         }
     }
@@ -130,14 +129,13 @@ void Reverb::processActiveReverb(juce::AudioBuffer<float> &buffer,
 void Reverb::processNewReverbTrigger(juce::AudioBuffer<float> &buffer,
                                      const juce::AudioBuffer<float> &reverbBuffer,
                                      const std::vector<juce::int64> &triggerSamplePositions,
-                                     const std::vector<juce::int64> &noteDurations,
                                      float wetMix) {
     int startSample = triggerSamplePositions[0];
     if (startSample >= 0 && startSample < buffer.getNumSamples()) {
         // Update the last trigger time
-        lastTriggerSample = timingManager->getSamplePosition() + startSample;
+        lastTriggerSample = processor.getTimingManager().getSamplePosition() + startSample;
 
-        juce::int64 noteDuration = noteDurations[0] * 3;
+        juce::int64 noteDuration = static_cast<juce::int64>(sampleRate * 3.0);
 
         // Start a new reverb effect
         activeReverb = {

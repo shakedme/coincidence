@@ -3,25 +3,28 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <juce_dsp/juce_dsp.h>
 #include "../../Shared/Models.h"
+#include "../../Shared/StateManager.h"
 #include "../../Shared/TimingManager.h"
 #include "../Sampler/SampleManager.h"
 #include "BaseEffect.h"
 #include <vector>
 
-class Delay : public BaseEffect
+class Delay : public BaseEffect, juce::Timer
 {
 public:
-    Delay(std::shared_ptr<TimingManager> t, SampleManager& sm);
+    Delay(PluginProcessor& processor);
     ~Delay() override = default;
 
     void prepareToPlay(double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
-    void setSettings(Config::FxSettings s) override;
-    void applyDelayEffect(juce::AudioBuffer<float>& buffer, 
-                          const std::vector<juce::int64>& triggerSamplePositions,
-                          const std::vector<juce::int64>& noteDurations);
+    void applyDelayEffect(juce::AudioBuffer<float>& buffer,
+                          const std::vector<juce::int64>& triggerSamplePositions);
+    void timerCallback() override;
 
 private:
+    std::unique_ptr<AppState::ParameterBinding<Models::DelaySettings>> paramBinding;
+    Models::DelaySettings settings;
+
     // Delay line setup
     std::unique_ptr<juce::dsp::DelayLine<float>> delayLineLeft;
     std::unique_ptr<juce::dsp::DelayLine<float>> delayLineRight;
@@ -57,6 +60,5 @@ private:
     void processNewDelayTrigger(juce::AudioBuffer<float>& buffer,
                                const juce::AudioBuffer<float>& delayBuffer,
                                const std::vector<juce::int64>& triggerSamplePositions,
-                               const std::vector<juce::int64>& noteDurations,
                                float wetMix);
 };

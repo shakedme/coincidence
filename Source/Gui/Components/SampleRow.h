@@ -37,7 +37,7 @@ private:
 
     int rateIconWidth = 30;
 
-    void setupRateIcon(std::unique_ptr<TextIcon> &icon, const juce::String &text, Config::RateOption rate);
-    void updateRateIcon(Config::RateOption rate);
-    TextIcon *getRateIcon(Config::RateOption rate);
+    void setupRateIcon(std::unique_ptr<TextIcon> &icon, const juce::String &text, Models::RateOption rate);
+    void updateRateIcon(Models::RateOption rate);
+    TextIcon *getRateIcon(Models::RateOption rate);
 };

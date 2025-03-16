@@ -1,17 +1,11 @@
 #include <juce_audio_utils/juce_audio_utils.h>
-#include "../../Shared/TimingManager.h"
 #include "FxEngine.h"
-#include "../PluginProcessor.h"
 
-FxEngine::FxEngine(std::shared_ptr<TimingManager> t, PluginProcessor &processorRef)
-        : timingManager(t), processor(processorRef) {
-    // Get a reference to the SampleManager
-    auto& sampleManager = processor.getSampleManager();
-    
-    // Create effects with the SampleManager reference
-    stutterEffect = std::make_unique<Stutter>(timingManager, sampleManager);
-    reverbEffect = std::make_unique<Reverb>(timingManager, sampleManager);
-    delayEffect = std::make_unique<Delay>(timingManager, sampleManager);
+FxEngine::FxEngine(PluginProcessor &processorRef)
+        : processor(processorRef) {
+    stutterEffect = std::make_unique<Stutter>(processorRef);
+    reverbEffect = std::make_unique<Reverb>(processorRef);
+    delayEffect = std::make_unique<Delay>(processorRef);
 }
 
 FxEngine::~FxEngine() {
@@ -35,23 +29,13 @@ void FxEngine::releaseResources() {
     delayEffect->releaseResources();
 }
 
-void FxEngine::setSettings(Config::FxSettings _settings) {
-    settings = _settings;
-    reverbEffect->setSettings(_settings);
-    stutterEffect->setSettings(_settings);
-    delayEffect->setSettings(_settings);
-}
-
 void FxEngine::processAudio(juce::AudioBuffer<float> &buffer,
-                            juce::AudioPlayHead *playHead,
                             const juce::MidiBuffer &midiMessages) {
-    updateTimingInfo(playHead);
     std::vector<juce::int64> triggerPositions = checkForMidiTriggers(midiMessages);
-    std::vector<juce::int64> noteDurations = getNoteDurations(triggerPositions);
 
     // Apply effects in order: reverb, delay, stutter
-    reverbEffect->applyReverbEffect(buffer, triggerPositions, noteDurations);
-    delayEffect->applyDelayEffect(buffer, triggerPositions, noteDurations);
+    reverbEffect->applyReverbEffect(buffer, triggerPositions);
+    delayEffect->applyDelayEffect(buffer, triggerPositions);
     stutterEffect->applyStutterEffect(buffer, triggerPositions);
 }
 
@@ -94,12 +78,6 @@ std::vector<juce::int64> FxEngine::getNoteDurations(const std::vector<juce::int6
     }
 
     return noteDurations;
-}
-
-void FxEngine::updateTimingInfo(juce::AudioPlayHead *playHead) {
-    if (playHead != nullptr) {
-        timingManager->updateTimingInfo(playHead);
-    }
 }
 
 std::vector<juce::int64>

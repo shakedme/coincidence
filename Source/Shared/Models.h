@@ -8,7 +8,7 @@ class PluginProcessor;
 /**
  * Common types and constants
  */
-namespace Config {
+namespace Models {
 
 // Rate options
     enum RateOption {
@@ -21,7 +21,7 @@ namespace Config {
         NUM_RATE_OPTIONS
     };
 
-    static inline const char *rateBaseNames[Config::NUM_RATE_OPTIONS] = {
+    static inline const char *rateBaseNames[Models::NUM_RATE_OPTIONS] = {
             "1/1", "1/2", "1/4", "1/8", "1/16", "1/32"};
 
 // Scale types
@@ -47,12 +47,18 @@ namespace Config {
         RANDOM
     };
 
-    struct FxSettings {
+    struct StutterSettings {
         float stutterProbability = 0.0f;      // 0-100%
+    };
+
+    struct ReverbSettings {
         float reverbMix = 50.0f;              // 0-100% (dry/wet mix)
         float reverbProbability = 0.0f;       // 0-100% (chance of applying reverb)
         float reverbTime = 50.0f;             // 0-100% (reverb decay time)
         float reverbWidth = 100.0f;           // 0-100% (stereo width)
+    };
+
+    struct DelaySettings {
         float delayMix = 50.0f;               // 0-100% (dry/wet mix)
         float delayProbability = 0.0f;        // 0-100% (chance of applying delay)
         float delayRate = 50.0f;              // 0-100% (delay time in milliseconds or BPM sync)
@@ -60,7 +66,6 @@ namespace Config {
         bool delayPingPong = false;           // Ping pong mode (true) or normal (false)
         bool delayBpmSync = true;             // BPM sync mode (true) or milliseconds (false)
     };
-
 
     // Generator settings
     struct MidiSettings {

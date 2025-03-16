@@ -7,6 +7,7 @@
 
 #include "juce_audio_utils/juce_audio_utils.h"
 #include "../../Shared/Models.h"
+#include "../../Shared/StateManager.h"
 #include "../../Shared/TimingManager.h"
 #include "../Sampler/SampleManager.h"
 #include "BaseEffect.h"
@@ -14,7 +15,7 @@
 class Stutter : public BaseEffect
 {
 public:
-    Stutter(std::shared_ptr<TimingManager> tm, SampleManager& sm);
+    Stutter(PluginProcessor& processor);
     ~Stutter() override = default;
 
     void prepareToPlay(double sampleRate, int samplesPerBlock) override;
@@ -22,9 +23,10 @@ public:
     void applyStutterEffect(juce::AudioBuffer<float>& buffer,
                             std::vector<juce::int64> triggerSamplePositions);
 
-    // Setters
-    void setSettings(Config::FxSettings s) override;
 private:
+    std::unique_ptr<AppState::ParameterBinding<Models::StutterSettings>> paramBinding;
+    Models::StutterSettings settings;
+
     // Beat-repeat effect state
     bool isStuttering {false};
     int stutterPosition {0};
@@ -74,7 +76,7 @@ private:
     void captureHistorySegment(int historyTriggerPos, int lengthToCapture);
 
     // Selects a random musical rate for repeat duration
-    Config::RateOption selectRandomRate();
+    Models::RateOption selectRandomRate();
 };
 
 #endif //JAMMER_STUTTER_H
