@@ -20,14 +20,6 @@ Reverb::Reverb(PluginProcessor &p)
     // Initialize active reverb state
     activeReverb = {};
 
-    // Start the timer for updating reverb parameters
-    startTimer(1000);
-}
-
-void Reverb::timerCallback() {
-    juceReverbParams.roomSize = settings.reverbTime;
-    juceReverbParams.width = settings.reverbWidth;
-    juceReverb.setParameters(juceReverbParams);
 }
 
 void Reverb::prepareToPlay(double sampleRate, int samplesPerBlock) {
@@ -47,6 +39,10 @@ void Reverb::releaseResources() {
 
 void Reverb::applyReverbEffect(juce::AudioBuffer<float> &buffer,
                                const std::vector<juce::int64> &triggerSamplePositions) {
+
+    juceReverbParams.roomSize = settings.reverbTime;
+    juceReverbParams.width = settings.reverbWidth;
+    juceReverb.setParameters(juceReverbParams);
 
     // Check if we should apply reverb based on probability
     if (shouldApplyReverb()) {

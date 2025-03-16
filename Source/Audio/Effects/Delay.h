@@ -9,7 +9,7 @@
 #include "BaseEffect.h"
 #include <vector>
 
-class Delay : public BaseEffect, juce::Timer
+class Delay : public BaseEffect
 {
 public:
     Delay(PluginProcessor& processor);
@@ -19,8 +19,6 @@ public:
     void releaseResources() override;
     void applyDelayEffect(juce::AudioBuffer<float>& buffer,
                           const std::vector<juce::int64>& triggerSamplePositions);
-    void timerCallback() override;
-
 private:
     std::unique_ptr<AppState::ParameterBinding<Models::DelaySettings>> paramBinding;
     Models::DelaySettings settings;
@@ -44,6 +42,7 @@ private:
     bool shouldApplyDelay();
     bool isDelayEnabledForSample();
     float calculateDelayTimeFromBPM(float rate);
+    void recalculateDelayTimeInSamples();
     
     // Delay processing methods
     void processPingPongDelay(const juce::AudioBuffer<float> &buffer, 

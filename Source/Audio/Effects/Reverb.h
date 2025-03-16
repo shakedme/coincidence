@@ -9,7 +9,7 @@
 #include "BaseEffect.h"
 #include <vector>
 
-class Reverb : public BaseEffect, juce::Timer
+class Reverb : public BaseEffect
 {
 public:
     Reverb(PluginProcessor& processor);
@@ -21,7 +21,6 @@ public:
                           const std::vector<juce::int64>& triggerSamplePositions);
 
     bool shouldApplyReverb();
-    void timerCallback() override;
 
 private:
     std::unique_ptr<AppState::ParameterBinding<Models::ReverbSettings>> paramBinding;

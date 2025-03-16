@@ -9,8 +9,6 @@ Delay::Delay(PluginProcessor &p)
 
     // Initialize active delay state
     activeDelay = {};
-
-    startTimer(1000);
 }
 
 void Delay::prepareToPlay(double sampleRate, int samplesPerBlock) {
@@ -50,7 +48,7 @@ void Delay::releaseResources() {
     delayLineRight.reset();
 }
 
-void Delay::timerCallback() {
+void Delay::recalculateDelayTimeInSamples() {
     // Calculate delay time based on rate parameter
     float delayTimeMs;
 
@@ -121,6 +119,8 @@ void Delay::applyDelayEffect(juce::AudioBuffer<float> &buffer,
                              const std::vector<juce::int64> &triggerSamplePositions) {
     if (!delayLineLeft || !delayLineRight || buffer.getNumChannels() == 0 || settings.delayMix <= 0.0f)
         return;
+
+    recalculateDelayTimeInSamples();
 
     // Apply delay effect
     const int numChannels = buffer.getNumChannels();
