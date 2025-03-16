@@ -20,7 +20,7 @@ void BaseEffect::releaseResources() {
 }
 
 bool BaseEffect::shouldApplyEffect(float probability) {
-    return juce::Random::getSystemRandom().nextFloat() * 100.0f <= probability;
+    return juce::Random::getSystemRandom().nextFloat() <= probability;
 }
 
 bool BaseEffect::hasMinTimePassed() {

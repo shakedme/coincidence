@@ -163,7 +163,8 @@ namespace AppState {
                 createPercentageParam<Models::DelaySettings>("delay_feedback", &Models::DelaySettings::delayFeedback),
                 createPercentageParam<Models::DelaySettings>("delay_rate", &Models::DelaySettings::delayRate),
                 createBoolParam<Models::DelaySettings>("delay_ping_pong", &Models::DelaySettings::delayPingPong),
-                createBoolParam<Models::DelaySettings>("delay_bpm_sync", &Models::DelaySettings::delayBpmSync)
+                createBoolParam<Models::DelaySettings>("delay_bpm_sync", &Models::DelaySettings::delayBpmSync),
+                createPercentageParam<Models::DelaySettings>("delay_probability", &Models::DelaySettings::delayProbability)
         };
     }
 
@@ -171,6 +172,7 @@ namespace AppState {
     inline std::vector<ParameterDescriptor<Models::ReverbSettings>> createReverbParameters() {
         return {
                 createPercentageParam<Models::ReverbSettings>("reverb_mix", &Models::ReverbSettings::reverbMix),
+                createPercentageParam<Models::ReverbSettings>("reverb_probability", &Models::ReverbSettings::reverbProbability),
                 createPercentageParam<Models::ReverbSettings>("reverb_time", &Models::ReverbSettings::reverbTime),
                 createPercentageParam<Models::ReverbSettings>("reverb_width", &Models::ReverbSettings::reverbWidth)
         };

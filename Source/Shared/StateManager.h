@@ -66,8 +66,6 @@ namespace AppState {
     static const juce::String ID_DELAY_BPM_SYNC = "delay_bpm_sync";
 
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
-
-
 }
 
 #endif //COINCIDENCE_STATEMANAGER_H
