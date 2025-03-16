@@ -20,6 +20,8 @@ PluginProcessor::PluginProcessor()
 
 //    auto *fileLogger = new FileLogger();
 //    juce::Logger::setCurrentLogger(fileLogger);
+
+    forceParameterUpdates();
 }
 
 PluginProcessor::~PluginProcessor() {
@@ -393,11 +395,10 @@ void PluginProcessor::setStateInformation(const void *data, int sizeInBytes) {
                 }
             }
         }
-
-        // After all state is loaded, force parameter updates to ensure all components
-        // receive the correct initial values
-        forceParameterUpdates();
     }
+
+    // Force an update of all parameters
+    forceParameterUpdates();
 }
 
 juce::AudioProcessor *JUCE_CALLTYPE createPluginFilter() {

@@ -168,7 +168,7 @@ void PluginEditor::switchTab(HeaderComponent::Tab tab)
     pitchSection->setVisible(isMainTab);
     sampleSection->setVisible(isMainTab);
     fxSection->setVisible(isMainTab);
-    
+
     envelopeSection->setVisible(!isMainTab);
     
     // Update layout
