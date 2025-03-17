@@ -64,6 +64,7 @@ target_sources(${BaseTargetName} PRIVATE
         Audio/Effects/Stutter.cpp
         Audio/Effects/Reverb.cpp
         Audio/Effects/Delay.cpp
+        Audio/Effects/Gain.cpp
         Audio/Effects/BaseEffect.cpp
 
         Audio/Envelope/EnvelopeParameterMapper.cpp

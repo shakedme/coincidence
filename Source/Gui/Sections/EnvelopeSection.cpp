@@ -1,7 +1,4 @@
 #include "EnvelopeSection.h"
-#include "../../Audio/Envelope/EnvelopeParameterTypes.h"
-#include "../PluginEditor.h"
-#include "../../Audio/PluginProcessor.h"
 #include "../Components/EnvelopeComponent.h"
 #include <memory>
 

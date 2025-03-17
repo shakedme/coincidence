@@ -25,10 +25,10 @@ namespace EnvelopeParams {
     
     void Registry::registerType(const EnvelopeTypeInfo& typeInfo) {
         // Check if type already exists
-        for (size_t i = 0; i < types.size(); i++) {
-            if (types[i].type == typeInfo.type) {
+        for (auto & type : types) {
+            if (type.type == typeInfo.type) {
                 // Update existing
-                types[i] = typeInfo;
+                type = typeInfo;
                 return;
             }
         }

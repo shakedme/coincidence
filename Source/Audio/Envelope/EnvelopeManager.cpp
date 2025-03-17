@@ -41,6 +41,7 @@ void EnvelopeManager::connectComponent(EnvelopeComponent* component, EnvelopePar
     // Configure the component
     component->setParameterType(type);
     component->setRate(mapper->getRate());
+    component->setSettings(registry.getTypeInfo(type).settings);
     
     // Set up callback to sync points when they change in the UI
     component->onPointsChanged = [this, type]() {

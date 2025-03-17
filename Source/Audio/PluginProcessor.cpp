@@ -113,9 +113,6 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         sampleManager->processAudio(buffer, processedMidi);
         fxEngine->processAudio(buffer, processedMidi);
 
-        // Apply amplitude envelope to the final buffer
-        envelopeManager->applyEnvelopeToBuffer(EnvelopeParams::ParameterType::Amplitude, buffer);
-
         // After processing is done, send the processed audio data to envelope components for visualization
         if (buffer.getNumChannels() > 0 && buffer.getNumSamples() > 0) {
             envelopeManager->pushAudioBuffer(buffer.getReadPointer(0), buffer.getNumSamples());

@@ -45,6 +45,8 @@ public:
     // Set the envelope points (thread-safe)
     void setPoints(const std::vector<std::unique_ptr<EnvelopePoint>> &newPoints);
 
+    void setSettings(EnvelopeParams::ParameterSettings settings) { settings = settings; }
+
     // Get a copy of the current envelope points
     std::vector<std::unique_ptr<EnvelopePoint>> getPointsCopy() const;
 

@@ -8,6 +8,7 @@
 #include "Reverb.h"
 #include "Delay.h"
 #include "Stutter.h"
+#include "Gain.h"
 #include "BaseEffect.h"
 
 class PluginProcessor;
@@ -31,7 +32,8 @@ private:
     enum {
         ReverbIndex,
         DelayIndex,
-        StutterIndex
+        StutterIndex,
+        GainIndex
     };
-    juce::dsp::ProcessorChain<Reverb, Delay, Stutter> fxChain;
+    juce::dsp::ProcessorChain<Reverb, Delay, Stutter, Gain> fxChain;
 };

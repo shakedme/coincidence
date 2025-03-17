@@ -121,6 +121,10 @@ public:
 
     void setGridDivisions(int horizontal, int vertical);
 
+    void setSettings(EnvelopeParams::ParameterSettings settings) {
+        parameterMapper.setSettings(settings);
+    }
+
     // Snap a point to the nearest grid position
     juce::Point<float> snapToGrid(const juce::Point<float> &point) const;
 
@@ -195,7 +199,7 @@ private:
     int verticalDivisions = 4;
 
     // Snap to grid
-    bool snapToGridFlag = false;
+    bool snapToGridFlag = true;
 
     // Curve editing
     int curveEditingSegment = -1;
