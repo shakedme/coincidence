@@ -19,8 +19,6 @@ SamplerSound::SamplerSound(const juce::String& soundName,
         source.read(
             &audioData, 0, static_cast<int>(source.lengthInSamples), 0, true, true);
     }
-
-
 }
 
 bool SamplerSound::appliesToNote(int midiNoteNumber)
@@ -57,11 +55,12 @@ bool SamplerVoice::canPlaySound(juce::SynthesiserSound* sound)
 {
     // First check if it's a SamplerSound
     auto* samplerSound = dynamic_cast<SamplerSound*>(sound);
-    if (samplerSound == nullptr)
+    if (samplerSound == nullptr || voiceState == nullptr)
         return false;
     
     // If we have a valid sample index set through controller, use that instead of the voice's sample index
     // This allows controller-based sample switching to override the assigned sound
+    int currentGlobalSampleIndex = voiceState->getCurrentSampleIndex();
     if (currentGlobalSampleIndex >= 0) {
         int soundIndex = samplerSound->getIndex();
         
@@ -84,7 +83,7 @@ void SamplerVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
                                    int startSample,
                                    int numSamples)
 {
-    if (!playing || !getCurrentlyPlayingSound())
+    if (!playing || !getCurrentlyPlayingSound() || voiceState == nullptr)
         return;
 
     // Get the sound that the voice was assigned
@@ -106,7 +105,7 @@ void SamplerVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
     if (currentSampleIndex >= 0 && assignedIndex != currentSampleIndex)
     {
         // Try to find the correct sound by index
-        SamplerSound* correctSound = getCorrectSoundForIndex(currentSampleIndex);
+        SamplerSound* correctSound = voiceState->getCorrectSoundForIndex(currentSampleIndex);
 
         if (correctSound != nullptr && correctSound->isActive())
         {
@@ -168,10 +167,6 @@ void SamplerVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
     }
 }
 
-// Initialize static members
-int SamplerVoice::currentGlobalSampleIndex = -1;
-std::map<int, SamplerSound*> SamplerVoice::indexToSoundMap;
-
 void SamplerVoice::startNote(int midiNoteNumber,
                             float velocity,
                             juce::SynthesiserSound* sound,
@@ -179,6 +174,10 @@ void SamplerVoice::startNote(int midiNoteNumber,
 {
     // Reset voice state first
     reset();
+
+    // No voice state, can't proceed
+    if (voiceState == nullptr)
+        return;
 
     // Cast to our custom sound class
     if (auto* samplerSound = dynamic_cast<SamplerSound*>(sound))
@@ -189,11 +188,12 @@ void SamplerVoice::startNote(int midiNoteNumber,
 
         // Restore sample index selection logic
         // First, prioritize any sample index set through the controller
+        int currentGlobalSampleIndex = voiceState->getCurrentSampleIndex();
         if (currentGlobalSampleIndex >= 0) {
             currentSampleIndex = currentGlobalSampleIndex;
 
             // Get the correct sound for this index if it exists
-            if (SamplerSound* correctSound = getCorrectSoundForIndex(currentSampleIndex)) {
+            if (SamplerSound* correctSound = voiceState->getCorrectSoundForIndex(currentSampleIndex)) {
                 // If the correct sound exists but isn't the assigned sound,
                 // still use the assigned sound's parameters but note the index change
                 if (correctSound != samplerSound) {
@@ -211,7 +211,7 @@ void SamplerVoice::startNote(int midiNoteNumber,
         double soundMidiNoteHz = juce::MidiMessage::getMidiNoteInHertz(60); // C4 as reference
 
         // Apply pitch ratio based on the global setting
-        if (pitchFollowEnabled) {
+        if (voiceState->isPitchFollowEnabled()) {
             pitchRatio = midiNoteHz / soundMidiNoteHz;
         } else {
             pitchRatio = 1.0; // Original pitch
@@ -219,8 +219,6 @@ void SamplerVoice::startNote(int midiNoteNumber,
 
         // Account for source sample rate difference
         pitchRatio *= getSampleRate() / samplerSound->getSourceSampleRate();
-
-
 
         // Apply start marker position to calculate starting sample position
         auto& data = *samplerSound->getAudioData();
@@ -292,44 +290,17 @@ void SamplerVoice::pitchWheelMoved(int newPitchWheelValue)
 
 void SamplerVoice::controllerMoved(int controllerNumber, int newControllerValue)
 {
-    // Check if this is our sample index controller (controller 32)
     if (controllerNumber == 32) {
+        // Store the sample index for use when playing
         // Make sure the index exists before setting it
-        if (getCorrectSoundForIndex(newControllerValue) != nullptr) {
+        if (voiceState && voiceState->getCorrectSoundForIndex(newControllerValue) != nullptr) {
             // Store the sample index for use when playing
             currentSampleIndex = newControllerValue;
             
             // Also update the global sample index
-            currentGlobalSampleIndex = newControllerValue;
+            voiceState->setCurrentSampleIndex(newControllerValue);
         }
     }
     
     // Other controllers can be handled here if needed
 }
-
-void SamplerVoice::registerSoundWithIndex(SamplerSound* sound, int index)
-{
-    if (sound != nullptr)
-    {
-        indexToSoundMap[index] = sound;
-    }
-}
-
-SamplerSound* SamplerVoice::getCorrectSoundForIndex(int index)
-{
-    // Look up the sound by index in our map
-    auto it = indexToSoundMap.find(index);
-    if (it != indexToSoundMap.end()) {
-        return it->second;
-    }
-    
-    // If the map is not empty, just use the first available sound as a fallback
-    if (!indexToSoundMap.empty()) {
-        auto firstSound = indexToSoundMap.begin()->second;
-        return firstSound;
-    }
-    
-    return nullptr;
-}
-
-bool SamplerVoice::pitchFollowEnabled = false;

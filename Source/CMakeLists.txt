@@ -26,12 +26,14 @@ target_compile_features(${BaseTargetName} PRIVATE cxx_std_20)
 target_sources(${BaseTargetName} PRIVATE
         Gui/LookAndFeel.cpp
         Gui/PluginEditor.cpp
+
         Gui/Sections/BaseSection.cpp
         Gui/Sections/EffectsSection.cpp
         Gui/Sections/GrooveSection.cpp
         Gui/Sections/EnvelopeSection.cpp
         Gui/Sections/PitchSection.cpp
         Gui/Sections/SampleSection.cpp
+
         Gui/Components/DirectionButton.h
         Gui/Components/DirectionSelector.h
         Gui/Components/SampleDetail.h
@@ -42,10 +44,11 @@ target_sources(${BaseTargetName} PRIVATE
         Gui/Components/EnvelopeComponent.cpp
         Gui/Components/HeaderComponent.h
         Gui/Components/WaveformComponent.cpp
+
         Shared/Models.h
-        Shared/StateManager.cpp
-        Shared/ParameterBinding.h
+        Shared/ParameterBinding.cpp
         Shared/TimingManager.cpp
+
         Audio/PluginProcessor.cpp
         Audio/Sampler/SampleManager.cpp
         Audio/Sampler/Sampler.cpp

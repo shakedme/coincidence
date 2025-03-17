@@ -35,8 +35,8 @@ bool BaseEffect::hasMinTimePassed() {
 }
 
 bool BaseEffect::isEffectEnabledForSample(Models::EffectType effectType) {
-    int currentSampleIndex = SamplerVoice::getCurrentSampleIndex();
-    auto *sound = SamplerVoice::getCorrectSoundForIndex(currentSampleIndex);
+    int currentSampleIndex = processor.getSampleManager().getCurrentSampleIndex();
+    auto *sound = processor.getSampleManager().getCorrectSoundForIndex(currentSampleIndex);
 
     if (sound != nullptr) {
         // Check if this sample belongs to a group

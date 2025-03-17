@@ -97,6 +97,15 @@ public:
 
     // Sampler access
     juce::Synthesiser &getSampler() { return sampler; }
+    
+    // Voice state control (replacing static methods in SamplerVoice)
+    void setCurrentSampleIndex(int sampleIndex) { voiceState.setCurrentSampleIndex(sampleIndex); }
+    int getCurrentSampleIndex() const { return voiceState.getCurrentSampleIndex(); }
+    void registerSoundWithIndex(SamplerSound* sound, int index) { voiceState.registerSoundWithIndex(sound, index); }
+    SamplerSound* getCorrectSoundForIndex(int index) { return voiceState.getCorrectSoundForIndex(index); }
+    void clearSoundRegistrations() { voiceState.clearSoundRegistrations(); }
+    void setPitchFollowEnabled(bool enabled) { voiceState.setPitchFollowEnabled(enabled); }
+    bool isPitchFollowEnabled() const { return voiceState.isPitchFollowEnabled(); }
 
     // Setup
     void prepareToPlay(double sampleRate);
@@ -154,6 +163,9 @@ private:
 
     // Playback engine
     juce::Synthesiser sampler;
+    
+    // Voice state (replaces static variables in SamplerVoice)
+    SamplerVoiceState voiceState;
 
     // Format manager for loading audio files
     juce::AudioFormatManager formatManager;

@@ -12,24 +12,21 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 
 // Custom tabbed component that allows us to handle tab changes
-class SampleSectionTabs : public juce::TabbedComponent
-{
+class SampleSectionTabs : public juce::TabbedComponent {
 public:
     explicit SampleSectionTabs(juce::TabbedButtonBar::Orientation orientation)
-        : juce::TabbedComponent(orientation)
-    {
+            : juce::TabbedComponent(orientation) {
         // Make sure we're not intercepting mouse events that should go to our content components
         setInterceptsMouseClicks(false, true);
-        
+
         // Make container transparent
         setColour(juce::TabbedComponent::backgroundColourId, juce::Colours::transparentBlack);
         setColour(juce::TabbedComponent::outlineColourId, juce::Colours::transparentBlack);
     }
-    
+
     std::function<void(int)> onTabChanged;
-    
-    void currentTabChanged(int newCurrentTabIndex, const juce::String& /*newCurrentTabName*/) override
-    {
+
+    void currentTabChanged(int newCurrentTabIndex, const juce::String & /*newCurrentTabName*/) override {
         if (onTabChanged)
             onTabChanged(newCurrentTabIndex);
     }
@@ -37,21 +34,25 @@ public:
 
 class SampleSectionComponent : public BaseSectionComponent,
                                public juce::FileDragAndDropTarget,
-                               private juce::Timer
-{
+                               private juce::Timer {
 public:
-    SampleSectionComponent(PluginEditor& editor, PluginProcessor& processor);
+    SampleSectionComponent(PluginEditor &editor, PluginProcessor &processor);
+
     ~SampleSectionComponent() override;
 
     // Component overrides
     void resized() override;
-    void paint(juce::Graphics& g) override;
+
+    void paint(juce::Graphics &g) override;
 
     // FileDragAndDropTarget overrides
-    bool isInterestedInFileDrag(const juce::StringArray& files) override;
-    void filesDropped(const juce::StringArray& files, int x, int y) override;
-    void fileDragEnter(const juce::StringArray& files, int x, int y) override;
-    void fileDragExit(const juce::StringArray& files) override;
+    bool isInterestedInFileDrag(const juce::StringArray &files) override;
+
+    void filesDropped(const juce::StringArray &files, int x, int y) override;
+
+    void fileDragEnter(const juce::StringArray &files, int x, int y) override;
+
+    void fileDragExit(const juce::StringArray &files) override;
 
     // Timer callback for updating the active sample highlight
     void timerCallback() override;
@@ -64,15 +65,16 @@ private:
     std::unique_ptr<juce::TextButton> clearAllButton;
     std::unique_ptr<juce::TextButton> normalizeButton;
     std::unique_ptr<Toggle> pitchFollowToggle;
-    std::unique_ptr<juce::Label> pitchFollowLabel;
 
     // Tab components
     std::unique_ptr<SampleSectionTabs> tabs;
-    enum TabIDs { SamplesTab = 0, GroupsTab = 1 };
-    
+    enum TabIDs {
+        SamplesTab = 0, GroupsTab = 1
+    };
+
     // Direction selector
     std::unique_ptr<DirectionSelector> sampleDirectionSelector;
-    
+
     // Group list view
     std::unique_ptr<GroupListView> groupListView;
 
@@ -85,14 +87,15 @@ private:
 
     bool draggedOver = false;
 
-    void initComponents(PluginProcessor& processor);
+    void initComponents(PluginProcessor &processor);
 
     void showDetailViewForSample(int sampleIndex);
+
     void showListView();
-    
+
     // Handle tab changes
     void handleTabChange(int newTabIndex);
-    
+
     // Updates the visibility of components based on the current tab
     void updateTabVisibility();
 };

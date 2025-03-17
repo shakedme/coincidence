@@ -3,7 +3,7 @@
 //
 
 #include "GrooveSection.h"
-#include "../../Shared/StateManager.h"
+#include "../../Shared/ParameterBinding.h"
 
 GrooveSectionComponent::GrooveSectionComponent(PluginEditor &e,
                                                PluginProcessor &p)

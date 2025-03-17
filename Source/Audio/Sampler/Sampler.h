@@ -4,6 +4,9 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <map>
 
+// Forward declaration
+class SamplerVoiceState;
+
 /**
  * SamplerSound - Custom implementation of SynthesiserSound for sample playback
  */
@@ -91,15 +94,57 @@ private:
 };
 
 /**
+ * SamplerVoiceState - Non-static state for SamplerVoice instances
+ * This class holds the state that was previously static in SamplerVoice
+ */
+class SamplerVoiceState {
+public:
+    SamplerVoiceState() : currentSampleIndex(-1), pitchFollowEnabled(false) {}
+    
+    void setCurrentSampleIndex(int sampleIndex) { currentSampleIndex = sampleIndex; }
+    int getCurrentSampleIndex() const { return currentSampleIndex; }
+    
+    void registerSoundWithIndex(SamplerSound* sound, int index) {
+        if (sound != nullptr) {
+            indexToSoundMap[index] = sound;
+        }
+    }
+    
+    SamplerSound* getCorrectSoundForIndex(int index) {
+        // Look up the sound by index in our map
+        auto it = indexToSoundMap.find(index);
+        if (it != indexToSoundMap.end()) {
+            return it->second;
+        }
+        
+        // If the map is not empty, just use the first available sound as a fallback
+        if (!indexToSoundMap.empty()) {
+            return indexToSoundMap.begin()->second;
+        }
+        
+        return nullptr;
+    }
+    
+    void clearSoundRegistrations() { indexToSoundMap.clear(); }
+    
+    bool isPitchFollowEnabled() const { return pitchFollowEnabled; }
+    void setPitchFollowEnabled(bool enabled) { pitchFollowEnabled = enabled; }
+    
+private:
+    int currentSampleIndex;
+    std::map<int, SamplerSound*> indexToSoundMap;
+    bool pitchFollowEnabled;
+};
+
+/**
  * SamplerVoice - Custom implementation of SynthesiserVoice for sample playback
  */
 class SamplerVoice : public juce::SynthesiserVoice {
 public:
     SamplerVoice();
-
-    static void setPitchFollowEnabled(bool enabled) { pitchFollowEnabled = enabled; }
-
-    static bool isPitchFollowEnabled() { return pitchFollowEnabled; }
+    
+    // Set the voice state - must be called before using the voice
+    void setVoiceState(SamplerVoiceState* state) { voiceState = state; }
 
     bool canPlaySound(juce::SynthesiserSound *sound) override;
 
@@ -122,20 +167,7 @@ public:
     void reset();
 
     // Helper method to check if voice is active
-    bool isVoiceActive() const override;
-
-    static void setCurrentSampleIndex(int sampleIndex) { currentGlobalSampleIndex = sampleIndex; }
-
-    static int getCurrentSampleIndex() { return currentGlobalSampleIndex; }
-
-    // New method to register a sound with a specific index
-    static void registerSoundWithIndex(SamplerSound *sound, int index);
-
-    // Method to get the appropriate SamplerSound for the current index
-    static SamplerSound *getCorrectSoundForIndex(int index);
-
-    // Method to clear all sound registrations
-    static void clearSoundRegistrations() { indexToSoundMap.clear(); }
+    [[nodiscard]] bool isVoiceActive() const override;
 
 private:
     double pitchRatio = 1.0;
@@ -144,10 +176,9 @@ private:
     float lgain = 0.0f, rgain = 0.0f;
     bool playing = false;
     int currentSampleIndex = -1;
-    // Static shared sample index and sound map
-    static int currentGlobalSampleIndex;
-    static std::map<int, SamplerSound *> indexToSoundMap;
-    static bool pitchFollowEnabled;
+    
+    // Non-static pointer to the voice state (owned by SampleManager)
+    SamplerVoiceState* voiceState = nullptr;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SamplerVoice)
 };

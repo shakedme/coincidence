@@ -1,5 +1,5 @@
 #include "SampleSection.h"
-#include "../../Shared/StateManager.h"
+#include "../../Shared/ParameterBinding.h"
 
 SampleSectionComponent::SampleSectionComponent(PluginEditor &editorRef,
                                                PluginProcessor &processorRef)
@@ -185,13 +185,6 @@ void SampleSectionComponent::initComponents(PluginProcessor &processorRef) {
     };
     addAndMakeVisible(pitchFollowToggle.get());
 
-    pitchFollowLabel = std::make_unique<juce::Label>();
-    pitchFollowLabel->setText("Pitch Follow", juce::dontSendNotification);
-    pitchFollowLabel->setFont(juce::Font(11.0f));
-    pitchFollowLabel->setColour(juce::Label::textColourId, juce::Colours::white);
-    pitchFollowLabel->setJustificationType(juce::Justification::centredRight);
-    addAndMakeVisible(pitchFollowLabel.get());
-
     // Set initial tab visibility
     updateTabVisibility();
 
@@ -208,7 +201,6 @@ void SampleSectionComponent::initComponents(PluginProcessor &processorRef) {
     clearAllButton->toFront(false);
     normalizeButton->toFront(false);
     pitchFollowToggle->toFront(false);
-    pitchFollowLabel->toFront(false);
 }
 
 // Handle tab changes
@@ -243,7 +235,6 @@ void SampleSectionComponent::handleTabChange(int newTabIndex) {
     clearAllButton->toFront(false);
     normalizeButton->toFront(false);
     pitchFollowToggle->toFront(false);
-    pitchFollowLabel->toFront(false);
 }
 
 // Update component visibility based on current tab

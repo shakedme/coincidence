@@ -15,8 +15,11 @@ SampleManager::SampleManager(PluginProcessor &p) : processor(p) {
     formatManager.registerBasicFormats();
 
     // Set up synth voices - increase from 32 to 64 voices for more polyphony
-    for (int i = 0; i < 64; ++i)
-        sampler.addVoice(new SamplerVoice());
+    for (int i = 0; i < 64; ++i) {
+        auto* voice = new SamplerVoice();
+        voice->setVoiceState(&voiceState); // Set the voice state
+        sampler.addVoice(voice);
+    }
 
     // Enable voice stealing to handle when all voices are in use
     sampler.setNoteStealingEnabled(true);
@@ -45,8 +48,8 @@ void SampleManager::processAudio(juce::AudioBuffer<float> &buffer,
 
     // Set the global sample index directly
     if (currentSampleIdx >= 0 && currentSampleIdx < getNumSamples()) {
-        // Update the global index that all voices will check
-        SamplerVoice::setCurrentSampleIndex(currentSampleIdx);
+        // Update the sample index in the voice state
+        setCurrentSampleIndex(currentSampleIdx);
 
         // If the sample index has changed, we need to stop any active notes
         // to make sure we use the new sample for upcoming notes
@@ -150,8 +153,8 @@ void SampleManager::addSample(const juce::File &file) {
         // Add the sound to the sampler
         sampler.addSound(samplerSound);
 
-        // Register this sound with our SamplerVoice to be accessible by index
-        SamplerVoice::registerSoundWithIndex(samplerSound, sampleIndex);
+        // Register this sound with our voice state
+        registerSoundWithIndex(samplerSound, sampleIndex);
 
         // Add to our sample list
         sampleList.push_back(std::move(newSample));
@@ -177,7 +180,7 @@ void SampleManager::removeSamples(int startIdx, int endIdx) {
     sampler.allNotesOff(0, true);
 
     // Clear the sound registrations first to avoid dangling pointers
-    SamplerVoice::clearSoundRegistrations();
+    clearSoundRegistrations();
 
     // Remove samples from back to front to avoid index shifting problems
     for (int i = endIdx; i >= startIdx; --i) {
@@ -220,7 +223,7 @@ void SampleManager::rebuildSounds() {
             sound->setGroupIndex(groupIndex);
 
             sampler.addSound(sound);
-            SamplerVoice::registerSoundWithIndex(sound, i);
+            registerSoundWithIndex(sound, i);
         }
     }
 
@@ -241,7 +244,7 @@ void SampleManager::clearAllSamples() {
 
     // Clear our sound registration map before clearing the sample list
     // to avoid any dangling pointers
-    SamplerVoice::clearSoundRegistrations();
+    clearSoundRegistrations();
 
     // Clear all groups
     groups.clear();
