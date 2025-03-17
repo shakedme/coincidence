@@ -189,8 +189,7 @@ void NoteGenerator::playNewNote(Models::RateOption selectedRate,
     // Determine which sample to use
     int sampleIndex = -1;
     if (processor.getSampleManager().isSampleLoaded()) {
-        Models::DirectionType sampleDirection = processor.getSampleDirectionType();
-        sampleIndex = processor.getSampleManager().getNextSampleIndex(sampleDirection, selectedRate);
+        sampleIndex = processor.getSampleManager().getNextSampleIndex( selectedRate);
     }
 
     int bufferSize = processor.getBlockSize();

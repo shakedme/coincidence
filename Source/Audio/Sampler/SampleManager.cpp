@@ -1,9 +1,10 @@
 #include "SampleManager.h"
 #include <algorithm>
 #include <random>
+#include <utility>
 
-SampleManager::SampleInfo::SampleInfo(const juce::String &n, const juce::File &f, int idx)
-        : name(n), file(f), index(idx) {
+SampleManager::SampleInfo::SampleInfo(juce::String n, const juce::File &f, int idx)
+        : name(std::move(n)), file(f), index(idx) {
     // Initialize all rates to enabled by default
     for (int i = 0; i < Models::NUM_RATE_OPTIONS; ++i) {
         rateEnabled[static_cast<Models::RateOption>(i)] = true;
@@ -11,12 +12,15 @@ SampleManager::SampleInfo::SampleInfo(const juce::String &n, const juce::File &f
 }
 
 SampleManager::SampleManager(PluginProcessor &p) : processor(p) {
+    processor.getAPVTS().addParameterListener(AppState::ID_SAMPLE_DIRECTION, this);
+    processor.getAPVTS().addParameterListener(AppState::ID_SAMPLE_PITCH_FOLLOW, this);
+
     // Initialize format manager
     formatManager.registerBasicFormats();
 
     // Set up synth voices - increase from 32 to 64 voices for more polyphony
     for (int i = 0; i < 64; ++i) {
-        auto* voice = new SamplerVoice();
+        auto *voice = new SamplerVoice();
         voice->setVoiceState(&voiceState); // Set the voice state
         sampler.addVoice(voice);
     }
@@ -27,6 +31,14 @@ SampleManager::SampleManager(PluginProcessor &p) : processor(p) {
 
 SampleManager::~SampleManager() {
     clearAllSamples();
+}
+
+void SampleManager::parameterChanged(const juce::String &parameterID, float newValue) {
+    if (parameterID == AppState::ID_SAMPLE_DIRECTION) {
+        sampleDirection = static_cast<Models::DirectionType>(static_cast<int>(newValue));
+    } else if (parameterID == AppState::ID_SAMPLE_PITCH_FOLLOW) {
+        voiceState.setPitchFollowEnabled(newValue > 0.5f);
+    }
 }
 
 void SampleManager::prepareToPlay(double sampleRate) {
@@ -259,7 +271,7 @@ void SampleManager::clearAllSamples() {
     validSamplesForRate.clear();
 }
 
-int SampleManager::getNextSampleIndex(Models::DirectionType direction, Models::RateOption currentRate) {
+int SampleManager::getNextSampleIndex(Models::RateOption currentRate) {
     const auto &validSamples = getValidSamplesForRate(currentRate);
 
     if (validSamples.empty())
@@ -286,7 +298,7 @@ int SampleManager::getNextSampleIndex(Models::DirectionType direction, Models::R
     }
 
     int nextValidIndex = currentValidIndex;
-    switch (direction) {
+    switch (sampleDirection) {
         case Models::LEFT: // Sequential backward
         {
             nextValidIndex = (currentValidIndex - 1 + validSamples.size()) % validSamples.size();

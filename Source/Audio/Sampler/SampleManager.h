@@ -10,7 +10,7 @@
 #include <map>
 #include <unordered_map>
 
-class SampleManager {
+class SampleManager : public juce::AudioProcessorValueTreeState::Listener {
 public:
     SampleManager(PluginProcessor &processor);
 
@@ -26,7 +26,7 @@ public:
 
         std::unordered_map<Models::RateOption, bool> rateEnabled;
 
-        SampleInfo(const juce::String &n, const juce::File &f, int idx);
+        SampleInfo(juce::String n, const juce::File &f, int idx);
     };
 
     // Group of samples
@@ -51,6 +51,8 @@ public:
         }
     };
 
+    void parameterChanged(const juce::String &parameterID, float newValue) override;
+
     void processAudio(juce::AudioBuffer<float> &buffer, juce::MidiBuffer &processedMidi);
 
     // Sample management
@@ -64,7 +66,7 @@ public:
 
     juce::File getSampleFilePath(int index) const;
 
-    int getNextSampleIndex(Models::DirectionType direction, Models::RateOption currentRate);
+    int getNextSampleIndex(Models::RateOption currentRate);
 
     void rebuildSounds();
 
@@ -95,17 +97,16 @@ public:
 
     SamplerSound *getSampleSound(int index) const;
 
-    // Sampler access
-    juce::Synthesiser &getSampler() { return sampler; }
-    
     // Voice state control (replacing static methods in SamplerVoice)
     void setCurrentSampleIndex(int sampleIndex) { voiceState.setCurrentSampleIndex(sampleIndex); }
+
     int getCurrentSampleIndex() const { return voiceState.getCurrentSampleIndex(); }
-    void registerSoundWithIndex(SamplerSound* sound, int index) { voiceState.registerSoundWithIndex(sound, index); }
-    SamplerSound* getCorrectSoundForIndex(int index) { return voiceState.getCorrectSoundForIndex(index); }
+
+    void registerSoundWithIndex(SamplerSound *sound, int index) { voiceState.registerSoundWithIndex(sound, index); }
+
+    SamplerSound *getCorrectSoundForIndex(int index) { return voiceState.getCorrectSoundForIndex(index); }
+
     void clearSoundRegistrations() { voiceState.clearSoundRegistrations(); }
-    void setPitchFollowEnabled(bool enabled) { voiceState.setPitchFollowEnabled(enabled); }
-    bool isPitchFollowEnabled() const { return voiceState.isPitchFollowEnabled(); }
 
     // Setup
     void prepareToPlay(double sampleRate);
@@ -163,12 +164,14 @@ private:
 
     // Playback engine
     juce::Synthesiser sampler;
-    
-    // Voice state (replaces static variables in SamplerVoice)
+
+    // Voice state for SamplerVoice instances
     SamplerVoiceState voiceState;
 
     // Format manager for loading audio files
     juce::AudioFormatManager formatManager;
 
     OnsetDetector onsetDetector;
+
+    Models::DirectionType sampleDirection = Models::DirectionType::RANDOM;
 };

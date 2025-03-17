@@ -1,5 +1,4 @@
 #include "SampleSection.h"
-#include "../../Shared/ParameterBinding.h"
 
 SampleSectionComponent::SampleSectionComponent(PluginEditor &editorRef,
                                                PluginProcessor &processorRef)

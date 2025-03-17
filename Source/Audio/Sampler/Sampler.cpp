@@ -1,14 +1,12 @@
 #include "Sampler.h"
 
-//==============================================================================
-// SamplerSound Implementation
-//==============================================================================
+#include <utility>
 
-SamplerSound::SamplerSound(const juce::String& soundName,
+SamplerSound::SamplerSound(juce::String  soundName,
                            juce::AudioFormatReader& source,
-                           const juce::BigInteger& midiNotes)
-    : name(soundName)
-    , midiNotes(midiNotes)
+                           juce::BigInteger  midiNotes)
+    : name(std::move(soundName))
+    , midiNotes(std::move(midiNotes))
     , sourceSampleRate(source.sampleRate)
 {
     if (source.numChannels > 0)

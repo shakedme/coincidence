@@ -3,7 +3,6 @@
 //
 
 #include "PitchSection.h"
-#include "../../Shared/ParameterBinding.h"
 
 PitchSectionComponent::PitchSectionComponent(PluginEditor &e,
                                              PluginProcessor &p)

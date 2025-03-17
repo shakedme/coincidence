@@ -12,9 +12,9 @@ class SamplerVoiceState;
  */
 class SamplerSound : public juce::SynthesiserSound {
 public:
-    SamplerSound(const juce::String &name,
+    SamplerSound(juce::String name,
                  juce::AudioFormatReader &source,
-                 const juce::BigInteger &notes);
+                 juce::BigInteger notes);
 
 
     // SynthesiserSound methods
@@ -94,8 +94,7 @@ private:
 };
 
 /**
- * SamplerVoiceState - Non-static state for SamplerVoice instances
- * This class holds the state that was previously static in SamplerVoice
+ * SamplerVoiceState - state for SamplerVoice instances
  */
 class SamplerVoiceState {
 public:

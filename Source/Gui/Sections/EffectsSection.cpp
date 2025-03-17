@@ -3,7 +3,6 @@
 //
 
 #include "EffectsSection.h"
-#include "../../Shared/ParameterBinding.h"
 
 EffectsSection::EffectsSection(PluginEditor &e, PluginProcessor &p)
         : BaseSectionComponent(e, p, "EFFECTS", juce::Colour(0xffd9a652)) {

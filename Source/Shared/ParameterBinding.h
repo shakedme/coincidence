@@ -198,6 +198,16 @@ namespace AppState {
         return std::make_unique<ParameterBinding<SettingsType>>(settings, apvts);
     }
 
+    // Create a set of sample parameters
+    inline std::vector<ParameterDescriptor<Models::SamplerSettings>> createSampleParameters() {
+        return {
+                createEnumParam<Models::SamplerSettings, Models::DirectionType>(ID_SAMPLE_DIRECTION,
+                                                                                &Models::SamplerSettings::sampleDirection),
+                createBoolParam<Models::SamplerSettings>(ID_SAMPLE_PITCH_FOLLOW,
+                                                         &Models::SamplerSettings::samplePitchFollow)
+        };
+    }
+
     // Create a set of stutter parameters
     inline std::vector<ParameterDescriptor<Models::StutterSettings>> createStutterParameters() {
         return {

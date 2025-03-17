@@ -144,7 +144,7 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     // After processing is done, send the processed audio data to the envelope component
     if (envelopeComponent != nullptr) {
         // Send the first channel for visualization (can be modified to send other channels or a mix)
-        if (buffer.getNumChannels() > 0) {
+        if (buffer.getNumChannels() > 0 && buffer.getNumSamples() > 0) {
             envelopeComponent->pushAudioBuffer(buffer.getReadPointer(0), buffer.getNumSamples());
         }
     }
