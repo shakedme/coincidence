@@ -3,13 +3,9 @@
 //
 
 #include "Stutter.h"
-#include "../Sampler/Sampler.h"
 
-Stutter::Stutter(PluginProcessor &p)
-        : BaseEffect(p, 3.0) {
-    paramBinding = AppState::createParameterBinding<Models::StutterSettings>(settings, processor.getAPVTS());
-    paramBinding->registerParameters(AppState::createStutterParameters());
-
+Stutter::Stutter()
+        : BaseEffect() {
     // Initialize stutter state
     isStuttering = false;
     stutterPosition = 0;
@@ -18,9 +14,14 @@ Stutter::Stutter(PluginProcessor &p)
     stutterRepeatsTotal = 2;
 }
 
-void Stutter::prepareToPlay(double sampleRate, int samplesPerBlock) {
-    BaseEffect::prepareToPlay(sampleRate, samplesPerBlock);
+void Stutter::initialize(PluginProcessor &p) {
+    BaseEffect::initialize(p);
 
+    paramBinding = AppState::createParameterBinding<Models::StutterSettings>(settings, p.getAPVTS());
+    paramBinding->registerParameters(AppState::createStutterParameters());
+}
+
+void Stutter::prepare(const juce::dsp::ProcessSpec &spec) {
     int maxStutterSamples = static_cast<int>(sampleRate * 5.0); // 5 seconds of audio
     stutterBuffer.setSize(2, maxStutterSamples);
     stutterBuffer.clear();
@@ -35,144 +36,178 @@ void Stutter::prepareToPlay(double sampleRate, int samplesPerBlock) {
     resetStutterState();
 }
 
-void Stutter::releaseResources() {
-    BaseEffect::releaseResources();
+void Stutter::reset() {
     stutterBuffer.setSize(0, 0);
     historyBuffer.setSize(0, 0);
 }
 
-void Stutter::applyStutterEffect(juce::AudioBuffer<float> &buffer,
-                                 std::vector<juce::int64> triggerSamplePositions) {
-    // Store buffer info for later use
-    int numSamples = buffer.getNumSamples();
-    int numChannels = buffer.getNumChannels();
+void Stutter::process(const juce::dsp::ProcessContextReplacing<float> &context) {
+    auto &&inBlock = context.getInputBlock();
+    auto &&outBlock = context.getOutputBlock();
+    auto numSamples = inBlock.getNumSamples();
+    auto numChannels = inBlock.getNumChannels();
 
-    addToHistory(buffer);
+    jassert(inBlock.getNumChannels() == outBlock.getNumChannels());
+    jassert(inBlock.getNumSamples() == outBlock.getNumSamples());
+
+    // Update the current buffer size for consistent behavior
+    currentBufferSize = static_cast<int>(numSamples);
+
+    // Add the current input to history buffer
+    addToHistoryFromBlock(inBlock);
+
+    // Handle transport loop detection
     handleTransportLoopDetection();
 
-//     Process stutter effect
+    // Check for MIDI triggers
+    std::vector<juce::int64> triggerSamplePositions = checkForMidiTriggers(midiMessages);
+
+    // Process stutter effect directly on the blocks
     if (isStuttering) {
-        processActiveStutter(buffer, numSamples, numChannels);
+        processActiveStutterBlock(outBlock, numSamples, numChannels);
     } else if (shouldStutter() && !triggerSamplePositions.empty() && hasMinTimePassed() &&
                isEffectEnabledForSample(Models::EffectType::STUTTER)) {
-        startStutterAtPosition(
-                buffer, triggerSamplePositions[0], numSamples, numChannels);
+        // If we need to start stuttering, first copy input to output
+        outBlock.copyFrom(inBlock);
+
+        // Then apply stutter starting at the trigger position
+        startStutterAtPositionBlock(outBlock, triggerSamplePositions[0], numSamples, numChannels);
+    } else {
+        // If not stuttering, simply copy input to output
+        outBlock.copyFrom(inBlock);
     }
 }
 
-bool Stutter::shouldStutter() {
-    // Use the base class method with stutter probability
-    return BaseEffect::shouldApplyEffect(settings.stutterProbability);
-}
+void Stutter::addToHistoryFromBlock(const juce::dsp::AudioBlock<const float> &block) {
+    // Add the current block to the history circular buffer
+    int numSamples = block.getNumSamples();
 
-void Stutter::processActiveStutter(juce::AudioBuffer<float> &buffer,
-                                   int numSamples,
-                                   int numChannels) {
-    // Safety check for division by zero
-    if (stutterLength <= 0) {
-        resetStutterState();
-        return;
-    }
+    for (size_t channel = 0; channel < std::min(block.getNumChannels(),
+                                                static_cast<size_t>(historyBuffer.getNumChannels())); ++channel) {
+        const float *blockData = block.getChannelPointer(channel);
 
-    // Safety check for stutter buffer size
-    if (stutterBuffer.getNumSamples() < stutterLength) {
-        resetStutterState();
-        return;
-    }
-
-    // Create a temporary buffer for mixing
-    juce::AudioBuffer<float> tempBuffer(numChannels, numSamples);
-    tempBuffer.clear();
-
-    // Copy stutter data to temp buffer with looping
-    copyStutterDataToBuffer(tempBuffer, numSamples, numChannels);
-
-    // Apply crossfade between original and stutter buffer
-    applyStutterCrossfade(buffer, tempBuffer, numSamples, numChannels);
-
-    // Update stutter position and repeat count
-    updateStutterPosition(numSamples);
-
-    // If we've just marked the stutter to end (via endStutterEffect),
-    // but haven't yet fully reset the state, do a complete reset now
-    if (!isStuttering && stutterRepeatCount >= stutterRepeatsTotal) {
-        resetStutterState();
-    }
-}
-
-void Stutter::copyStutterDataToBuffer(juce::AudioBuffer<float> &tempBuffer,
-                                      int numSamples,
-                                      int numChannels) {
-    // Safety check for stutter buffer size and stutter length
-    if (stutterLength <= 0 || stutterBuffer.getNumSamples() < stutterLength) {
-        return; // Don't copy anything
-    }
-
-    for (int channel = 0;
-         channel < juce::jmin(numChannels, stutterBuffer.getNumChannels());
-         ++channel) {
-        float *channelData = tempBuffer.getWritePointer(channel);
-        const float *stutterData = stutterBuffer.getReadPointer(channel);
-
-
-        for (int i = 0; i < numSamples; ++i) {
-            // Loop through the stutter buffer with bounds checking
-            int stutterIndex = (stutterPosition + i) % stutterLength;
-
-            // Additional safety check
-            if (stutterIndex < 0 || stutterIndex >= stutterBuffer.getNumSamples()) {
-                channelData[i] = 0.0f; // Safety - use silence
-            } else {
-                channelData[i] = stutterData[stutterIndex];
-            }
+        if (historyWritePosition + numSamples <= historyBufferSize) {
+            // Simple copy if it doesn't wrap around
+            historyBuffer.copyFrom(channel, historyWritePosition, blockData, numSamples);
+        } else {
+            // Handle wrap-around case
+            int firstPartSize = historyBufferSize - historyWritePosition;
+            historyBuffer.copyFrom(channel, historyWritePosition, blockData, firstPartSize);
+            historyBuffer.copyFrom(channel, 0, blockData + firstPartSize, numSamples - firstPartSize);
         }
     }
+
+    // Update write position with wrap-around
+    historyWritePosition = (historyWritePosition + numSamples) % historyBufferSize;
 }
 
-void Stutter::applyStutterCrossfade(juce::AudioBuffer<float> &buffer,
-                                    const juce::AudioBuffer<float> &tempBuffer,
-                                    int numSamples,
-                                    int numChannels) {
-    float fadeLength = juce::jmin(100, numSamples); // 100 samples for crossfade
+void Stutter::processActiveStutterBlock(juce::dsp::AudioBlock<float> &outBlock,
+                                        int numSamples,
+                                        int numChannels) {
+    // Safety checks for stutter state
+    if (stutterLength <= 0 || stutterBuffer.getNumSamples() < stutterLength) {
+        resetStutterState();
+        return;
+    }
 
-    for (int channel = 0; channel < numChannels; ++channel) {
-        float *mainData = buffer.getWritePointer(channel);
-        const float *stutterData = tempBuffer.getReadPointer(channel);
+    // Copy stutter data to output block with looping
+    for (size_t channel = 0; channel < std::min(numChannels, stutterBuffer.getNumChannels()); ++channel) {
+        float *outData = outBlock.getChannelPointer(channel);
+        const float *stutterData = stutterBuffer.getReadPointer(channel);
 
-        // Apply crossfade at the start of stutter (only during first cycle)
+        // Handle crossfade at the start of stutter (only during first cycle)
+        float fadeLength = std::min(100, numSamples);
+
         if (stutterPosition < fadeLength && stutterRepeatCount == 0) {
+            // Apply crossfade at the beginning
             for (int i = 0; i < fadeLength; ++i) {
                 float alpha = static_cast<float>(i) / fadeLength;
-                mainData[i] = mainData[i] * (1.0f - alpha) + stutterData[i] * alpha;
+                // Keep original data with (1-alpha) weight and add stutter data with alpha weight
+                int stutterIndex = (stutterPosition + i) % stutterLength;
+                outData[i] = outData[i] * (1.0f - alpha) + stutterData[stutterIndex] * alpha;
             }
 
-            // Copy the rest of the stutter data after crossfade
-            if (fadeLength < numSamples) {
-                buffer.copyFrom(channel, fadeLength, tempBuffer, channel, fadeLength, numSamples - fadeLength);
+            // Fill the rest without crossfade
+            for (int i = fadeLength; i < numSamples; ++i) {
+                int stutterIndex = (stutterPosition + i) % stutterLength;
+                outData[i] = stutterData[stutterIndex];
             }
         }
             // Apply crossfade at the end of stutter effect (when near the end of the last repeat)
         else if (stutterRepeatCount == stutterRepeatsTotal - 1 &&
                  stutterPosition > stutterLength - numSamples - fadeLength &&
                  stutterPosition <= stutterLength - fadeLength) {
-            // We're approaching the end of the last repeat, apply fadeout
-
             // Calculate how many samples are left in the stutter
             int samplesRemaining = stutterLength - stutterPosition;
 
-            // Apply crossfade
+            // Apply crossfade for the remaining samples
             for (int i = 0; i < samplesRemaining; ++i) {
                 float alpha = 1.0f - (static_cast<float>(i) / samplesRemaining);
-                mainData[i] = mainData[i] * (1.0f - alpha) + stutterData[i] * alpha;
+                int stutterIndex = (stutterPosition + i) % stutterLength;
+                outData[i] = outData[i] * (1.0f - alpha) + stutterData[stutterIndex] * alpha;
             }
 
-            // For the rest of the buffer after the stutter ends, just use the original buffer
-            // (which is already in mainData)
+            // The rest of the buffer is just passed through (already in outData)
         } else {
-            // Copy all the stutter data in other cases
-            buffer.copyFrom(channel, 0, tempBuffer, channel, 0, numSamples);
+            // Regular case - just copy stutter data
+            for (int i = 0; i < numSamples; ++i) {
+                int stutterIndex = (stutterPosition + i) % stutterLength;
+                outData[i] = stutterData[stutterIndex];
+            }
         }
     }
+
+    // Update stutter position
+    updateStutterPosition(numSamples);
+
+    // Check if we need to reset stutter state
+    if (!isStuttering && stutterRepeatCount >= stutterRepeatsTotal) {
+        resetStutterState();
+    }
+}
+
+void Stutter::startStutterAtPositionBlock(juce::dsp::AudioBlock<float> &outBlock,
+                                          juce::int64 samplePosition,
+                                          int numSamples,
+                                          int numChannels) {
+    // Choose a rate (1/8, 1/16 note, etc.)
+    Models::RateOption selectedRate = selectRandomRate();
+
+    // Calculate stutter length based on musical timing
+    int captureLength = static_cast<int>(timingManagerPtr->getNoteDurationInSamples(selectedRate));
+
+    // Limit to a reasonable value
+    captureLength = juce::jmin(captureLength, stutterBuffer.getNumSamples());
+
+    // Capture the musical segment starting from the note position
+    captureFromHistory(samplePosition, captureLength);
+
+    // Configure stutter parameters
+    isStuttering = true;
+    stutterLength = captureLength;
+    stutterPosition = 0;
+    stutterRepeatsTotal = 2 + random.nextInt(3); // 2-4 repeats
+    stutterRepeatCount = 0;
+
+    // Apply stutter effect immediately for the rest of this block
+    // Apply from samplePosition to the end of the block
+    for (size_t channel = 0; channel < std::min(numChannels, stutterBuffer.getNumChannels()); ++channel) {
+        float *outData = outBlock.getChannelPointer(channel);
+        const float *stutterData = stutterBuffer.getReadPointer(channel);
+
+        // Replace data from trigger position to end of block with stutter data
+        for (int i = samplePosition; i < numSamples; ++i) {
+            int stutterIndex = (i - samplePosition) % stutterLength;
+            outData[i] = stutterData[stutterIndex];
+        }
+    }
+
+    // Update stutter position for the next buffer
+    stutterPosition = (numSamples - samplePosition) % stutterLength;
+}
+
+bool Stutter::shouldStutter() {
+    return BaseEffect::shouldApplyEffect(settings.stutterProbability);
 }
 
 void Stutter::updateStutterPosition(int numSamples) {
@@ -210,7 +245,7 @@ void Stutter::endStutterEffect() {
 
     // Mark that we've completed all repeats to trigger final crossfade
     stutterRepeatCount = stutterRepeatsTotal;
-    lastTriggerSample = timingManager.getSamplePosition();
+    lastTriggerSample = timingManagerPtr->getSamplePosition();
 }
 
 void Stutter::resetStutterState() {
@@ -220,86 +255,6 @@ void Stutter::resetStutterState() {
     stutterLength = 0;
     stutterRepeatCount = 0;
     stutterRepeatsTotal = 0;
-}
-
-void Stutter::startStutterAtPosition(juce::AudioBuffer<float> &buffer,
-                                     juce::int64 samplePosition,
-                                     int numSamples,
-                                     int numChannels) {
-    // Choose a rate (1/8, 1/16 note, etc.)
-    Models::RateOption selectedRate = selectRandomRate();
-
-    // Calculate stutter length based on musical timing
-    int captureLength =
-            static_cast<int>(timingManager.getNoteDurationInSamples(selectedRate));
-
-    // Limit to a reasonable value (and log any adjustment)
-    int originalLength = captureLength;
-    captureLength = juce::jmin(captureLength, stutterBuffer.getNumSamples());
-    // Capture the musical segment starting from the note position
-    captureFromHistory(samplePosition, captureLength);
-
-    // Configure stutter parameters
-    isStuttering = true;
-    stutterLength = captureLength;
-    stutterPosition = 0;
-    stutterRepeatsTotal = 2 + random.nextInt(3); // 2-4 repeats
-    stutterRepeatCount = 0;
-
-    // Apply stutter effect immediately for the rest of this buffer
-    applyImmediateStutterEffect(buffer, samplePosition, numSamples, numChannels);
-}
-
-void Stutter::applyImmediateStutterEffect(juce::AudioBuffer<float> &buffer,
-                                          juce::int64 samplePosition,
-                                          int numSamples,
-                                          int numChannels) {
-    juce::AudioBuffer<float> tempBuffer(numChannels, numSamples - samplePosition);
-    tempBuffer.clear();
-
-    for (int channel = 0;
-         channel < juce::jmin(numChannels, stutterBuffer.getNumChannels());
-         ++channel) {
-        float *channelData = tempBuffer.getWritePointer(channel);
-        const float *stutterData = stutterBuffer.getReadPointer(channel);
-
-        for (int i = 0; i < numSamples - samplePosition; ++i) {
-            int stutterIndex = i % stutterLength;
-            channelData[i] = stutterData[stutterIndex];
-        }
-
-        // Copy the stutter data back to the main buffer starting at the note position
-        buffer.copyFrom(
-                channel, samplePosition, tempBuffer, channel, 0, numSamples - samplePosition);
-    }
-
-    // Update stutter position for the next buffer
-    stutterPosition = (numSamples - samplePosition) % stutterLength;
-}
-
-void Stutter::addToHistory(const juce::AudioBuffer<float> &buffer) {
-    // Add the current buffer to the history circular buffer
-    int numSamples = buffer.getNumSamples();
-
-    for (int channel = 0;
-         channel < juce::jmin(buffer.getNumChannels(), historyBuffer.getNumChannels());
-         ++channel) {
-        if (historyWritePosition + numSamples <= historyBufferSize) {
-            // Simple copy if it doesn't wrap around
-            historyBuffer.copyFrom(
-                    channel, historyWritePosition, buffer, channel, 0, numSamples);
-        } else {
-            // Handle wrap-around case
-            int firstPartSize = historyBufferSize - historyWritePosition;
-            historyBuffer.copyFrom(
-                    channel, historyWritePosition, buffer, channel, 0, firstPartSize);
-            historyBuffer.copyFrom(
-                    channel, 0, buffer, channel, firstPartSize, numSamples - firstPartSize);
-        }
-    }
-
-    // Update write position with wrap-around
-    historyWritePosition = (historyWritePosition + numSamples) % historyBufferSize;
 }
 
 void Stutter::captureFromHistory(juce::int64 triggerSamplePosition, int lengthToCapture) {
@@ -362,7 +317,7 @@ void Stutter::captureFromHistory(juce::int64 triggerSamplePosition, int lengthTo
 
 void Stutter::handleTransportLoopDetection() {
     // Check if we've detected a loop in the transport (from TimingManager)
-    if (timingManager.wasLoopDetected()) {
+    if (timingManagerPtr->wasLoopDetected()) {
         // Reset stuttering state when transport loops
         isStuttering = false;
         stutterPosition = 0;
@@ -371,7 +326,7 @@ void Stutter::handleTransportLoopDetection() {
         stutterRepeatsTotal = 0;
 
         // Clear the loop detection flag
-        timingManager.clearLoopDetection();
+        timingManagerPtr->clearLoopDetection();
     }
 }
 
@@ -382,11 +337,28 @@ Models::RateOption Stutter::selectRandomRate() {
 
     float randomValue = random.nextFloat();
 
-    if (randomValue < 0.33f) {
+    if (randomValue < 0.4f) {
         return rates[0]; // 1/8 note
-    } else if (randomValue < 0.75f) {
+    } else if (randomValue < 0.8f) {
         return rates[1]; // 1/16 note
     } else {
         return rates[2]; // 1/32 note
     }
+}
+
+std::vector<juce::int64> Stutter::checkForMidiTriggers(const juce::MidiBuffer &midiMessages) {
+    std::vector<juce::int64> triggerPositions;
+
+    // Look for MIDI note-on events to use as reference points
+    if (!midiMessages.isEmpty()) {
+        for (const auto metadata: midiMessages) {
+            auto message = metadata.getMessage();
+            if (message.isNoteOn()) {
+                // Found a note-on - this is a good point to start effects
+                triggerPositions.push_back(metadata.samplePosition);
+            }
+        }
+    }
+
+    return triggerPositions;
 }

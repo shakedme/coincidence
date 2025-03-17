@@ -100,10 +100,7 @@ namespace AppState {
 
         // Reverb parameters
         layout.add(std::make_unique<juce::AudioParameterFloat>(
-                ID_REVERB_MIX, "Reverb Mix", 0.0f, 100.0f, 15.0f));
-
-        layout.add(std::make_unique<juce::AudioParameterFloat>(
-                ID_REVERB_PROBABILITY, "Reverb Probability", 0.0f, 100.0f, 0.0f));
+                ID_REVERB_MIX, "Reverb Mix", 0.0f, 100.0f, 0.0f));
 
         layout.add(std::make_unique<juce::AudioParameterFloat>(
                 ID_REVERB_TIME, "Reverb Time", 0.0f, 100.0f, 20.0f));
@@ -113,10 +110,7 @@ namespace AppState {
 
         // Delay parameters
         layout.add(std::make_unique<juce::AudioParameterFloat>(
-                ID_DELAY_MIX, "Delay Mix", 0.0f, 100.0f, 50.0f));
-
-        layout.add(std::make_unique<juce::AudioParameterFloat>(
-                ID_DELAY_PROBABILITY, "Delay Probability", 0.0f, 100.0f, 0.0f));
+                ID_DELAY_MIX, "Delay Mix", 0.0f, 100.0f, 0.0f));
 
         layout.add(std::make_unique<juce::AudioParameterFloat>(
                 ID_DELAY_RATE, "Delay Rate", 0.0f, 100.0f, 50.0f));

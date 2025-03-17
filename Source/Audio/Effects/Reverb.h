@@ -7,41 +7,30 @@
 #include "../Sampler/SampleManager.h"
 #include "BaseEffect.h"
 #include <vector>
+#include "../../Shared/ParameterBinding.h"
 
-class Reverb : public BaseEffect
-{
+class Reverb : public BaseEffect {
 public:
-    Reverb(PluginProcessor& processor);
+    // Default constructor for ProcessorChain
+    Reverb();
+
     ~Reverb() override = default;
 
-    void prepareToPlay(double sampleRate, int samplesPerBlock) override;
-    void releaseResources() override;
-    void applyReverbEffect(juce::AudioBuffer<float>& buffer,
-                          const std::vector<juce::int64>& triggerSamplePositions);
+    // Initialize after default construction
+    void initialize(PluginProcessor &p);
 
-    bool shouldApplyReverb();
+    // Override ProcessorBase methods
+    void prepare(const juce::dsp::ProcessSpec &spec) override;
+
+    void process(const juce::dsp::ProcessContextReplacing<float> &context) override;
+
+    void reset() override;
+
 
 private:
-    std::unique_ptr<AppState::ParameterBinding<Models::ReverbSettings>> paramBinding;
     Models::ReverbSettings settings;
+    std::unique_ptr<AppState::ParameterBinding<Models::ReverbSettings>> paramBinding;
 
-    struct ActiveReverb
-    {
-        juce::int64 startSample;
-        juce::int64 duration;
-        juce::int64 currentPosition;
-        bool isActive;
-    };
-
-    juce::Reverb juceReverb;
-    juce::Reverb::Parameters juceReverbParams;
-    ActiveReverb activeReverb;
-
-    void processActiveReverb(juce::AudioBuffer<float>& buffer,
-                             const juce::AudioBuffer<float>& reverbBuffer, 
-                             float wetMix);
-    void processNewReverbTrigger(juce::AudioBuffer<float>& buffer,
-                                const juce::AudioBuffer<float>& reverbBuffer,
-                                const std::vector<juce::int64>& triggerSamplePositions,
-                                float wetMix);
+    // JUCE reverb processor
+    juce::dsp::Reverb reverbProcessor;
 };

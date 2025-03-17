@@ -85,9 +85,10 @@ public:
 
     float getCurrentRandomizedVelocity() const { return noteGenerator->getCurrentRandomizedVelocity(); }
 
-    // Connect the envelope component to receive waveform data
+    // Connect the envelope components to receive waveform data and sync changes
     void connectEnvelopeComponent(EnvelopeComponent *component);
 
+    // Access to envelope components
     EnvelopeComponent *getEnvelopeComponent() const { return envelopeComponent; }
 
     // Force all parameter listeners to update with current values

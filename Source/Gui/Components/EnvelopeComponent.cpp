@@ -549,6 +549,8 @@ bool EnvelopeComponent::keyPressed(const juce::KeyPress &key) {
                     ),
                     points.end() - 1
             );
+            parameterMapper.setPoints(points);
+            notifyPointsChanged();
             repaint();
             return true;
         }

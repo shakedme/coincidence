@@ -1,6 +1,7 @@
 #pragma once
 
 #include <juce_audio_utils/juce_audio_utils.h>
+#include <juce_dsp/juce_dsp.h>
 #include <memory>
 #include <vector>
 #include "../../Shared/Models.h"
@@ -9,7 +10,6 @@
 #include "Stutter.h"
 #include "BaseEffect.h"
 
-// Forward declarations
 class PluginProcessor;
 
 class FxEngine {
@@ -28,17 +28,10 @@ public:
 private:
     PluginProcessor &processor;
 
-    // Audio effect objects
-    std::unique_ptr<Reverb> reverbEffect;
-    std::unique_ptr<Delay> delayEffect;
-    std::unique_ptr<Stutter> stutterEffect;
-
-    // Audio settings
-    double sampleRate{44100.0};
-    int bufferSize{512};
-
-    std::vector<juce::int64> getNoteDurations(const std::vector<juce::int64> &triggerPositions);
-
-    std::vector<juce::int64> checkForMidiTriggers(const juce::MidiBuffer &midiMessages);
-
+    enum {
+        ReverbIndex,
+        DelayIndex,
+        StutterIndex
+    };
+    juce::dsp::ProcessorChain<Reverb, Delay, Stutter> fxChain;
 };

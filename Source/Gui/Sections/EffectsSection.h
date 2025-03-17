@@ -24,10 +24,8 @@ private:
     
     // Reverb UI Components
     std::unique_ptr<juce::Slider> reverbMixKnob;
-    std::unique_ptr<juce::Slider> reverbProbabilityKnob;
     std::unique_ptr<juce::Slider> reverbTimeKnob;
     std::unique_ptr<juce::Label> reverbMixLabel;
-    std::unique_ptr<juce::Label> reverbProbabilityLabel;
     std::unique_ptr<juce::Label> reverbTimeLabel;
     std::unique_ptr<juce::Label> reverbSectionLabel;
 
@@ -39,13 +37,11 @@ private:
     
     // Delay UI Components
     std::unique_ptr<juce::Slider> delayMixKnob;
-    std::unique_ptr<juce::Slider> delayProbabilityKnob;
     std::unique_ptr<juce::Slider> delayRateKnob;
     std::unique_ptr<juce::Slider> delayFeedbackKnob;
     std::unique_ptr<Toggle> delayPingPongToggle;
     std::unique_ptr<Toggle> delayBpmSyncToggle;
     std::unique_ptr<juce::Label> delayMixLabel;
-    std::unique_ptr<juce::Label> delayProbabilityLabel;
     std::unique_ptr<juce::Label> delayRateLabel;
     std::unique_ptr<juce::Label> delayFeedbackLabel;
     

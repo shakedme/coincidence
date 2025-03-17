@@ -5,6 +5,9 @@
 // Forward declaration
 class PluginProcessor;
 
+// Forward declaration of EnvelopePoint for use in Models
+class EnvelopePoint;
+
 
 
 /**
@@ -62,14 +65,12 @@ namespace Models {
 
     struct ReverbSettings {
         float reverbMix = 50.0f;              // 0-100% (dry/wet mix)
-        float reverbProbability = 0.0f;       // 0-100% (chance of applying reverb)
         float reverbTime = 50.0f;             // 0-100% (reverb decay time)
         float reverbWidth = 100.0f;           // 0-100% (stereo width)
     };
 
     struct DelaySettings {
         float delayMix = 50.0f;               // 0-100% (dry/wet mix)
-        float delayProbability = 0.0f;        // 0-100% (chance of applying delay)
         float delayRate = 50.0f;              // 0-100% (delay time in milliseconds or BPM sync)
         float delayFeedback = 50.0f;          // 0-100% (amount of feedback in the delay)
         bool delayPingPong = false;           // Ping pong mode (true) or normal (false)

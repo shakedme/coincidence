@@ -3,8 +3,8 @@
 namespace EnvelopeParams {
     enum class ParameterType {
         Amplitude,
-        Filter,
-        Pitch,
+        Reverb,
+        Delay
         // Add more parameter types here as needed
     };
 
@@ -22,10 +22,10 @@ namespace EnvelopeParams {
         switch (type) {
             case ParameterType::Amplitude:
                 return {0.0f, 1.0f, false, 0.5f, false};
-            case ParameterType::Filter:
-                return {20.0f, 20000.0f, true, 1000.0f, false};
-            case ParameterType::Pitch:
-                return {-12.0f, 12.0f, false, 0.0f, true};
+            case ParameterType::Reverb:
+                return {0.0f, 1.0f, false, 0.5f, false};
+            case ParameterType::Delay:
+                return {0.0f, 1.0f, false, 0.5f, false};
             default:
                 return {0.0f, 1.0f, false, 0.5f, false};
         }

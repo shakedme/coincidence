@@ -49,16 +49,17 @@ namespace AppState {
     static const juce::String ID_STUTTER_PROBABILITY = "stutter_probability";
     // Reverb parameters
     static const juce::String ID_REVERB_MIX = "reverb_mix";
-    static const juce::String ID_REVERB_PROBABILITY = "reverb_probability";
     static const juce::String ID_REVERB_TIME = "reverb_time";
     static const juce::String ID_REVERB_WIDTH = "reverb_width";
+    static const juce::String ID_REVERB_ENVELOPE_POINTS = "reverb_envelope_points";
+
     // Delay parameters
     static const juce::String ID_DELAY_MIX = "delay_mix";
-    static const juce::String ID_DELAY_PROBABILITY = "delay_probability";
     static const juce::String ID_DELAY_RATE = "delay_rate";
     static const juce::String ID_DELAY_FEEDBACK = "delay_feedback";
     static const juce::String ID_DELAY_PING_PONG = "delay_ping_pong";
     static const juce::String ID_DELAY_BPM_SYNC = "delay_bpm_sync";
+    static const juce::String ID_DELAY_ENVELOPE_POINTS = "delay_envelope_points";
 
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
@@ -223,9 +224,7 @@ namespace AppState {
                 createPercentageParam<Models::DelaySettings>(ID_DELAY_FEEDBACK, &Models::DelaySettings::delayFeedback),
                 createPercentageParam<Models::DelaySettings>(ID_DELAY_RATE, &Models::DelaySettings::delayRate),
                 createBoolParam<Models::DelaySettings>(ID_DELAY_PING_PONG, &Models::DelaySettings::delayPingPong),
-                createBoolParam<Models::DelaySettings>(ID_DELAY_BPM_SYNC, &Models::DelaySettings::delayBpmSync),
-                createPercentageParam<Models::DelaySettings>(ID_DELAY_PROBABILITY,
-                                                             &Models::DelaySettings::delayProbability)
+                createBoolParam<Models::DelaySettings>(ID_DELAY_BPM_SYNC, &Models::DelaySettings::delayBpmSync)
         };
     }
 
@@ -233,8 +232,6 @@ namespace AppState {
     inline std::vector<ParameterDescriptor<Models::ReverbSettings>> createReverbParameters() {
         return {
                 createPercentageParam<Models::ReverbSettings>(ID_REVERB_MIX, &Models::ReverbSettings::reverbMix),
-                createPercentageParam<Models::ReverbSettings>(ID_REVERB_PROBABILITY,
-                                                              &Models::ReverbSettings::reverbProbability),
                 createPercentageParam<Models::ReverbSettings>(ID_REVERB_TIME, &Models::ReverbSettings::reverbTime),
                 createPercentageParam<Models::ReverbSettings>(ID_REVERB_WIDTH, &Models::ReverbSettings::reverbWidth)
         };

@@ -40,17 +40,6 @@ EffectsSection::EffectsSection(PluginEditor &e, PluginProcessor &p)
     initLabel(reverbMixLabel, "MIX");
     reverbMixKnob->setSize(compactKnobSize, compactKnobSize);
 
-    // Probability knob
-    initKnob(reverbProbabilityKnob,
-             "Reverb Probability",
-             AppState::ID_REVERB_PROBABILITY,
-             0,
-             100,
-             0.1,
-             "");
-    initLabel(reverbProbabilityLabel, "PROB");
-    reverbProbabilityKnob->setSize(compactKnobSize, compactKnobSize);
-
     // Time knob
     initKnob(reverbTimeKnob, "Reverb Time", AppState::ID_REVERB_TIME, 0, 100, 0.1, "");
     initLabel(reverbTimeLabel, "TIME");
@@ -65,10 +54,6 @@ EffectsSection::EffectsSection(PluginEditor &e, PluginProcessor &p)
     sliderAttachments.push_back(
             std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
                     processor.getAPVTS(), AppState::ID_REVERB_MIX, *reverbMixKnob));
-
-    sliderAttachments.push_back(
-            std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-                    processor.getAPVTS(), AppState::ID_REVERB_PROBABILITY, *reverbProbabilityKnob));
 
     sliderAttachments.push_back(
             std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
@@ -91,11 +76,6 @@ EffectsSection::EffectsSection(PluginEditor &e, PluginProcessor &p)
     initKnob(delayMixKnob, "Delay Mix", AppState::ID_DELAY_MIX, 0, 100, 0.1, "");
     initLabel(delayMixLabel, "MIX");
     delayMixKnob->setSize(compactKnobSize, compactKnobSize);
-
-    // Probability knob
-    initKnob(delayProbabilityKnob, "Delay Probability", AppState::ID_DELAY_PROBABILITY, 0, 100, 0.1, "");
-    initLabel(delayProbabilityLabel, "PROB");
-    delayProbabilityKnob->setSize(compactKnobSize, compactKnobSize);
 
     // Rate knob - set initial tooltip based on BPM sync state
     initKnob(delayRateKnob, "Delay Rate", AppState::ID_DELAY_RATE, 0, 100, 0.1, "");
@@ -182,10 +162,6 @@ EffectsSection::EffectsSection(PluginEditor &e, PluginProcessor &p)
     sliderAttachments.push_back(
             std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
                     processor.getAPVTS(), AppState::ID_DELAY_MIX, *delayMixKnob));
-
-    sliderAttachments.push_back(
-            std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-                    processor.getAPVTS(), AppState::ID_DELAY_PROBABILITY, *delayProbabilityKnob));
 
     sliderAttachments.push_back(
             std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
@@ -318,7 +294,7 @@ void EffectsSection::resized() {
     stutterLabel->setBounds(stutterCenterX - knobSize / 2, rowY + knobSize, knobSize, labelHeight);
 
     // Position reverb knobs with even spacing
-    const int reverbKnobCount = 4;
+    const int reverbKnobCount = 3;
     const float reverbKnobGap = sectionWidth / (reverbKnobCount + 1);
 
     float currentX = divider1X + reverbKnobGap;
@@ -328,10 +304,6 @@ void EffectsSection::resized() {
     currentX += reverbKnobGap;
     reverbTimeKnob->setBounds(currentX - knobSize / 2, rowY, knobSize, knobSize);
     reverbTimeLabel->setBounds(currentX - knobSize / 2, rowY + knobSize, knobSize, labelHeight);
-
-    currentX += reverbKnobGap;
-    reverbProbabilityKnob->setBounds(currentX - knobSize / 2, rowY, knobSize, knobSize);
-    reverbProbabilityLabel->setBounds(currentX - knobSize / 2, rowY + knobSize, knobSize, labelHeight);
 
     currentX += reverbKnobGap;
     reverbWidthKnob->setBounds(currentX - knobSize / 2, rowY, knobSize, knobSize);
@@ -349,7 +321,7 @@ void EffectsSection::resized() {
     delayBpmSyncToggle->setBounds(divider2X + sectionWidth - toggleWidth - 5, toggleY, toggleWidth, toggleHeight);
 
     // Position delay knobs with even spacing
-    const int delayKnobCount = 4; // 4 knobs (mix, rate, probability, feedback)
+    const int delayKnobCount = 3; // 4 knobs (mix, rate, probability, feedback)
     const float delayKnobGap = sectionWidth / (delayKnobCount + 1);
 
     // Position delay knobs
@@ -360,10 +332,6 @@ void EffectsSection::resized() {
     currentX += delayKnobGap;
     delayRateKnob->setBounds(currentX - knobSize / 2, rowY, knobSize, knobSize);
     delayRateLabel->setBounds(currentX - knobSize / 2, rowY + knobSize, knobSize, labelHeight);
-
-    currentX += delayKnobGap;
-    delayProbabilityKnob->setBounds(currentX - knobSize / 2, rowY, knobSize, knobSize);
-    delayProbabilityLabel->setBounds(currentX - knobSize / 2, rowY + knobSize, knobSize, labelHeight);
 
     currentX += delayKnobGap;
     delayFeedbackKnob->setBounds(currentX - knobSize / 2, rowY, knobSize, knobSize);

@@ -1,25 +1,29 @@
 #pragma once
 
 #include <juce_audio_utils/juce_audio_utils.h>
+#include <juce_dsp/juce_dsp.h>
 #include "../../Shared/Models.h"
 #include "../PluginProcessor.h"
 #include <vector>
 
-// Base class for all audio effects
-class BaseEffect {
+class BaseEffect : public juce::dsp::ProcessorBase {
 public:
-    BaseEffect(PluginProcessor &processor,
-               float minTimeBetweenTriggers = 3.0);
+    BaseEffect();
+
+    // Initialize method to be called after default construction
+    void initialize(PluginProcessor &processor);
 
     virtual ~BaseEffect() = default;
 
-    virtual void prepareToPlay(double sampleRate, int samplesPerBlock);
+    virtual void prepare(const juce::dsp::ProcessSpec &spec) override;
 
-    virtual void releaseResources();
+    virtual void process(const juce::dsp::ProcessContextReplacing<float> &) override;
+
+    virtual void reset() override;
 
 protected:
-    PluginProcessor &processor;
-    TimingManager &timingManager;
+    PluginProcessor *processorPtr = nullptr;
+    TimingManager *timingManagerPtr = nullptr;
 
     // Common utility methods
     bool shouldApplyEffect(float probability);
