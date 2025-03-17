@@ -23,7 +23,7 @@ void PitchSectionComponent::paint(juce::Graphics &g) {
     // Draw vertical line from top to just above the horizontal line
     g.drawLine(getWidth() / 2, 100, getWidth() / 2, bounds.getHeight() - 50, 1.0f);
     // Draw horizontal line near the bottom
-    g.drawLine(20, bounds.getHeight() - 37, bounds.getWidth() - 20, bounds.getHeight() - 37, 1.0f);
+    g.drawLine(20, bounds.getHeight() - 32, bounds.getWidth() - 20, bounds.getHeight() - 32, 1.0f);
 }
 
 void PitchSectionComponent::resized() {

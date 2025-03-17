@@ -57,23 +57,7 @@ PluginEditor::~PluginEditor()
 //==============================================================================
 void PluginEditor::paint(juce::Graphics& g)
 {
-    // Fill background with dark grey
     g.fillAll(juce::Colour(0xff222222));
-
-    //    // Draw title banner with a metallic gradient
-    //    g.setGradientFill(juce::ColourGradient(
-    //        juce::Colour(0xff505050), 0, 0, juce::Colour(0xff303030), 0, 60, false));
-    //    g.fillRect(0, 0, getWidth(), 30);
-    //
-    //    // Add subtle highlight to give a metal panel effect
-    //    g.setColour(juce::Colour(0x20ffffff));
-    //    g.fillRect(0, 3, getWidth(), 2);
-    //
-    //    // Draw plugin logo/title
-    //    g.setColour(juce::Colours::white);
-    //    g.setFont(juce::Font(20.0f, juce::Font::bold));
-    //    g.drawText(
-    //        "Coincidence", getLocalBounds().removeFromTop(30), juce::Justification::centred, true);
 }
 
 void PluginEditor::resized()
@@ -107,9 +91,9 @@ void PluginEditor::resized()
         int topSectionY = contentArea.getY();
         int sectionPadding = 5;
         int xPadding = 10;
-        int topSectionHeight = static_cast<int>(contentArea.getHeight() * 0.40);
+        int topSectionHeight = static_cast<int>(contentArea.getHeight() * 0.44);
         int glitchHeight = static_cast<int>(contentArea.getHeight() * 0.20);
-        int sampleHeight = static_cast<int>(contentArea.getHeight() * 0.30);
+        int sampleHeight = static_cast<int>(contentArea.getHeight() * 0.34);
         int grooveWidth = static_cast<int>(getWidth() * 0.7f) - 15;
         int pitchWidth = getWidth() - grooveWidth - 25;
         int pitchX = xPadding + grooveWidth + sectionPadding;

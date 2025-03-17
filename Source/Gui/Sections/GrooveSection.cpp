@@ -3,7 +3,6 @@
 //
 
 #include "GrooveSection.h"
-#include "../../Shared/ParameterBinding.h"
 
 GrooveSectionComponent::GrooveSectionComponent(PluginEditor &e,
                                                PluginProcessor &p)
@@ -68,8 +67,8 @@ void GrooveSectionComponent::resized() {
                                          knobSize + 30,
                                          25);
 
-    probabilityKnob->setBounds(area.getCentreX() - knobSize / 2, middleRowY, knobSize, knobSize);
-    probabilityLabel->setBounds(area.getCentreX() - knobSize / 2, middleRowY + knobSize, knobSize, labelHeight);
+    probabilityKnob->setBounds(area.getCentreX() - 65 / 2, middleRowY, 65, 65);
+    probabilityLabel->setBounds(area.getCentreX() - 65 / 2, middleRowY + 50, 65, 65);
 
     const int rhythmComboWidth = 90;
     const int rhythmComboHeight = 25;
@@ -86,17 +85,12 @@ void GrooveSectionComponent::resized() {
 void GrooveSectionComponent::setupRateControls() {
     for (size_t i = 0; i < Models::NUM_RATE_OPTIONS; ++i) {
         auto rateName = Models::rateBaseNames[i];
-        rateKnobs[i] = std::unique_ptr<juce::Slider>(
-                createRotarySlider("Rate " + juce::String(Models::rateBaseNames[i]) + " intensity"));
-        rateKnobs[i]->setName("rate_" + juce::String(i));
-        rateKnobs[i]->setRange(0.0, 100.0, 0.1);
-        rateKnobs[i]->setTextValueSuffix("%");
+        initKnob(rateKnobs[i], "Rate " + juce::String(Models::rateBaseNames[i]) + " intensity",
+                 rateName);
         addAndMakeVisible(rateKnobs[i].get());
 
         // Create rate label
-        rateLabels[i] = std::unique_ptr<juce::Label>(
-                createLabel(Models::rateBaseNames[i], juce::Justification::centred));
-        rateLabels[i]->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
+        initLabel(rateLabels[i], Models::rateBaseNames[i], juce::Justification::centred);
         addAndMakeVisible(rateLabels[i].get());
 
         // Create parameter attachment
@@ -119,33 +113,27 @@ void GrooveSectionComponent::setupRhythmModeControls() {
                                   juce::Colour(0xff3a3a3a));
     rhythmModeComboBox->setColour(juce::ComboBox::textColourId, juce::Colours::white);
     rhythmModeComboBox->onChange = [this]() { updateRateLabelsForRhythmMode(); };
-    addAndMakeVisible(rhythmModeComboBox.get());
+//    addAndMakeVisible(rhythmModeComboBox.get());
 
     // Create rhythm mode label
     rhythmModeLabel =
             std::unique_ptr<juce::Label>(createLabel("MODE", juce::Justification::centred));
     rhythmModeLabel->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
-    addAndMakeVisible(rhythmModeLabel.get());
+//    addAndMakeVisible(rhythmModeLabel.get());
 
     // Create parameter attachment
-    comboBoxAttachments.push_back(
-            std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
-                    processor.getAPVTS(), AppState::ID_RHYTHM_MODE, *rhythmModeComboBox));
+//    comboBoxAttachments.push_back(
+//            std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
+//                    processor.getAPVTS(), AppState::ID_RHYTHM_MODE, *rhythmModeComboBox));
 }
 
 void GrooveSectionComponent::setupDensityControls() {
     // Create density knob
-    probabilityKnob =
-            std::unique_ptr<juce::Slider>(createRotarySlider("Overall probability to play a note"));
-    probabilityKnob->setName("probability");
-    probabilityKnob->setRange(0.0, 100.0, 0.1);
-    probabilityKnob->setTextValueSuffix("%");
+    initKnob(probabilityKnob, "Overall probability to play a note", "probability");
     addAndMakeVisible(probabilityKnob.get());
 
     // Create density label
-    probabilityLabel = std::unique_ptr<juce::Label>(
-            createLabel("PROBABILITY", juce::Justification::centred));
-    probabilityLabel->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
+    initLabel(probabilityLabel, "PROBABILITY", juce::Justification::centred, 14.0f);
     addAndMakeVisible(probabilityLabel.get());
 
     // Create parameter attachment
@@ -156,30 +144,18 @@ void GrooveSectionComponent::setupDensityControls() {
 
 void GrooveSectionComponent::setupGateControls() {
     // Create gate knob
-    gateKnob = std::unique_ptr<juce::Slider>(createRotarySlider("Gate length"));
-    gateKnob->setName("gate");
-    gateKnob->setRange(0.0, 100.0, 0.1);
-    gateKnob->setTextValueSuffix("%");
+    initKnob(gateKnob, "Gate length", "gate");
     addAndMakeVisible(gateKnob.get());
 
     // Create gate label
-    gateLabel =
-            std::unique_ptr<juce::Label>(createLabel("GATE", juce::Justification::centred));
-    gateLabel->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
+    initLabel(gateLabel, "GATE", juce::Justification::centred);
     addAndMakeVisible(gateLabel.get());
 
-    // Create gate random knob
-    gateRandomKnob =
-            std::unique_ptr<juce::Slider>(createRotarySlider("Gate randomization"));
-    gateRandomKnob->setName("gate_random");
-    gateRandomKnob->setRange(0.0, 100.0, 0.1);
-    gateRandomKnob->setTextValueSuffix("%");
+    initKnob(gateRandomKnob, "Gate randomization", "gate_random");
     addAndMakeVisible(gateRandomKnob.get());
 
     // Create gate random label
-    gateRandomLabel =
-            std::unique_ptr<juce::Label>(createLabel("RNDM", juce::Justification::centred));
-    gateRandomLabel->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
+    initLabel(gateRandomLabel, "RNDM", juce::Justification::centred);
     addAndMakeVisible(gateRandomLabel.get());
 
     // Create parameter attachments
@@ -193,30 +169,19 @@ void GrooveSectionComponent::setupGateControls() {
 
 void GrooveSectionComponent::setupVelocityControls() {
     // Create velocity knob
-    velocityKnob = std::unique_ptr<juce::Slider>(createRotarySlider("Velocity"));
-    velocityKnob->setName("velocity");
-    velocityKnob->setRange(0.0, 100.0, 0.1);
-    velocityKnob->setTextValueSuffix("%");
+    initKnob(velocityKnob, "Velocity", "velocity");
     addAndMakeVisible(velocityKnob.get());
 
     // Create velocity label
-    velocityLabel =
-            std::unique_ptr<juce::Label>(createLabel("VELO", juce::Justification::centred));
-    velocityLabel->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
+    initLabel(velocityLabel, "VELO", juce::Justification::centred);
     addAndMakeVisible(velocityLabel.get());
 
     // Create velocity random knob
-    velocityRandomKnob =
-            std::unique_ptr<juce::Slider>(createRotarySlider("Velocity randomization"));
-    velocityRandomKnob->setName("velocity_random");
-    velocityRandomKnob->setRange(0.0, 100.0, 0.1);
-    velocityRandomKnob->setTextValueSuffix("%");
+    initKnob(velocityRandomKnob, "Velocity randomization", "velocity_random");
     addAndMakeVisible(velocityRandomKnob.get());
 
     // Create velocity random label
-    velocityRandomLabel =
-            std::unique_ptr<juce::Label>(createLabel("RNDM", juce::Justification::centred));
-    velocityRandomLabel->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
+    initLabel(velocityRandomLabel, "RNDM", juce::Justification::centred);
     addAndMakeVisible(velocityRandomLabel.get());
 
     // Create parameter attachments
