@@ -5,6 +5,8 @@
 // Forward declaration
 class PluginProcessor;
 
+
+
 /**
  * Common types and constants
  */
@@ -45,6 +47,13 @@ namespace Models {
         BIDIRECTIONAL,
         RIGHT,
         RANDOM
+    };
+
+    enum EffectType {
+        REVERB = 0,
+        STUTTER,
+        DELAY,
+        NUM_EFFECT_TYPES
     };
 
     struct StutterSettings {
@@ -129,3 +138,21 @@ namespace Models {
     static inline const juce::Array<int> pentatonicScale = {0, 2, 4, 7, 9};
 
 } // namespace MidiGeneratorParams
+
+
+// Hash functions for enum classes
+namespace std {
+    template<>
+    struct hash<Models::RateOption> {
+        size_t operator()(const Models::RateOption &rate) const {
+            return hash<int>()(static_cast<int>(rate));
+        }
+    };
+
+    template<>
+    struct hash<Models::EffectType> {
+        size_t operator()(const Models::EffectType &effect) const {
+            return hash<int>()(static_cast<int>(effect));
+        }
+    };
+}

@@ -76,7 +76,7 @@ void Reverb::applyReverbEffect(juce::AudioBuffer<float> &buffer,
                 processActiveReverb(buffer, reverbBuffer, wetMix);
             }
                 // Handle new trigger
-            else if (!triggerSamplePositions.empty() && isReverbEnabledForSample() &&
+            else if (!triggerSamplePositions.empty() && isEffectEnabledForSample(Models::EffectType::REVERB) &&
                      hasMinTimePassed()) {
                 processNewReverbTrigger(buffer, reverbBuffer, triggerSamplePositions, wetMix);
             }
@@ -169,9 +169,4 @@ bool Reverb::shouldApplyReverb() {
     }
     // Apply random probability using the base class method
     return BaseEffect::shouldApplyEffect(settings.reverbProbability);
-}
-
-bool Reverb::isReverbEnabledForSample() {
-    // Use the base class method with reverb effect type (0)
-    return BaseEffect::isEffectEnabledForSample(0);
 }

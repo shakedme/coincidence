@@ -38,8 +38,7 @@ private:
     juce::Reverb::Parameters juceReverbParams;
     ActiveReverb activeReverb;
 
-    bool isReverbEnabledForSample();
-    void processActiveReverb(juce::AudioBuffer<float>& buffer, 
+    void processActiveReverb(juce::AudioBuffer<float>& buffer,
                              const juce::AudioBuffer<float>& reverbBuffer, 
                              float wetMix);
     void processNewReverbTrigger(juce::AudioBuffer<float>& buffer,

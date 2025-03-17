@@ -115,7 +115,7 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
 
     // If samples are loaded, uses generated midi to trigger samples
     if (sampleManager->isSampleLoaded()) {
-        sampleManager->processAudio(buffer, processedMidi, midiMessages);
+        sampleManager->processAudio(buffer, processedMidi);
         fxEngine->processAudio(buffer, processedMidi);
 
         // Apply amplitude envelope to the final buffer

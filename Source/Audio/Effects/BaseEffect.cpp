@@ -34,7 +34,7 @@ bool BaseEffect::hasMinTimePassed() {
     return true;
 }
 
-bool BaseEffect::isEffectEnabledForSample(int effectTypeIndex) {
+bool BaseEffect::isEffectEnabledForSample(Models::EffectType effectType) {
     int currentSampleIndex = SamplerVoice::getCurrentSampleIndex();
     auto *sound = SamplerVoice::getCorrectSoundForIndex(currentSampleIndex);
 
@@ -43,20 +43,20 @@ bool BaseEffect::isEffectEnabledForSample(int effectTypeIndex) {
         int groupIndex = sound->getGroupIndex();
         if (groupIndex >= 0) {
             // Check if effect is enabled for this group
-            if (!processor.getSampleManager().isGroupEffectEnabled(groupIndex, effectTypeIndex)) {
+            if (!processor.getSampleManager().isGroupEffectEnabled(groupIndex, effectType)) {
                 return false;
             }
         }
 
         // Check for individual effect enablement based on effect type
-        switch (effectTypeIndex) {
-            case 0: // Reverb
+        switch (effectType) {
+            case Models::EffectType::REVERB:
                 if (!sound->isReverbEnabled()) return false;
                 break;
-            case 1: // Delay
+            case Models::EffectType::DELAY:
                 if (!sound->isDelayEnabled()) return false;
                 break;
-            case 2: // Stutter
+            case Models::EffectType::STUTTER:
                 if (!sound->isStutterEnabled()) return false;
                 break;
         }

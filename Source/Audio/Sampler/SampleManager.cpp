@@ -1,7 +1,13 @@
 #include "SampleManager.h"
+#include <algorithm>
+#include <random>
 
 SampleManager::SampleInfo::SampleInfo(const juce::String &n, const juce::File &f, int idx)
         : name(n), file(f), index(idx) {
+    // Initialize all rates to enabled by default
+    for (int i = 0; i < Models::NUM_RATE_OPTIONS; ++i) {
+        rateEnabled[static_cast<Models::RateOption>(i)] = true;
+    }
 }
 
 SampleManager::SampleManager(PluginProcessor &p) : processor(p) {
@@ -28,8 +34,7 @@ void SampleManager::prepareToPlay(double sampleRate) {
 }
 
 void SampleManager::processAudio(juce::AudioBuffer<float> &buffer,
-                                 juce::MidiBuffer &processedMidi,
-                                 juce::MidiBuffer &midiMessages) {
+                                 juce::MidiBuffer &processedMidi) {
     // Get the current active sample index from the note generator
     int currentSampleIdx = processor.getNoteGenerator().getCurrentActiveSampleIdx();
 
@@ -247,11 +252,8 @@ void SampleManager::clearAllSamples() {
     currentPlayIndex = -1;
     isAscending = true;
 
-    // Clear all valid samples lists
-    validSamples_1_2.clear();
-    validSamples_1_4.clear();
-    validSamples_1_8.clear();
-    validSamples_1_16.clear();
+    // Clear all valid samples
+    validSamplesForRate.clear();
 }
 
 int SampleManager::getNextSampleIndex(Models::DirectionType direction, Models::RateOption currentRate) {
@@ -359,8 +361,7 @@ int SampleManager::selectRandomSampleWithProbability(const std::vector<int> &val
     organizeValidSamplesByGroup(samplesWithProbability, groupedValidSamples, totalGroupProbability);
 
     if (totalGroupProbability > 0.0f) {
-        return selectFromGroupedSamples(groupedValidSamples, totalGroupProbability,
-                                        samplesWithProbability);
+        return selectFromGroupedSamples(groupedValidSamples, totalGroupProbability);
     }
 
     return -1;
@@ -383,8 +384,7 @@ void SampleManager::organizeValidSamplesByGroup(const std::vector<int> &validSam
 }
 
 int SampleManager::selectFromGroupedSamples(const std::map<int, std::vector<int>> &groupedValidSamples,
-                                            float totalGroupProbability,
-                                            const std::vector<int> &validSamples) {
+                                            float totalGroupProbability) {
     // STEP 1: Select a group based on group probability
     int selectedGroupIdx = selectGroup(groupedValidSamples, totalGroupProbability);
 
@@ -405,47 +405,116 @@ int SampleManager::selectGroup(const std::map<int, std::vector<int>> &groupedVal
         return groupedValidSamples.begin()->first;
     }
 
-    float randomValue = juce::Random::getSystemRandom().nextFloat() * totalGroupProbability;
-
-    float runningGroupTotal = 0.0f;
-    // Iterate through all real groups
+    // Create a vector of pairs (groupIdx, probability) for unbiased selection
+    std::vector<std::pair<int, float>> groupProbabilities;
     for (const auto &[groupIdx, samples]: groupedValidSamples) {
-        runningGroupTotal += getGroupProbability(groupIdx);
-        if (randomValue <= runningGroupTotal) {
+        float probability = getGroupProbability(groupIdx);
+        if (probability > 0.0f) {
+            groupProbabilities.emplace_back(groupIdx, probability);
+        }
+    }
+
+    // If no groups with non-zero probability, return -1
+    if (groupProbabilities.empty()) {
+        return -1;
+    }
+
+    // Check for equal probabilities case - if all groups have the same probability
+    // we can just select one at random without roulette wheel selection
+    bool allEqual = true;
+    float firstProb = groupProbabilities[0].second;
+    for (size_t i = 1; i < groupProbabilities.size(); ++i) {
+        if (std::abs(groupProbabilities[i].second - firstProb) > 0.0001f) {
+            allEqual = false;
+            break;
+        }
+    }
+
+    // If all probabilities are equal, just pick randomly
+    if (allEqual) {
+        // Shuffle first for true randomness
+        std::shuffle(groupProbabilities.begin(), groupProbabilities.end(),
+                     std::default_random_engine(juce::Random::getSystemRandom().nextInt64()));
+
+        return groupProbabilities[0].first;
+    }
+
+    // True roulette wheel selection (doesn't depend on iteration order at all)
+    float randomValue = juce::Random::getSystemRandom().nextFloat() * totalGroupProbability;
+    float cumulativeProbability = 0.0f;
+
+    // Sort the vector randomly to avoid any potential bias
+    std::shuffle(groupProbabilities.begin(), groupProbabilities.end(),
+                 std::default_random_engine(juce::Random::getSystemRandom().nextInt64()));
+
+    // Implementation of roulette wheel selection
+    for (const auto &[groupIdx, probability]: groupProbabilities) {
+        cumulativeProbability += probability;
+        if (randomValue <= cumulativeProbability) {
             return groupIdx;
         }
     }
 
-    // Fallback if no group selected (could happen due to rounding errors)
-    for (const auto &[groupIdx, samples]: groupedValidSamples) {
-        if (groupIdx >= 0 && !samples.empty()) {
-            return groupIdx;
-        }
+    // Fallback if no group selected (could happen due to floating-point precision issues)
+    if (!groupProbabilities.empty()) {
+        return groupProbabilities.back().first;
     }
 
     return -1;
 }
 
 int SampleManager::selectSampleFromGroup(const std::vector<int> &samplesInGroup) {
+    // First, create a copy that we can shuffle
+    std::vector<int> shuffledSamples = samplesInGroup;
+
     // Calculate total probability for samples in this group
     float totalSampleProbability = 0.0f;
+    std::vector<std::pair<int, float>> sampleProbabilities;
+
     for (int idx: samplesInGroup) {
-        totalSampleProbability += getSampleProbability(idx);
+        float prob = getSampleProbability(idx);
+        totalSampleProbability += prob;
+        sampleProbabilities.emplace_back(idx, prob);
     }
+
+    // Check for equal probabilities case
+    bool allEqual = true;
+    if (!sampleProbabilities.empty()) {
+        float firstProb = sampleProbabilities[0].second;
+        for (size_t i = 1; i < sampleProbabilities.size(); ++i) {
+            if (std::abs(sampleProbabilities[i].second - firstProb) > 0.0001f) {
+                allEqual = false;
+                break;
+            }
+        }
+    }
+
+    // If all probabilities are equal, just pick randomly
+    if (allEqual && !sampleProbabilities.empty()) {
+        // Shuffle first for true randomness
+        std::shuffle(sampleProbabilities.begin(), sampleProbabilities.end(),
+                     std::default_random_engine(juce::Random::getSystemRandom().nextInt64()));
+
+        return sampleProbabilities[0].first;
+    }
+
+    // Shuffle the probabilities vector to remove bias when probabilities are equal
+    std::shuffle(sampleProbabilities.begin(), sampleProbabilities.end(),
+                 std::default_random_engine(juce::Random::getSystemRandom().nextInt64()));
 
     // Select based on sample probability
     float randomSampleValue = juce::Random::getSystemRandom().nextFloat() * totalSampleProbability;
     float runningSampleTotal = 0.0f;
 
-    for (int idx: samplesInGroup) {
-        runningSampleTotal += getSampleProbability(idx);
+    for (const auto &[idx, probability]: sampleProbabilities) {
+        runningSampleTotal += probability;
         if (randomSampleValue <= runningSampleTotal) {
             return idx;
         }
     }
 
     // Fallback in case of rounding errors
-    return samplesInGroup.size() - 1;
+    return samplesInGroup.back();
 }
 
 juce::String SampleManager::getSampleName(int index) const {
@@ -594,28 +663,7 @@ void SampleManager::removeSampleFromGroup(int sampleIndex) {
 void SampleManager::setSampleRateEnabled(int sampleIndex, Models::RateOption rate, bool enabled) {
     if (sampleIndex >= 0 && sampleIndex < sampleList.size()) {
         auto &sample = sampleList[sampleIndex];
-        switch (rate) {
-            case Models::RATE_1_1:
-                sample->rate_1_1_enabled = enabled;
-                break;
-            case Models::RATE_1_2:
-                sample->rate_1_2_enabled = enabled;
-                break;
-            case Models::RATE_1_4:
-                sample->rate_1_4_enabled = enabled;
-                break;
-            case Models::RATE_1_8:
-                sample->rate_1_8_enabled = enabled;
-                break;
-            case Models::RATE_1_16:
-                sample->rate_1_16_enabled = enabled;
-                break;
-            case Models::RATE_1_32:
-                sample->rate_1_32_enabled = enabled;
-                break;
-            default:
-                break;
-        }
+        sample->rateEnabled[rate] = enabled;
 
         // Update the valid samples list for this rate
         updateValidSamplesForRate(rate);
@@ -626,34 +674,11 @@ bool SampleManager::isSampleRateEnabled(int sampleIndex, Models::RateOption rate
     if (sampleIndex >= 0 && sampleIndex < sampleList.size()) {
         const auto &sample = sampleList[sampleIndex];
 
-        // Get the sample's rate state
-        bool sampleRateEnabled = false;
-        switch (rate) {
-            case Models::RATE_1_1:
-                sampleRateEnabled = sample->rate_1_1_enabled;
-                break;
-            case Models::RATE_1_2:
-                sampleRateEnabled = sample->rate_1_2_enabled;
-                break;
-            case Models::RATE_1_4:
-                sampleRateEnabled = sample->rate_1_4_enabled;
-                break;
-            case Models::RATE_1_8:
-                sampleRateEnabled = sample->rate_1_8_enabled;
-                break;
-            case Models::RATE_1_16:
-                sampleRateEnabled = sample->rate_1_16_enabled;
-                break;
-            case Models::RATE_1_32:
-                sampleRateEnabled = sample->rate_1_32_enabled;
-                break;
-
-            default:
-                return false;
-        }
-
         // Return false early if sample itself has the rate disabled
-        if (!sampleRateEnabled) return false;
+        auto it = sample->rateEnabled.find(rate);
+        if (it == sample->rateEnabled.end() || !it->second) {
+            return false;
+        }
 
         // Check if sample is in a valid group
         if (sample->groupIndex >= 0 && sample->groupIndex < groups.size()) {
@@ -667,84 +692,34 @@ bool SampleManager::isSampleRateEnabled(int sampleIndex, Models::RateOption rate
 }
 
 void SampleManager::updateValidSamplesForRate(Models::RateOption rate) {
-    std::vector<int> *targetList = nullptr;
-    switch (rate) {
-        case Models::RATE_1_1:
-            targetList = &validSamples_1_1;
-            break;
-        case Models::RATE_1_2:
-            targetList = &validSamples_1_2;
-            break;
-        case Models::RATE_1_4:
-            targetList = &validSamples_1_4;
-            break;
-        case Models::RATE_1_8:
-            targetList = &validSamples_1_8;
-            break;
-        case Models::RATE_1_16:
-            targetList = &validSamples_1_16;
-            break;
-        case Models::RATE_1_32:
-            targetList = &validSamples_1_32;
-            break;
-        default:
-            return;
-    }
+    // Clear the vector for this rate (creates it if it doesn't exist)
+    validSamplesForRate[rate].clear();
 
-    targetList->clear();
+    // Add all valid samples for this rate
     for (size_t i = 0; i < sampleList.size(); ++i) {
         if (isSampleRateEnabled(i, rate)) {
-            targetList->push_back(i);
+            validSamplesForRate[rate].push_back(i);
         }
     }
 }
 
 const std::vector<int> &SampleManager::getValidSamplesForRate(Models::RateOption rate) const {
-    switch (rate) {
-        case Models::RATE_1_1:
-            return validSamples_1_1;
-        case Models::RATE_1_2:
-            return validSamples_1_2;
-        case Models::RATE_1_4:
-            return validSamples_1_4;
-        case Models::RATE_1_8:
-            return validSamples_1_8;
-        case Models::RATE_1_16:
-            return validSamples_1_16;
-        case Models::RATE_1_32:
-            return validSamples_1_32;
-        default:
-            return validSamples_1_4; // Default to quarter notes
+    // If the rate exists in the map, return its vector
+    auto it = validSamplesForRate.find(rate);
+    if (it != validSamplesForRate.end()) {
+        return it->second;
     }
+
+    // Fallback to an empty vector if not found
+    static const std::vector<int> emptyVector;
+    return emptyVector;
 }
 
 // Group rate methods implementation
 void SampleManager::setGroupRateEnabled(int groupIndex, Models::RateOption rate, bool enabled) {
     if (groupIndex >= 0 && groupIndex < groups.size()) {
         auto &group = groups[groupIndex];
-        switch (rate) {
-            case Models::RATE_1_1:
-                group->rate_1_1_enabled = enabled;
-                break;
-            case Models::RATE_1_2:
-                group->rate_1_2_enabled = enabled;
-                break;
-            case Models::RATE_1_4:
-                group->rate_1_4_enabled = enabled;
-                break;
-            case Models::RATE_1_8:
-                group->rate_1_8_enabled = enabled;
-                break;
-            case Models::RATE_1_16:
-                group->rate_1_16_enabled = enabled;
-                break;
-            case Models::RATE_1_32:
-                group->rate_1_32_enabled = enabled;
-                break;
-            default:
-                break;
-        }
-
+        group->rateEnabled[rate] = enabled;
         updateValidSamplesForRate(rate);
     }
 }
@@ -752,59 +727,25 @@ void SampleManager::setGroupRateEnabled(int groupIndex, Models::RateOption rate,
 bool SampleManager::isGroupRateEnabled(int groupIndex, Models::RateOption rate) const {
     if (groupIndex >= 0 && groupIndex < groups.size()) {
         const auto &group = groups[groupIndex];
-        switch (rate) {
-            case Models::RATE_1_1:
-                return group->rate_1_1_enabled;
-            case Models::RATE_1_2:
-                return group->rate_1_2_enabled;
-            case Models::RATE_1_4:
-                return group->rate_1_4_enabled;
-            case Models::RATE_1_8:
-                return group->rate_1_8_enabled;
-            case Models::RATE_1_16:
-                return group->rate_1_16_enabled;
-            case Models::RATE_1_32:
-                return group->rate_1_32_enabled;
-            default:
-                break;
-        }
+        auto it = group->rateEnabled.find(rate);
+        return (it != group->rateEnabled.end()) ? it->second : false;
     }
     return false;
 }
 
 // Group effect methods implementation
-void SampleManager::setGroupEffectEnabled(int groupIndex, int effectType, bool enabled) {
+void SampleManager::setGroupEffectEnabled(int groupIndex, Models::EffectType effectType, bool enabled) {
     if (groupIndex >= 0 && groupIndex < groups.size()) {
         auto &group = groups[groupIndex];
-        switch (effectType) {
-            case 0:
-                group->reverb_enabled = enabled;
-                break;  // Reverb
-            case 1:
-                group->stutter_enabled = enabled;
-                break; // Stutter
-            case 2:
-                group->delay_enabled = enabled;
-                break;   // Delay
-            default:
-                break;
-        }
+        group->effectEnabled[effectType] = enabled;
     }
 }
 
-bool SampleManager::isGroupEffectEnabled(int groupIndex, int effectType) const {
+bool SampleManager::isGroupEffectEnabled(int groupIndex, Models::EffectType effectType) const {
     if (groupIndex >= 0 && groupIndex < groups.size()) {
         const auto &group = groups[groupIndex];
-        switch (effectType) {
-            case 0:
-                return group->reverb_enabled;  // Reverb
-            case 1:
-                return group->stutter_enabled; // Stutter
-            case 2:
-                return group->delay_enabled;   // Delay
-            default:
-                break;
-        }
+        auto it = group->effectEnabled.find(effectType);
+        return (it != group->effectEnabled.end()) && it->second;
     }
     return false;
 }

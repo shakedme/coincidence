@@ -2,15 +2,17 @@
 
 #include "Sampler.h"
 #include <juce_audio_basics/juce_audio_basics.h>
+#include <utility>
 #include <vector>
 #include <memory>
 #include "../../Shared/Models.h"
 #include "OnsetDetector.h"
 #include <map>
+#include <unordered_map>
 
 class SampleManager {
 public:
-    SampleManager(PluginProcessor& processor);
+    SampleManager(PluginProcessor &processor);
 
     ~SampleManager();
 
@@ -22,13 +24,7 @@ public:
         float probability = 1.0f; // Default probability value (1.0 = 100%)
         int groupIndex = -1;      // -1 means not part of any group, 0-3 for groups
 
-        // Rate flags - all enabled by default
-        bool rate_1_1_enabled = true;
-        bool rate_1_2_enabled = true;
-        bool rate_1_4_enabled = true;
-        bool rate_1_8_enabled = true;
-        bool rate_1_16_enabled = true;
-        bool rate_1_32_enabled = true;
+        std::unordered_map<Models::RateOption, bool> rateEnabled;
 
         SampleInfo(const juce::String &n, const juce::File &f, int idx);
     };
@@ -37,27 +33,25 @@ public:
     struct Group {
         juce::String name;
         int index;
-        float probability = 1.0f; // Default probability value (1.0 = 100%)
+        float probability = 1.0f;
         std::vector<int> sampleIndices;
 
-        // Rate flags - all enabled by default
-        bool rate_1_1_enabled = true;
-        bool rate_1_2_enabled = true;
-        bool rate_1_4_enabled = true;
-        bool rate_1_8_enabled = true;
-        bool rate_1_16_enabled = true;
-        bool rate_1_32_enabled = true;
+        std::unordered_map<Models::RateOption, bool> rateEnabled;
+        std::unordered_map<Models::EffectType, bool> effectEnabled;
 
-        // Effect flags - all enabled by default
-        bool reverb_enabled = true;
-        bool stutter_enabled = true;
-        bool delay_enabled = true;
+        Group(juce::String n, int idx) : name(std::move(n)), index(idx) {
+            // Initialize all rates and effects to enabled by default
+            for (int i = 0; i < Models::NUM_RATE_OPTIONS; ++i) {
+                rateEnabled[static_cast<Models::RateOption>(i)] = true;
+            }
 
-        Group(const juce::String &n, int idx) : name(n), index(idx) {}
+            for (int i = 0; i < Models::NUM_EFFECT_TYPES; ++i) {
+                effectEnabled[static_cast<Models::EffectType>(i)] = true;
+            }
+        }
     };
 
-    void processAudio(juce::AudioBuffer<float> &buffer, juce::MidiBuffer &processedMidi,
-                      juce::MidiBuffer &midiMessages);
+    void processAudio(juce::AudioBuffer<float> &buffer, juce::MidiBuffer &processedMidi);
 
     // Sample management
     void addSample(const juce::File &file);
@@ -118,9 +112,9 @@ public:
     bool isGroupRateEnabled(int groupIndex, Models::RateOption rate) const;
 
     // Group effect methods (0=reverb, 1=stutter, 2=delay)
-    void setGroupEffectEnabled(int groupIndex, int effectType, bool enabled);
+    void setGroupEffectEnabled(int groupIndex, Models::EffectType effectType, bool enabled);
 
-    bool isGroupEffectEnabled(int groupIndex, int effectType) const;
+    bool isGroupEffectEnabled(int groupIndex, Models::EffectType effectType) const;
 
 private:
     // Current sample state (for playback)
@@ -131,13 +125,8 @@ private:
     // Loaded samples
     std::vector<std::unique_ptr<SampleInfo>> sampleList;
 
-    // Pre-filtered lists of valid samples for each rate
-    std::vector<int> validSamples_1_1;
-    std::vector<int> validSamples_1_2;
-    std::vector<int> validSamples_1_4;
-    std::vector<int> validSamples_1_8;
-    std::vector<int> validSamples_1_16;
-    std::vector<int> validSamples_1_32;
+    // Replace six separate vectors with a single unordered_map
+    std::unordered_map<Models::RateOption, std::vector<int>> validSamplesForRate;
 
     // Helper methods for managing valid sample lists
     void updateValidSamplesForRate(Models::RateOption rate);
@@ -152,8 +141,7 @@ private:
                                      float &totalGroupProbability);
 
     int selectFromGroupedSamples(const std::map<int, std::vector<int>> &groupedValidSamples,
-                                 float totalGroupProbability,
-                                 const std::vector<int> &validSamples);
+                                 float totalGroupProbability);
 
     int selectGroup(const std::map<int, std::vector<int>> &groupedValidSamples, float totalGroupProbability);
 

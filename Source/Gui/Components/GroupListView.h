@@ -66,9 +66,9 @@ public:
             setupRateIcon(rateIcons1_32[i], "1/32", Models::RATE_1_32, i);
 
             // Create effect icons with shorter names like in the screenshot
-            setupEffectIcon(reverbIcons[i], "R", i, EffectType::Reverb);
-            setupEffectIcon(stutterIcons[i], "S", i, EffectType::Stutter);
-            setupEffectIcon(delayIcons[i], "D", i, EffectType::Delay);
+            setupEffectIcon(reverbIcons[i], "R", i, Models::EffectType::REVERB);
+            setupEffectIcon(stutterIcons[i], "S", i, Models::EffectType::STUTTER);
+            setupEffectIcon(delayIcons[i], "D", i, Models::EffectType::DELAY);
 
             // Initially hide components (will be shown in resized() if group is active)
             label->setVisible(false);
@@ -100,7 +100,7 @@ public:
 
         // Get the number of active groups
         const int numGroups = static_cast<int>(processor.getSampleManager().getNumGroups());
-        
+
         // Skip layout if no groups exist
         if (numGroups == 0) {
             return;
@@ -312,9 +312,9 @@ public:
                         updateRateIconState(rateIcons1_32[i].get(), i, Models::RATE_1_32);
 
                         // Update effect icon states
-                        updateEffectIconState(reverbIcons[i].get(), i, EffectType::Reverb);
-                        updateEffectIconState(stutterIcons[i].get(), i, EffectType::Stutter);
-                        updateEffectIconState(delayIcons[i].get(), i, EffectType::Delay);
+                        updateEffectIconState(reverbIcons[i].get(), i, Models::EffectType::REVERB);
+                        updateEffectIconState(stutterIcons[i].get(), i, Models::EffectType::STUTTER);
+                        updateEffectIconState(delayIcons[i].get(), i, Models::EffectType::DELAY);
                     }
                 }
             }
@@ -326,10 +326,10 @@ public:
 
     void paint(juce::Graphics &g) override {
         auto bounds = getLocalBounds();
-        
+
         // Get the number of active groups
         const int numGroups = static_cast<int>(processor.getSampleManager().getNumGroups());
-        
+
         if (numGroups > 0) {
             // Draw vertical divider lines between all 8 group slots when groups exist
             const int groupWidth = bounds.getWidth() / MAX_GROUPS;
@@ -337,10 +337,10 @@ public:
             for (int i = 1; i < MAX_GROUPS; ++i) {
                 int dividerX = i * groupWidth;
                 g.drawLine(dividerX,
-                        bounds.getY(),
-                        dividerX,
-                        bounds.getBottom() - 10,
-                        1.0f);
+                           bounds.getY(),
+                           dividerX,
+                           bounds.getBottom() - 10,
+                           1.0f);
             }
         } else {
             // Display centered message when no groups exist
@@ -354,10 +354,6 @@ public:
     }
 
 private:
-    enum class EffectType {
-        Reverb, Stutter, Delay
-    };
-
     PluginProcessor &processor;
     juce::Label titleLabel;
 
@@ -419,7 +415,8 @@ private:
 
         // Make icons more visible with brighter initial color
         icon->setNormalColour(juce::Colour(0xffaaaaaa));
-        icon->setTooltip("Toggle " + text + " rate for Group " + juce::String(groupIndex + 1) + ". When disabled, the rate will never be played regardless of probability settings.\"" );
+        icon->setTooltip("Toggle " + text + " rate for Group " + juce::String(groupIndex + 1) +
+                         ". When disabled, the rate will never be played regardless of probability settings.\"");
 
         // Add click handler
         icon->onClicked = [this, rate, groupIndex]() {
@@ -434,32 +431,31 @@ private:
     }
 
     void
-    setupEffectIcon(std::unique_ptr<TextIcon> &icon, const juce::String &text, int groupIndex, EffectType effectType) {
+    setupEffectIcon(std::unique_ptr<TextIcon> &icon, const juce::String &text, int groupIndex,
+                    Models::EffectType effectType) {
         icon = std::make_unique<TextIcon>(text, effectIconWidth, effectIconHeight);
         icon->setNormalColour(juce::Colour(0xff888888));
 
         juce::String effectName;
         switch (effectType) {
-            case EffectType::Reverb:
+            case Models::EffectType::REVERB:
                 effectName = "Reverb";
                 break;
-            case EffectType::Stutter:
+            case Models::EffectType::STUTTER:
                 effectName = "Stutter";
                 break;
-            case EffectType::Delay:
+            case Models::EffectType::DELAY:
                 effectName = "Delay";
                 break;
         }
 
-        icon->setTooltip("Toggle " + effectName + " for Group " + juce::String(groupIndex + 1) + ". When disabled, the effect will never be applied to this group regardless of probability settings.");
+        icon->setTooltip("Toggle " + effectName + " for Group " + juce::String(groupIndex + 1) +
+                         ". When disabled, the effect will never be applied to this group regardless of probability settings.");
 
         // Add click handler
         icon->onClicked = [this, effectType, groupIndex]() {
-            int effectTypeIdx = static_cast<int>(effectType);
-            bool currentState = processor.getSampleManager().isGroupEffectEnabled(groupIndex, effectTypeIdx);
-            processor.getSampleManager().setGroupEffectEnabled(groupIndex, effectTypeIdx, !currentState);
-
-            // Update icon state
+            bool currentState = processor.getSampleManager().isGroupEffectEnabled(groupIndex, effectType);
+            processor.getSampleManager().setGroupEffectEnabled(groupIndex, effectType, !currentState);
             updateEffectIconState(getGroupEffectIcon(groupIndex, effectType), groupIndex, effectType);
         };
 
@@ -487,15 +483,15 @@ private:
         }
     }
 
-    TextIcon *getGroupEffectIcon(int groupIndex, EffectType effectType) {
+    TextIcon *getGroupEffectIcon(int groupIndex, Models::EffectType effectType) {
         if (groupIndex < 0 || groupIndex >= MAX_GROUPS) return nullptr;
 
         switch (effectType) {
-            case EffectType::Reverb:
+            case Models::EffectType::REVERB:
                 return reverbIcons[groupIndex].get();
-            case EffectType::Stutter:
+            case Models::EffectType::STUTTER:
                 return stutterIcons[groupIndex].get();
-            case EffectType::Delay:
+            case Models::EffectType::DELAY:
                 return delayIcons[groupIndex].get();
             default:
                 return nullptr;
@@ -515,12 +511,11 @@ private:
         }
     }
 
-    void updateEffectIconState(TextIcon *icon, int groupIndex, EffectType effectType) {
+    void updateEffectIconState(TextIcon *icon, int groupIndex, Models::EffectType effectType) {
         if (icon == nullptr)
             return;
 
-        int effectTypeIdx = static_cast<int>(effectType);
-        bool isEnabled = processor.getSampleManager().isGroupEffectEnabled(groupIndex, effectTypeIdx);
+        bool isEnabled = processor.getSampleManager().isGroupEffectEnabled(groupIndex, effectType);
 
         if (isEnabled)
             icon->setActive(true, getGroupColor(groupIndex));

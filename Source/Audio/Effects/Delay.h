@@ -40,7 +40,6 @@ private:
     
     // Helper methods
     bool shouldApplyDelay();
-    bool isDelayEnabledForSample();
     float calculateDelayTimeFromBPM(float rate);
     void recalculateDelayTimeInSamples();
     

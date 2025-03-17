@@ -110,11 +110,6 @@ bool Delay::shouldApplyDelay() {
     return BaseEffect::shouldApplyEffect(settings.delayProbability);
 }
 
-bool Delay::isDelayEnabledForSample() {
-    // Use the base class method with delay effect type (1)
-    return BaseEffect::isEffectEnabledForSample(1);
-}
-
 void Delay::applyDelayEffect(juce::AudioBuffer<float> &buffer,
                              const std::vector<juce::int64> &triggerSamplePositions) {
     if (!delayLineLeft || !delayLineRight || buffer.getNumChannels() == 0 || settings.delayMix <= 0.0f)
@@ -173,7 +168,7 @@ void Delay::applyDelayEffect(juce::AudioBuffer<float> &buffer,
             processActiveDelay(buffer, delayBuffer, wetMix);
         }
             // Handle new trigger position
-        else if (!triggerSamplePositions.empty() && isDelayEnabledForSample() && hasMinTimePassed()) {
+        else if (!triggerSamplePositions.empty() && isEffectEnabledForSample(Models::EffectType::DELAY) && hasMinTimePassed()) {
             processNewDelayTrigger(buffer, delayBuffer, triggerSamplePositions, wetMix);
         }
     }

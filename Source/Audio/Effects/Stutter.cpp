@@ -53,7 +53,8 @@ void Stutter::applyStutterEffect(juce::AudioBuffer<float> &buffer,
 //     Process stutter effect
     if (isStuttering) {
         processActiveStutter(buffer, numSamples, numChannels);
-    } else if (shouldStutter() && !triggerSamplePositions.empty() && hasMinTimePassed()) {
+    } else if (shouldStutter() && !triggerSamplePositions.empty() && hasMinTimePassed() &&
+               isEffectEnabledForSample(Models::EffectType::STUTTER)) {
         startStutterAtPosition(
                 buffer, triggerSamplePositions[0], numSamples, numChannels);
     }
