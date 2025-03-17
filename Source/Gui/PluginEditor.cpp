@@ -30,12 +30,8 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     envelopeSection = std::make_unique<EnvelopeSectionComponent>(*this, audioProcessor);
     addChildComponent(envelopeSection.get());
 
-    // Connect the envelope component to the processor for waveform visualization
-    if (envelopeSection != nullptr)
-    {
-        audioProcessor.connectEnvelopeComponent(envelopeSection->getEnvelopeComponent());
-        audioProcessor.connectReverbEnvelopeComponent(envelopeSection->getReverbEnvelopeComponent());
-    }
+    // Connect the envelope section to the processor
+    audioProcessor.connectEnvelopeSection(envelopeSection.get());
 
     tooltipWindow = std::make_unique<juce::TooltipWindow>(this, 0);
 

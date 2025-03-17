@@ -23,15 +23,15 @@ void Reverb::process(const juce::dsp::ProcessContextReplacing<float> &context) {
 
         float baseMix = settings.reverbMix;
 
-        float mixValue = baseMix;
-        if (processorPtr != nullptr) {
-            float envelopeValue = processorPtr->getReverbEnvelope().getCurrentValue();
+//        float mixValue = baseMix;
+//        if (processorPtr != nullptr) {
+//            float envelopeValue = processorPtr->getReverbEnvelope().getCurrentValue();
+//
+//            mixValue = baseMix * envelopeValue;
+//        }
 
-            mixValue = baseMix * envelopeValue;
-        }
-
-        params.wetLevel = mixValue;
-        params.dryLevel = 1.0f - mixValue;
+        params.wetLevel = settings.reverbMix;
+        params.dryLevel = 1.0f - params.wetLevel;
 
         reverbProcessor.setParameters(params);
         reverbProcessor.process(context);

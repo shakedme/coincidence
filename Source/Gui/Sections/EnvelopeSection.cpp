@@ -1,44 +1,81 @@
 #include "EnvelopeSection.h"
-
+#include "../../Audio/Envelope/EnvelopeParameterTypes.h"
+#include "../PluginEditor.h"
+#include "../../Audio/PluginProcessor.h"
+#include "../Components/EnvelopeComponent.h"
 #include <memory>
 
 EnvelopeSectionComponent::EnvelopeSectionComponent(PluginEditor &editor, PluginProcessor &processor)
         : BaseSectionComponent(editor, processor, "", juce::Colour(0xff8a6e9e)) {
+
+    // Setup the tabbed interface
     envTabs = std::make_unique<EnvelopeTabs>(juce::TabbedButtonBar::TabsAtTop);
     envTabs->setOutline(0);
     envTabs->setTabBarDepth(30);
-
-    envTabs->addTab("Amplitude", juce::Colours::transparentBlack, new juce::Component(), true);
-    envTabs->addTab("Reverb", juce::Colours::transparentBlack, new juce::Component(), true);
-
     addAndMakeVisible(envTabs.get());
 
-    // Create the amplitude envelope component
-    envelopeComponent = std::make_unique<EnvelopeComponent>(processor.getTimingManager(),
-                                                            EnvelopeParams::ParameterType::Amplitude);
-    addAndMakeVisible(envelopeComponent.get());
+    // Create envelope components for all registered types
+    createEnvelopeComponents();
 
-    // Create the reverb envelope component (initially hidden)
-    reverbEnvelopeComponent = std::make_unique<EnvelopeComponent>(processor.getTimingManager(),
-                                                                  EnvelopeParams::ParameterType::Reverb);
-    addChildComponent(reverbEnvelopeComponent.get());
+    // Set up scale slider for waveform visualization
+    setupScaleSlider();
 
-    // Show the active tab's envelope component
+    // Show the first envelope component by default
+    if (!envelopeComponents.empty()) {
+        auto &typeInfo = processor.getEnvelopeRegistry().getAvailableTypes().front();
+        envelopeComponents[typeInfo.type]->setVisible(true);
+    }
+}
+
+void EnvelopeSectionComponent::createEnvelopeComponents() {
+    // Get all available envelope types
+    const auto &availableTypes = processor.getEnvelopeRegistry().getAvailableTypes();
+
+    // Create envelope component and tab for each visible type
+    int tabIndex = 0;
+    for (const auto &typeInfo: availableTypes) {
+        if (typeInfo.visible) {
+            // Add tab
+            envTabs->addTab(typeInfo.name, juce::Colours::transparentBlack, new juce::Component(), true);
+
+            // Create envelope component
+            auto component = std::make_unique<EnvelopeComponent>(
+                    processor.getTimingManager(), typeInfo.type);
+
+            // Initially all components are hidden
+            component->setVisible(false);
+            addAndMakeVisible(component.get());
+
+            // Store the component
+            envelopeComponents[typeInfo.type] = std::move(component);
+
+            tabIndex++;
+        }
+    }
+
+    // Setup tab change callback
     envTabs->onTabChanged = [this](int tabIndex) {
-        if (tabIndex == 0) { // Amplitude tab
-            envelopeComponent->setVisible(true);
-            reverbEnvelopeComponent->setVisible(false);
-        } else if (tabIndex == 1) { // Reverb tab
-            envelopeComponent->setVisible(false);
-            reverbEnvelopeComponent->setVisible(true);
-        } else { // Other tabs (EQ, Pitch)
-            envelopeComponent->setVisible(false);
-            reverbEnvelopeComponent->setVisible(false);
+        // Hide all components
+        for (auto &pair: envelopeComponents) {
+            pair.second->setVisible(false);
+        }
+
+        // Show the selected component
+        if (tabIndex >= 0 && tabIndex < processor.getEnvelopeRegistry().getAvailableTypes().size()) {
+            const auto &typeInfo = processor.getEnvelopeRegistry().getAvailableTypes()[tabIndex];
+            if (envelopeComponents.find(typeInfo.type) != envelopeComponents.end()) {
+                envelopeComponents[typeInfo.type]->setVisible(true);
+            }
         }
     };
+}
 
-    // Set up scale slider
-    setupScaleSlider();
+EnvelopeComponent *EnvelopeSectionComponent::getEnvelopeComponent(EnvelopeParams::ParameterType type) {
+    auto it = envelopeComponents.find(type);
+    if (it != envelopeComponents.end()) {
+        return it->second.get();
+    }
+    return nullptr;
 }
 
 void EnvelopeSectionComponent::setupScaleSlider() {
@@ -55,15 +92,12 @@ void EnvelopeSectionComponent::setupScaleSlider() {
     scaleSlider->setTooltip("Adjust waveform vertical scale");
     scaleSlider->onValueChange = [this] {
         float scaleFactor = static_cast<float>(scaleSlider->getValue());
-        
-        // Apply scale to amplitude envelope
-        if (envelopeComponent != nullptr) {
-            envelopeComponent->setWaveformScaleFactor(scaleFactor);
-        }
-        
-        // Apply same scale to reverb envelope
-        if (reverbEnvelopeComponent != nullptr) {
-            reverbEnvelopeComponent->setWaveformScaleFactor(scaleFactor);
+
+        // Apply scale to all envelope components
+        for (auto &pair: envelopeComponents) {
+            if (pair.second != nullptr) {
+                pair.second->setWaveformScaleFactor(scaleFactor);
+            }
         }
     };
     addAndMakeVisible(scaleSlider.get());
@@ -94,8 +128,9 @@ void EnvelopeSectionComponent::resized() {
     scaleLabel->setBounds(10, controlArea.getY(), labelWidth, controlHeight);
     scaleSlider->setBounds(scaleLabel->getRight(), controlArea.getY(), sliderWidth, controlHeight);
 
-    // Position the envelope components in the remaining space
+    // Position all envelope components in the remaining space
     auto envelopeArea = area.reduced(10, 10);
-    envelopeComponent->setBounds(envelopeArea);
-    reverbEnvelopeComponent->setBounds(envelopeArea);
+    for (auto &pair: envelopeComponents) {
+        pair.second->setBounds(envelopeArea);
+    }
 } 

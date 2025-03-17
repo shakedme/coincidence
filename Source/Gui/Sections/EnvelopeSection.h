@@ -1,57 +1,45 @@
 #pragma once
 
-#include <memory>
-
+#include "../Components/EnvelopeTabs.h"
 #include "BaseSection.h"
-#include "../Components/EnvelopeComponent.h"
-#include "../Components/WaveformComponent.h"
+#include <map>
+#include "../../Audio/Envelope/EnvelopeParameterTypes.h"
 
-class EnvelopeTabs : public juce::TabbedComponent {
-public:
-    explicit EnvelopeTabs(juce::TabbedButtonBar::Orientation orientation)
-            : juce::TabbedComponent(orientation) {
-        setInterceptsMouseClicks(false, true);
-        setColour(juce::TabbedComponent::backgroundColourId, juce::Colours::transparentBlack);
-        setColour(juce::TabbedComponent::outlineColourId, juce::Colours::transparentBlack);
-    }
-
-    std::function<void(int tabIndex)> onTabChanged;
-
-    void currentTabChanged(int newCurrentTabIndex, const juce::String & /*newCurrentTabName*/) override {
-        if (onTabChanged)
-            onTabChanged(newCurrentTabIndex);
-    }
-};
-
+// Forward declarations
+class PluginEditor;
+class PluginProcessor;
+class EnvelopeComponent;
 
 class EnvelopeSectionComponent : public BaseSectionComponent {
 public:
     EnvelopeSectionComponent(PluginEditor &editor, PluginProcessor &processor);
-
     ~EnvelopeSectionComponent() override = default;
 
     void paint(juce::Graphics &g) override;
-
     void resized() override;
 
-    // Get the envelope component for external access
-    EnvelopeComponent *getEnvelopeComponent() { return envelopeComponent.get(); }
+    // Create envelope components for all registered types
+    void createEnvelopeComponents();
 
-    // Get the reverb envelope component for external access
-    EnvelopeComponent *getReverbEnvelopeComponent() { return reverbEnvelopeComponent.get(); }
+    // Access to components by type
+    EnvelopeComponent* getEnvelopeComponent(EnvelopeParams::ParameterType type);
 
-    // Get the waveform component for external access
-    WaveformComponent *getWaveformComponent() { return waveformComponent.get(); }
+    // Legacy accessor methods for backward compatibility
+    EnvelopeComponent* getAmplitudeEnvelopeComponent() { return getEnvelopeComponent(EnvelopeParams::ParameterType::Amplitude); }
+    EnvelopeComponent* getReverbEnvelopeComponent() { return getEnvelopeComponent(EnvelopeParams::ParameterType::Reverb); }
 
 private:
-    std::unique_ptr<EnvelopeTabs> envTabs;
-    std::unique_ptr<EnvelopeComponent> envelopeComponent;
-    std::unique_ptr<EnvelopeComponent> reverbEnvelopeComponent;
-    std::unique_ptr<WaveformComponent> waveformComponent;
-    std::unique_ptr<juce::Slider> scaleSlider;
-    std::unique_ptr<juce::Label> scaleLabel;
-
+    // Set up UI controls and tabs
+    void setupControls();
     void setupScaleSlider();
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(EnvelopeSectionComponent)
+    // Tab component for envelope selection
+    std::unique_ptr<EnvelopeTabs> envTabs;
+
+    // Map of envelope components by type
+    std::map<EnvelopeParams::ParameterType, std::unique_ptr<EnvelopeComponent>> envelopeComponents;
+
+    // UI controls
+    std::unique_ptr<juce::Label> scaleLabel;
+    std::unique_ptr<juce::Slider> scaleSlider;
 }; 

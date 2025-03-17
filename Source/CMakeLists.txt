@@ -50,19 +50,28 @@ target_sources(${BaseTargetName} PRIVATE
         Shared/TimingManager.cpp
 
         Audio/PluginProcessor.cpp
+
         Audio/Sampler/SampleManager.cpp
         Audio/Sampler/Sampler.cpp
         Audio/Sampler/OnsetDetector.cpp
+
         Audio/Midi/ScaleManager.cpp
         Audio/Midi/NoteGenerator.cpp
+
         Audio/FileLogger.cpp
+
         Audio/Effects/FxEngine.cpp
         Audio/Effects/Stutter.cpp
         Audio/Effects/Reverb.cpp
         Audio/Effects/Delay.cpp
         Audio/Effects/BaseEffect.cpp
+
         Audio/Envelope/EnvelopeParameterMapper.cpp
         Audio/Envelope/EnvelopeParameterTypes.h
+        Audio/Envelope/EnvelopeManager.cpp
+        Audio/Envelope/EnvelopeParameterRegistry.cpp
+        Audio/Envelope/EnvelopePoint.h
+
         Audio/Util/AudioBufferQueue.h
         Audio/Util/AudioOscilloscope.cpp
         )

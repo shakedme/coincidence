@@ -6,6 +6,7 @@
 #include <mutex>
 #include "../../Audio/Envelope/EnvelopeParameterMapper.h"
 #include "../../Audio/Envelope/EnvelopeParameterTypes.h"
+#include "../../Audio/Envelope/EnvelopePoint.h"
 #include "../../Shared/TimingManager.h"
 #include "WaveformComponent.h"
 

@@ -1,99 +1,99 @@
 #pragma once
 
+#include <juce_audio_basics/juce_audio_basics.h>
 #include <vector>
-#include <memory>
 #include <atomic>
-#include "EnvelopeParameterMapper.h"
+#include <memory>
 #include "EnvelopeParameterTypes.h"
 
-class EnvelopePoint {
-public:
-    EnvelopePoint(float x, float y, bool _isEditable = true) : position(x, y) {
-        isEditable = _isEditable;
-    }
+// Forward class declaration for envelope points
+class EnvelopePoint;
 
-    juce::Point<float> position;
-    bool selected = false;
-    bool isEditable = true;
-    float curvature = 0.0f; // 0.0 = straight line, -1.0 to 1.0 = curved
-};
-
-/**
- * Maps envelope control points to parameter values for various effect parameters
- */
+// Class to map envelope parameters for real-time audio processing
 class EnvelopeParameterMapper {
 public:
-    explicit EnvelopeParameterMapper(EnvelopeParams::ParameterType type = EnvelopeParams::ParameterType::Amplitude);
-
+    EnvelopeParameterMapper(EnvelopeParams::ParameterType type);
     ~EnvelopeParameterMapper();
 
-    // Get the current parameter value based on time and envelope shape
+    // Get current value (thread-safe)
     float getCurrentValue() const;
 
-    // Get the current value at a specific position (0-1)
+    // Get value at a specific position (0-1) in the envelope
     float getValueAtPosition(float position) const;
 
-    // Update internal time counter
-    void updateTime(float deltaTime);
-
-    // Set the transport position directly
+    // Set transport position
     void setTransportPosition(double ppqPosition);
 
-    // Set the rate at which the envelope cycles
-    void setRate(float newRate);
+    // Update time-based envelope
+    void updateTime(float deltaTime);
 
+    // Set the rate multiplier
+    void setRate(float newRate);
+    
+    // Get the current rate
     float getRate() const { return rate; }
 
-    // Manage envelope settings
+    // Set parameter type
     void setParameterType(EnvelopeParams::ParameterType type);
 
-    EnvelopeParams::ParameterType getParameterType() const { return parameterType; }
+    // Set the value range for the parameter
+    void setParameterRange(float min, float max, bool isExponential);
 
-    void setParameterRange(float min, float max, bool isExponential = false);
-
+    // Set bipolar mode (whether param can go negative)
     void setBipolar(bool isBipolar);
 
-    // Manage envelope points - thread-safe methods
+    // Set the envelope points (thread-safe)
     void setPoints(const std::vector<std::unique_ptr<EnvelopePoint>> &newPoints);
 
+    // Get a copy of the current envelope points
     std::vector<std::unique_ptr<EnvelopePoint>> getPointsCopy() const;
 
+    // Reset to default points
     void clearPoints();
 
+    // Get the parameter type
+    EnvelopeParams::ParameterType getParameterType() const { return parameterType; }
+
 private:
-    // Thread-safe point buffer structure
+    // Lock-free buffer structure for points
     struct PointBuffer {
         std::vector<std::unique_ptr<EnvelopePoint>> points;
-
-        ~PointBuffer() = default;
     };
 
-    // Create a new buffer with the same points (deep copy)
+    // Create a deep copy of a point buffer
     std::unique_ptr<PointBuffer> createPointBufferCopy(const PointBuffer *source) const;
 
     // Add default points to a buffer
     void addDefaultPointsToBuffer(PointBuffer *buffer) const;
 
-    // Internal helper methods
-    void updateSettings();
-
+    // Interpolate value between points
     float interpolateValue(float time) const;
 
+    // Map normalized value to parameter range
     float mapToParameterRange(float normalizedValue) const;
 
+    // Get y value from a point (normalized 0-1)
     float getPointValue(const EnvelopePoint &point) const;
 
-    // Thread-safe envelope data with atomic pointer swapping
-    mutable std::atomic<PointBuffer *> activePointBuffer;
-    PointBuffer *editBuffer;
-
-    // Timing data
-    float currentTime = 0.0f;
-    float rate = 1.0f;
-    double currentPpqPosition = 0.0;
-    bool useTransportSync = true;
+    // The parameter type this mapper controls
+    EnvelopeParams::ParameterType parameterType;
 
     // Parameter settings
-    EnvelopeParams::ParameterType parameterType;
     EnvelopeParams::ParameterSettings settings;
+
+    // Rate multiplier (higher values = faster envelope)
+    float rate = 1.0f;
+
+    // Whether to use transport position for sync
+    bool useTransportSync = true;
+
+    // Current position info
+    double currentPpqPosition = -1.0;
+    float currentTime = 0.0f;
+
+    // Active point buffer (read by audio thread)
+    std::atomic<PointBuffer *> activePointBuffer;
+
+    // Edit buffer (written by UI thread)
+    PointBuffer *editBuffer;
 }; 

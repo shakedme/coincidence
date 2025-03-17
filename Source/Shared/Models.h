@@ -8,8 +8,6 @@ class PluginProcessor;
 // Forward declaration of EnvelopePoint for use in Models
 class EnvelopePoint;
 
-
-
 /**
  * Common types and constants
  */

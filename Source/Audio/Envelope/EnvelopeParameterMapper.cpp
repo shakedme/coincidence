@@ -1,4 +1,6 @@
 #include "EnvelopeParameterMapper.h"
+#include "EnvelopePoint.h"
+#include <cmath>
 
 EnvelopeParameterMapper::EnvelopeParameterMapper(EnvelopeParams::ParameterType type)
         : parameterType(type) {
@@ -11,9 +13,6 @@ EnvelopeParameterMapper::EnvelopeParameterMapper(EnvelopeParams::ParameterType t
 
     // Set the active buffer (the one read by audio thread)
     activePointBuffer.store(initialBuffer, std::memory_order_release);
-
-    // Set up initial settings
-    updateSettings();
 }
 
 EnvelopeParameterMapper::~EnvelopeParameterMapper() {
@@ -100,7 +99,6 @@ void EnvelopeParameterMapper::setRate(float newRate) {
 
 void EnvelopeParameterMapper::setParameterType(EnvelopeParams::ParameterType type) {
     parameterType = type;
-    updateSettings();
 }
 
 void EnvelopeParameterMapper::setParameterRange(float min, float max, bool isExponential) {
@@ -160,10 +158,6 @@ void EnvelopeParameterMapper::clearPoints() {
 
     // Delete the old buffer
     delete oldBuffer;
-}
-
-void EnvelopeParameterMapper::updateSettings() {
-    settings = EnvelopeParams::getDefaultSettings(parameterType);
 }
 
 float EnvelopeParameterMapper::interpolateValue(float time) const {

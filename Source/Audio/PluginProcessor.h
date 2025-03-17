@@ -6,7 +6,7 @@
 #include "Midi/ScaleManager.h"
 #include "Midi/NoteGenerator.h"
 #include "Sampler/Sampler.h"
-#include "Envelope/EnvelopeParameterMapper.h"
+#include "Envelope/EnvelopeManager.h"
 #include "Sampler/SampleManager.h"
 
 // Forward declarations
@@ -15,6 +15,8 @@ class PluginEditor;
 class FxEngine;
 
 class EnvelopeComponent;
+
+class EnvelopeSectionComponent;
 
 /**
  * Main processor class for the MIDI generator plugin.
@@ -85,20 +87,14 @@ public:
 
     float getCurrentRandomizedVelocity() const { return noteGenerator->getCurrentRandomizedVelocity(); }
 
-    // Connect the envelope components to receive waveform data and sync changes
-    void connectEnvelopeComponent(EnvelopeComponent *component);
-    
-    // Connect the reverb envelope component
-    void connectReverbEnvelopeComponent(EnvelopeComponent *component);
+    // Connect the envelope section to the envelope manager
+    void connectEnvelopeSection(EnvelopeSectionComponent* section);
 
-    // Access to envelope components
-    EnvelopeComponent *getEnvelopeComponent() const { return envelopeComponent; }
-    
-    // Access to reverb envelope component
-    EnvelopeComponent *getReverbEnvelopeComponent() const { return reverbEnvelopeComponent; }
-    
-    // Access to the reverb envelope mapper
-    EnvelopeParameterMapper& getReverbEnvelope() { return reverbEnvelope; }
+    // Access to the envelope manager
+    EnvelopeManager& getEnvelopeManager() { return *envelopeManager; }
+
+    // Access to the envelope registry
+    EnvelopeParams::Registry& getEnvelopeRegistry() { return envelopeRegistry; }
 
     // Force all parameter listeners to update with current values
     void forceParameterUpdates();
@@ -112,15 +108,12 @@ private:
     std::unique_ptr<SampleManager> sampleManager;
     std::unique_ptr<FxEngine> fxEngine;
     std::unique_ptr<TimingManager> timingManager;
-
-    // Envelope parameter mappers for effect control
-    EnvelopeParameterMapper amplitudeEnvelope;
-    EnvelopeParameterMapper reverbEnvelope;
-
-    // Pointer to the envelope component for waveform visualization
-    EnvelopeComponent *envelopeComponent = nullptr;
-    // Pointer to the reverb envelope component
-    EnvelopeComponent *reverbEnvelopeComponent = nullptr;
+    
+    // Envelope registry - instance per plugin
+    EnvelopeParams::Registry envelopeRegistry;
+    
+    // Envelope manager uses the registry
+    std::unique_ptr<EnvelopeManager> envelopeManager;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginProcessor)
 };
