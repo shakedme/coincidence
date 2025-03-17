@@ -87,9 +87,18 @@ public:
 
     // Connect the envelope components to receive waveform data and sync changes
     void connectEnvelopeComponent(EnvelopeComponent *component);
+    
+    // Connect the reverb envelope component
+    void connectReverbEnvelopeComponent(EnvelopeComponent *component);
 
     // Access to envelope components
     EnvelopeComponent *getEnvelopeComponent() const { return envelopeComponent; }
+    
+    // Access to reverb envelope component
+    EnvelopeComponent *getReverbEnvelopeComponent() const { return reverbEnvelopeComponent; }
+    
+    // Access to the reverb envelope mapper
+    EnvelopeParameterMapper& getReverbEnvelope() { return reverbEnvelope; }
 
     // Force all parameter listeners to update with current values
     void forceParameterUpdates();
@@ -104,11 +113,14 @@ private:
     std::unique_ptr<FxEngine> fxEngine;
     std::unique_ptr<TimingManager> timingManager;
 
-    // Envelope parameter mapper for amplitude control
+    // Envelope parameter mappers for effect control
     EnvelopeParameterMapper amplitudeEnvelope;
+    EnvelopeParameterMapper reverbEnvelope;
 
     // Pointer to the envelope component for waveform visualization
     EnvelopeComponent *envelopeComponent = nullptr;
+    // Pointer to the reverb envelope component
+    EnvelopeComponent *reverbEnvelopeComponent = nullptr;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginProcessor)
 };

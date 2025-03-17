@@ -12,8 +12,7 @@
 class EnvelopeComponent : public juce::Component, private juce::Timer {
 public:
     // Rate enum for time signature divisions
-    enum class Rate
-    {
+    enum class Rate {
         TwoWhole = 0,
         Whole,
         Half,
@@ -23,8 +22,18 @@ public:
         ThirtySecond // 1/32 note - 1/8 beat
     };
 
+    // Preset shape enum
+    enum class PresetShape {
+        Sine,
+        Triangle,
+        Square,
+        RampUp,
+        RampDown,
+        Custom
+    };
+
     explicit EnvelopeComponent(
-            TimingManager& tm,
+            TimingManager &tm,
             EnvelopeParams::ParameterType type = EnvelopeParams::ParameterType::Amplitude);
 
     ~EnvelopeComponent() override;
@@ -54,7 +63,7 @@ public:
     void pushAudioBuffer(const float *audioData, int numSamples);
 
     // Get the waveform component
-    WaveformComponent* getWaveformComponent() { return &waveformComponent; }
+    WaveformComponent *getWaveformComponent() { return &waveformComponent; }
 
     // Callbacks for parameter change notifications
     std::function<void()> onPointsChanged;
@@ -85,9 +94,34 @@ public:
 
     // Set the rate using the Rate enum
     void setRateFromEnum(Rate rate);
-    
+
     // Get the current Rate enum value
     Rate getCurrentRateEnum() const;
+
+    // Preset shape methods
+    void applyPresetShape(PresetShape shape);
+
+    void createSineShape(int numPoints = 16);
+
+    void createTriangleShape();
+
+    void createSquareShape();
+
+    void createSawtoothShape();
+
+    void createRampUpShape();
+
+    void createRampDownShape();
+
+    // Snap-to-grid functionality
+    void setSnapToGrid(bool shouldSnap);
+
+    bool isSnapToGridEnabled() const { return snapToGridFlag; }
+
+    void setGridDivisions(int horizontal, int vertical);
+
+    // Snap a point to the nearest grid position
+    juce::Point<float> snapToGrid(const juce::Point<float> &point) const;
 
 private:
     // Draw helper methods
@@ -124,13 +158,29 @@ private:
 
     // Setup and update rate UI
     void setupRateUI();
+
     void updateTimeRangeFromRate();
+
     void updateRateFromComboBox();
+
+    // Setup preset shapes UI
+    void setupPresetsUI();
+
+    // Setup snap-to-grid UI
+    void setupSnapToGridUI();
 
     // Rate UI components
     std::unique_ptr<juce::ComboBox> rateComboBox;
     std::unique_ptr<juce::Label> rateLabel;
     Rate currentRateEnum = Rate::Quarter;
+
+    // Preset shapes UI components
+    std::unique_ptr<juce::ComboBox> presetShapesComboBox;
+    std::unique_ptr<juce::Label> presetShapesLabel;
+    PresetShape currentPresetShape = PresetShape::Custom;
+
+    // Snap to grid UI components
+    std::unique_ptr<juce::ToggleButton> snapToGridButton;
 
     // Envelope data
     std::vector<std::unique_ptr<EnvelopePoint>> points;
@@ -142,6 +192,9 @@ private:
     static constexpr float pointRadius = 6.0f;
     int horizontalDivisions = 10;
     int verticalDivisions = 4;
+
+    // Snap to grid
+    bool snapToGridFlag = false;
 
     // Curve editing
     int curveEditingSegment = -1;
@@ -159,7 +212,7 @@ private:
     // Parameter mapper
     EnvelopeParameterMapper parameterMapper;
 
-    TimingManager& timingManager;
+    TimingManager &timingManager;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(EnvelopeComponent)
 }; 

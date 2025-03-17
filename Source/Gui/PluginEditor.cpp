@@ -34,6 +34,7 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     if (envelopeSection != nullptr)
     {
         audioProcessor.connectEnvelopeComponent(envelopeSection->getEnvelopeComponent());
+        audioProcessor.connectReverbEnvelopeComponent(envelopeSection->getReverbEnvelopeComponent());
     }
 
     tooltipWindow = std::make_unique<juce::TooltipWindow>(this, 0);

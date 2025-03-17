@@ -9,6 +9,8 @@
 #include <vector>
 #include "../../Shared/ParameterBinding.h"
 
+class PluginProcessor;
+
 class Reverb : public BaseEffect {
 public:
     // Default constructor for ProcessorChain

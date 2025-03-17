@@ -3,7 +3,6 @@
 
 FxEngine::FxEngine(PluginProcessor &processorRef)
         : processor(processorRef) {
-    // Get references to each processor in the chain
     fxChain.get<ReverbIndex>().initialize(processorRef);
     fxChain.get<DelayIndex>().initialize(processorRef);
     fxChain.get<StutterIndex>().initialize(processorRef);
@@ -27,7 +26,6 @@ void FxEngine::processAudio(juce::AudioBuffer<float> &buffer,
     auto &stutter = fxChain.get<StutterIndex>();
     stutter.setMidiMessages(midiMessages);
 
-    // Create audio block and context for processing
     juce::dsp::AudioBlock<float> block(buffer);
     juce::dsp::ProcessContextReplacing<float> context(block);
 

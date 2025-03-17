@@ -3,22 +3,39 @@
 #include <memory>
 
 EnvelopeSectionComponent::EnvelopeSectionComponent(PluginEditor &editor, PluginProcessor &processor)
-        : BaseSectionComponent(editor, processor, "Envelope", juce::Colour(0xff8a6e9e)) {
-    // Set up parameter tabs
-    paramTabs = std::make_unique<juce::TabbedComponent>(juce::TabbedButtonBar::TabsAtTop);
-    paramTabs->setOutline(0);
-    paramTabs->setTabBarDepth(30);
+        : BaseSectionComponent(editor, processor, "", juce::Colour(0xff8a6e9e)) {
+    envTabs = std::make_unique<EnvelopeTabs>(juce::TabbedButtonBar::TabsAtTop);
+    envTabs->setOutline(0);
+    envTabs->setTabBarDepth(30);
 
-    // Add empty content components for now - we'll implement the actual parameter tabs later
-    paramTabs->addTab("Amplitude", juce::Colours::transparentBlack, new juce::Component(), true);
-    paramTabs->addTab("EQ", juce::Colours::transparentBlack, new juce::Component(), true);
-    paramTabs->addTab("Pitch", juce::Colours::transparentBlack, new juce::Component(), true);
+    envTabs->addTab("Amplitude", juce::Colours::transparentBlack, new juce::Component(), true);
+    envTabs->addTab("Reverb", juce::Colours::transparentBlack, new juce::Component(), true);
 
-    addAndMakeVisible(paramTabs.get());
+    addAndMakeVisible(envTabs.get());
 
-    // Create the envelope component
-    envelopeComponent = std::make_unique<EnvelopeComponent>(processor.getTimingManager());
+    // Create the amplitude envelope component
+    envelopeComponent = std::make_unique<EnvelopeComponent>(processor.getTimingManager(),
+                                                            EnvelopeParams::ParameterType::Amplitude);
     addAndMakeVisible(envelopeComponent.get());
+
+    // Create the reverb envelope component (initially hidden)
+    reverbEnvelopeComponent = std::make_unique<EnvelopeComponent>(processor.getTimingManager(),
+                                                                  EnvelopeParams::ParameterType::Reverb);
+    addChildComponent(reverbEnvelopeComponent.get());
+
+    // Show the active tab's envelope component
+    envTabs->onTabChanged = [this](int tabIndex) {
+        if (tabIndex == 0) { // Amplitude tab
+            envelopeComponent->setVisible(true);
+            reverbEnvelopeComponent->setVisible(false);
+        } else if (tabIndex == 1) { // Reverb tab
+            envelopeComponent->setVisible(false);
+            reverbEnvelopeComponent->setVisible(true);
+        } else { // Other tabs (EQ, Pitch)
+            envelopeComponent->setVisible(false);
+            reverbEnvelopeComponent->setVisible(false);
+        }
+    };
 
     // Set up scale slider
     setupScaleSlider();
@@ -37,8 +54,16 @@ void EnvelopeSectionComponent::setupScaleSlider() {
     scaleSlider->setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
     scaleSlider->setTooltip("Adjust waveform vertical scale");
     scaleSlider->onValueChange = [this] {
+        float scaleFactor = static_cast<float>(scaleSlider->getValue());
+        
+        // Apply scale to amplitude envelope
         if (envelopeComponent != nullptr) {
-            envelopeComponent->setWaveformScaleFactor(static_cast<float>(scaleSlider->getValue()));
+            envelopeComponent->setWaveformScaleFactor(scaleFactor);
+        }
+        
+        // Apply same scale to reverb envelope
+        if (reverbEnvelopeComponent != nullptr) {
+            reverbEnvelopeComponent->setWaveformScaleFactor(scaleFactor);
         }
     };
     addAndMakeVisible(scaleSlider.get());
@@ -53,7 +78,7 @@ void EnvelopeSectionComponent::resized() {
 
     // Position the parameter tabs at the top
     const int tabsHeight = 30;
-    paramTabs->setBounds(area.removeFromTop(tabsHeight));
+    envTabs->setBounds(area.removeFromTop(tabsHeight));
 
     // Position the controls at the bottom
     const int controlHeight = 25;
@@ -69,6 +94,8 @@ void EnvelopeSectionComponent::resized() {
     scaleLabel->setBounds(10, controlArea.getY(), labelWidth, controlHeight);
     scaleSlider->setBounds(scaleLabel->getRight(), controlArea.getY(), sliderWidth, controlHeight);
 
-    // Position the envelope component in the remaining space
-    envelopeComponent->setBounds(area.reduced(10, 10));
+    // Position the envelope components in the remaining space
+    auto envelopeArea = area.reduced(10, 10);
+    envelopeComponent->setBounds(envelopeArea);
+    reverbEnvelopeComponent->setBounds(envelopeArea);
 } 

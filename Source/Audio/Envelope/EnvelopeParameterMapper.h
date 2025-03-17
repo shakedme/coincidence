@@ -8,8 +8,8 @@
 
 class EnvelopePoint {
 public:
-    EnvelopePoint(float x, float y, bool _isDraggable = true) : position(x, y) {
-        isEditable = _isDraggable;
+    EnvelopePoint(float x, float y, bool _isEditable = true) : position(x, y) {
+        isEditable = _isEditable;
     }
 
     juce::Point<float> position;

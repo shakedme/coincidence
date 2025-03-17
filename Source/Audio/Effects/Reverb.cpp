@@ -6,7 +6,6 @@ Reverb::Reverb()
 
 void Reverb::initialize(PluginProcessor &p) {
     BaseEffect::initialize(p);
-
     paramBinding = AppState::createParameterBinding<Models::ReverbSettings>(settings, p.getAPVTS());
     paramBinding->registerParameters(AppState::createReverbParameters());
 }
@@ -21,8 +20,18 @@ void Reverb::process(const juce::dsp::ProcessContextReplacing<float> &context) {
         juce::Reverb::Parameters params;
         params.roomSize = settings.reverbTime;
         params.width = settings.reverbWidth;
-        params.wetLevel = settings.reverbMix;
-        params.dryLevel = 1.0f - settings.reverbMix;
+
+        float baseMix = settings.reverbMix;
+
+        float mixValue = baseMix;
+        if (processorPtr != nullptr) {
+            float envelopeValue = processorPtr->getReverbEnvelope().getCurrentValue();
+
+            mixValue = baseMix * envelopeValue;
+        }
+
+        params.wetLevel = mixValue;
+        params.dryLevel = 1.0f - mixValue;
 
         reverbProcessor.setParameters(params);
         reverbProcessor.process(context);

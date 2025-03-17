@@ -10,7 +10,8 @@ PluginProcessor::PluginProcessor()
                                  .withInput("Input", juce::AudioChannelSet::stereo(), true)
                                  .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
           apvts(*this, nullptr, "PARAMETERS", AppState::createParameterLayout()),
-          amplitudeEnvelope(EnvelopeParams::ParameterType::Amplitude) {
+          amplitudeEnvelope(EnvelopeParams::ParameterType::Amplitude),
+          reverbEnvelope(EnvelopeParams::ParameterType::Reverb) {
 
     // Create specialized components
     timingManager = std::make_unique<TimingManager>();
@@ -134,10 +135,16 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
             }
         }
 
-        // After processing is done, send the processed audio data to the envelope component
-        if (envelopeComponent != nullptr) {
-            if (buffer.getNumChannels() > 0 && buffer.getNumSamples() > 0) {
+        // After processing is done, send the processed audio data to both envelope components
+        if (buffer.getNumChannels() > 0 && buffer.getNumSamples() > 0) {
+            // Send to amplitude envelope component
+            if (envelopeComponent != nullptr) {
                 envelopeComponent->pushAudioBuffer(buffer.getReadPointer(0), buffer.getNumSamples());
+            }
+            
+            // Send to reverb envelope component
+            if (reverbEnvelopeComponent != nullptr) {
+                reverbEnvelopeComponent->pushAudioBuffer(buffer.getReadPointer(0), buffer.getNumSamples());
             }
         }
 
@@ -147,6 +154,7 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     }
 
     amplitudeEnvelope.setTransportPosition(timingManager->getPpqPosition());
+    reverbEnvelope.setTransportPosition(timingManager->getPpqPosition());
 
     // Update sample position for next buffer
     timingManager->updateSamplePosition(buffer.getNumSamples());
@@ -432,6 +440,27 @@ void PluginProcessor::connectEnvelopeComponent(EnvelopeComponent *component) {
         envelopeComponent->onRateChanged = [this](float newRate) {
             // Update envelope rate when UI rate changes
             amplitudeEnvelope.setRate(newRate);
+        };
+    }
+}
+
+void PluginProcessor::connectReverbEnvelopeComponent(EnvelopeComponent *component) {
+    reverbEnvelopeComponent = component;
+    if (reverbEnvelopeComponent != nullptr) {
+        // Set up the envelope component with the same points as our reverb envelope
+        reverbEnvelopeComponent->setParameterType(EnvelopeParams::ParameterType::Reverb);
+        reverbEnvelopeComponent->setRate(reverbEnvelope.getRate());
+        
+        // Set up callback to sync points when they change in the UI
+        reverbEnvelopeComponent->onPointsChanged = [this]() {
+            // Get points from the component and update our envelope
+            reverbEnvelope.setPoints(reverbEnvelopeComponent->getPoints());
+        };
+
+        // Set up callback to sync rate changes from the UI
+        reverbEnvelopeComponent->onRateChanged = [this](float newRate) {
+            // Update envelope rate when UI rate changes
+            reverbEnvelope.setRate(newRate);
         };
     }
 }
