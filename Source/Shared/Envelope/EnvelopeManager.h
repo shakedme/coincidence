@@ -5,7 +5,7 @@
 #include <string>
 #include "EnvelopeParameterMapper.h"
 #include "EnvelopeParameterTypes.h"
-#include "../../Shared/TimingManager.h"
+#include "../TimingManager.h"
 
 // Forward declarations
 class EnvelopeComponent;

@@ -1,5 +1,5 @@
 #include "EnvelopeSection.h"
-#include "../Components/EnvelopeComponent.h"
+#include "../Components/Envelope/EnvelopeComponent.h"
 #include <memory>
 
 EnvelopeSectionComponent::EnvelopeSectionComponent(PluginEditor &editor, PluginProcessor &processor)

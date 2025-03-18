@@ -2,9 +2,9 @@
 
 #include "BaseSection.h"
 #include "../Components/DirectionSelector.h"
-#include "../Components/SampleList.h"
-#include "../Components/SampleDetail.h"
-#include "../Components/GroupListView.h"
+#include "../Components/Sample/SampleList.h"
+#include "../Components/Sample/SampleDetail.h"
+#include "../Components/Sample/GroupListView.h"
 #include "../../Audio/Sampler/OnsetDetector.h"
 #include "../../Shared/Models.h"
 #include "../Components/Toggle.h"

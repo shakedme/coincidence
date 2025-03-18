@@ -4,7 +4,7 @@
 #include <juce_dsp/juce_dsp.h>
 #include "../../Shared/Models.h"
 #include "BaseEffect.h"
-#include "../Envelope/EnvelopeManager.h"
+#include "../../Shared/Envelope/EnvelopeManager.h"
 #include <vector>
 
 /**

@@ -1,9 +1,9 @@
 #pragma once
 
 #include <juce_audio_utils/juce_audio_utils.h>
-#include "../../Audio/PluginProcessor.h"
-#include "Icon.h"
-#include "../Sections/BaseSection.h"
+#include "../../../Audio/PluginProcessor.h"
+#include "../Icon.h"
+#include "../../Sections/BaseSection.h"
 
 class GroupListView
         : public juce::Component, public juce::Slider::Listener, public juce::Timer {

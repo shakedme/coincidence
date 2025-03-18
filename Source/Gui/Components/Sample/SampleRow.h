@@ -2,8 +2,8 @@
 
 #include <juce_audio_utils/juce_audio_utils.h>
 #include "SampleList.h"
-#include "../../Audio/Sampler/Sampler.h"
-#include "Icon.h"
+#include "../../../Audio/Sampler/Sampler.h"
+#include "../Icon.h"
 
 // A complete cell component that includes both sample name, probability slider and icons
 class SampleRow : public juce::Component {

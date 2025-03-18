@@ -63,18 +63,11 @@ namespace AppState {
 
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
-// Parameter descriptor with member pointer support
     template<typename SettingsType>
     struct ParameterDescriptor {
         juce::String paramID;
         std::function<void(SettingsType &, float)> setter;
 
-        // Standard constructor
-        ParameterDescriptor(juce::String id,
-                            std::function<void(SettingsType &, float)> setterFunc)
-                : paramID(std::move(id)), setter(setterFunc) {}
-
-        // Member pointer constructor with converter
         template<typename ValueType>
         ParameterDescriptor(juce::String id,
                             ValueType SettingsType::* memberPtr,
@@ -111,7 +104,6 @@ namespace AppState {
         );
     }
 
-// For integer parameters
     template<typename SettingsType>
     ParameterDescriptor<SettingsType> createIntParam(const juce::String &paramID, int SettingsType::* memberPtr) {
         return ParameterDescriptor<SettingsType>(
@@ -121,7 +113,6 @@ namespace AppState {
         );
     }
 
-// For choice parameters (returning the index directly)
     template<typename SettingsType>
     ParameterDescriptor<SettingsType> createChoiceParam(
             const juce::String &paramID,
@@ -147,51 +138,51 @@ namespace AppState {
     }
 
 // Parameter binding class to connect APVTS parameters to settings struct members
-    template<typename SettingsType>
-    class ParameterBinding : public juce::AudioProcessorValueTreeState::Listener {
-    public:
-        ParameterBinding(SettingsType &settingsStruct, juce::AudioProcessorValueTreeState &apvts)
-                : settings(settingsStruct), audioParamsTree(apvts) {
-        }
+template<typename SettingsType>
+class ParameterBinding : public juce::AudioProcessorValueTreeState::Listener {
+public:
+    ParameterBinding(SettingsType &settingsStruct, juce::AudioProcessorValueTreeState &apvts)
+            : settings(settingsStruct), audioParamsTree(apvts) {
+    }
 
-        ~ParameterBinding() {
-            removeAllListeners();
-        }
+    ~ParameterBinding() {
+        removeAllListeners();
+    }
 
-        // Register a single parameter descriptor
-        void registerParameter(const ParameterDescriptor<SettingsType> &descriptor) {
-            parameterMap[descriptor.paramID] = descriptor.setter;
-            audioParamsTree.addParameterListener(descriptor.paramID, this);
+    // Register a single parameter descriptor
+    void registerParameter(const ParameterDescriptor<SettingsType> &descriptor) {
+        parameterMap[descriptor.paramID] = descriptor.setter;
+        audioParamsTree.addParameterListener(descriptor.paramID, this);
 
-            // Initialize with current value
-            if (auto *param = audioParamsTree.getParameter(descriptor.paramID))
-                descriptor.setter(settings, param->getValue());
-        }
+        // Initialize with current value
+        if (auto *param = audioParamsTree.getParameter(descriptor.paramID))
+            descriptor.setter(settings, param->getValue());
+    }
 
-        // Register a list of parameter descriptors
-        void registerParameters(const std::vector<ParameterDescriptor<SettingsType>> &descriptors) {
-            for (const auto &descriptor: descriptors)
-                registerParameter(descriptor);
-        }
+    // Register a list of parameter descriptors
+    void registerParameters(const std::vector<ParameterDescriptor<SettingsType>> &descriptors) {
+        for (const auto &descriptor: descriptors)
+            registerParameter(descriptor);
+    }
 
-        // Implement the listener callback
-        void parameterChanged(const juce::String &parameterID, float newValue) override {
-            auto it = parameterMap.find(parameterID);
-            if (it != parameterMap.end())
-                it->second(settings, newValue);
-        }
+    // Implement the listener callback
+    void parameterChanged(const juce::String &parameterID, float newValue) override {
+        auto it = parameterMap.find(parameterID);
+        if (it != parameterMap.end())
+            it->second(settings, newValue);
+    }
 
-        void removeAllListeners() {
-            for (const auto &mapping: parameterMap)
-                audioParamsTree.removeParameterListener(mapping.first, this);
-            parameterMap.clear();
-        }
+    void removeAllListeners() {
+        for (const auto &mapping: parameterMap)
+            audioParamsTree.removeParameterListener(mapping.first, this);
+        parameterMap.clear();
+    }
 
-    private:
-        SettingsType &settings;
-        juce::AudioProcessorValueTreeState &audioParamsTree;
-        std::map<juce::String, std::function<void(SettingsType &, float)>> parameterMap;
-    };
+private:
+    SettingsType &settings;
+    juce::AudioProcessorValueTreeState &audioParamsTree;
+    std::unordered_map<juce::String, std::function<void(SettingsType &, float)>> parameterMap;
+};
 
     template<typename SettingsType>
     std::unique_ptr<ParameterBinding<SettingsType>>

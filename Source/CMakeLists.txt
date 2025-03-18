@@ -36,43 +36,42 @@ target_sources(${BaseTargetName} PRIVATE
 
         Gui/Components/DirectionButton.h
         Gui/Components/DirectionSelector.h
-        Gui/Components/SampleDetail.h
-        Gui/Components/SampleList.cpp
-        Gui/Components/GroupListView.h
-        Gui/Components/SampleRow.cpp
+        Gui/Components/Sample/SampleDetail.h
+        Gui/Components/Sample/SampleList.cpp
+        Gui/Components/Sample/GroupListView.h
+        Gui/Components/Sample/SampleRow.cpp
         Gui/Components/Toggle.h
-        Gui/Components/EnvelopeComponent.cpp
+        Gui/Components/Envelope/EnvelopeComponent.cpp
         Gui/Components/HeaderComponent.h
         Gui/Components/WaveformComponent.cpp
+        Gui/Components/Envelope/EnvelopePresetGenerator.cpp
+        Gui/Components/Envelope/EnvelopeGridSystem.cpp
+        Gui/Components/Envelope/EnvelopePointManager.cpp
+        Gui/Components/Envelope/EnvelopeRenderer.cpp
+        Gui/Components/Envelope/EnvelopeUIControlsManager.cpp
 
         Shared/Models.h
         Shared/ParameterBinding.cpp
         Shared/TimingManager.cpp
+        Shared/Envelope/EnvelopeParameterMapper.cpp
+        Shared/Envelope/EnvelopeParameterTypes.h
+        Shared/Envelope/EnvelopeManager.cpp
+        Shared/Envelope/EnvelopeParameterRegistry.cpp
+        Shared/Envelope/EnvelopePoint.h
 
         Audio/PluginProcessor.cpp
-
         Audio/Sampler/SampleManager.cpp
         Audio/Sampler/Sampler.cpp
         Audio/Sampler/OnsetDetector.cpp
-
         Audio/Midi/ScaleManager.cpp
         Audio/Midi/NoteGenerator.cpp
-
         Audio/FileLogger.cpp
-
         Audio/Effects/FxEngine.cpp
         Audio/Effects/Stutter.cpp
         Audio/Effects/Reverb.cpp
         Audio/Effects/Delay.cpp
         Audio/Effects/Gain.cpp
         Audio/Effects/BaseEffect.cpp
-
-        Audio/Envelope/EnvelopeParameterMapper.cpp
-        Audio/Envelope/EnvelopeParameterTypes.h
-        Audio/Envelope/EnvelopeManager.cpp
-        Audio/Envelope/EnvelopeParameterRegistry.cpp
-        Audio/Envelope/EnvelopePoint.h
-
         Audio/Util/AudioBufferQueue.h
         Audio/Util/AudioOscilloscope.cpp
         )

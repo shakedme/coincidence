@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../Components/EnvelopeTabs.h"
+#include "../Components/Envelope/EnvelopeTabs.h"
 #include "BaseSection.h"
 #include <map>
-#include "../../Audio/Envelope/EnvelopeParameterTypes.h"
+#include "../../Shared/Envelope/EnvelopeParameterTypes.h"
 
 // Forward declarations
 class PluginEditor;

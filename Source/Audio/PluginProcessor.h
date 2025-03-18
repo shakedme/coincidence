@@ -6,7 +6,7 @@
 #include "Midi/ScaleManager.h"
 #include "Midi/NoteGenerator.h"
 #include "Sampler/Sampler.h"
-#include "Envelope/EnvelopeManager.h"
+#include "../Shared/Envelope/EnvelopeManager.h"
 #include "Sampler/SampleManager.h"
 
 // Forward declarations

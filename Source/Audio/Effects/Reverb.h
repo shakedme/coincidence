@@ -8,8 +8,8 @@
 #include "BaseEffect.h"
 #include <vector>
 #include "../../Shared/ParameterBinding.h"
-#include "../Envelope/EnvelopeManager.h"
-#include "../Envelope/EnvelopeParameterMapper.h"
+#include "../../Shared/Envelope/EnvelopeManager.h"
+#include "../../Shared/Envelope/EnvelopeParameterMapper.h"
 
 class PluginProcessor;
 

@@ -2,8 +2,8 @@
 
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <juce_dsp/juce_dsp.h>
-#include "../../Audio/Sampler/SampleManager.h"
-#include "../../Audio/Sampler/OnsetDetector.h"
+#include "../../../Audio/Sampler/SampleManager.h"
+#include "../../../Audio/Sampler/OnsetDetector.h"
 
 class SampleDetailComponent
     : public juce::Component

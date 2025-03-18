@@ -1,5 +1,5 @@
 #include "EnvelopeManager.h"
-#include "../../Gui/Components/EnvelopeComponent.h"
+#include "../../Gui/Components/Envelope/EnvelopeComponent.h"
 #include "../../Gui/Sections/EnvelopeSection.h"
 
 EnvelopeManager::EnvelopeManager(EnvelopeParams::Registry &registry)
