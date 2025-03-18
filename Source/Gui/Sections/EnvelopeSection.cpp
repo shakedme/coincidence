@@ -14,9 +14,6 @@ EnvelopeSectionComponent::EnvelopeSectionComponent(PluginEditor &editor, PluginP
     // Create envelope components for all registered types
     createEnvelopeComponents();
 
-    // Set up scale slider for waveform visualization
-    setupScaleSlider();
-
     // Show the first envelope component by default
     if (!envelopeComponents.empty()) {
         auto &typeInfo = processor.getEnvelopeRegistry().getAvailableTypes().front();
@@ -75,31 +72,6 @@ std::weak_ptr<EnvelopeComponent> EnvelopeSectionComponent::getEnvelopeComponent(
     return {};
 }
 
-void EnvelopeSectionComponent::setupScaleSlider() {
-    scaleLabel = std::make_unique<juce::Label>("scaleLabel", "Zoom");
-    scaleLabel->setFont(juce::Font(14.0f));
-    scaleLabel->setJustificationType(juce::Justification::centredRight);
-    addAndMakeVisible(scaleLabel.get());
-
-    scaleSlider = std::make_unique<juce::Slider>("scaleSlider");
-    scaleSlider->setSliderStyle(juce::Slider::LinearHorizontal);
-    scaleSlider->setRange(0.1, 5.0, 0.1);
-    scaleSlider->setValue(0.5);
-    scaleSlider->setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-    scaleSlider->setTooltip("Adjust waveform vertical scale");
-    scaleSlider->onValueChange = [this] {
-        float scaleFactor = static_cast<float>(scaleSlider->getValue());
-
-        // Apply scale to all envelope components
-        for (auto &pair: envelopeComponents) {
-            if (pair.second != nullptr) {
-                pair.second->setWaveformScaleFactor(scaleFactor);
-            }
-        }
-    };
-    addAndMakeVisible(scaleSlider.get());
-}
-
 void EnvelopeSectionComponent::paint(juce::Graphics &g) {
     BaseSectionComponent::paint(g);
 }
@@ -110,20 +82,6 @@ void EnvelopeSectionComponent::resized() {
     // Position the parameter tabs at the top
     const int tabsHeight = 30;
     envTabs->setBounds(area.removeFromTop(tabsHeight));
-
-    // Position the controls at the bottom
-    const int controlHeight = 25;
-    const int bottomMargin = 10;
-    auto controlArea = area.removeFromBottom(controlHeight + bottomMargin);
-
-    // Position scale slider - we removed rate controls
-    const int labelWidth = 40;
-    const int sliderWidth = 80;
-    const int spacing = 10;
-
-    // Scale slider (now the only control)
-    scaleLabel->setBounds(10, controlArea.getY(), labelWidth, controlHeight);
-    scaleSlider->setBounds(scaleLabel->getRight(), controlArea.getY(), sliderWidth, controlHeight);
 
     // Position all envelope components in the remaining space
     auto envelopeArea = area.reduced(10, 10);

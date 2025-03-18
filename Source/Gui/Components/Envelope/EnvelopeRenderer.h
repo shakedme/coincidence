@@ -2,31 +2,45 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "EnvelopePointManager.h"
-#include "EnvelopeGridSystem.h"
 
 /**
  * Handles rendering of envelope points, lines, curves, and selection areas
  */
 class EnvelopeRenderer {
 public:
-    explicit EnvelopeRenderer(EnvelopePointManager &pointManager);
+    explicit EnvelopeRenderer(
+            EnvelopePointManager &pointManager,
+            int horizontalDivisions = 10,
+            int verticalDivisions = 4
+    );
 
     ~EnvelopeRenderer() = default;
 
-    void drawEnvelope(juce::Graphics &g, int width, int height, float transportPosition);
+    void drawEnvelope(juce::Graphics &g, float transportPosition);
 
-    void drawEnvelopeLine(juce::Graphics &g, int width, int height);
+    void drawEnvelopeLine(juce::Graphics &g);
 
-    void drawPoints(juce::Graphics &g, int width, int height);
+    void drawPoints(juce::Graphics &g);
 
     void drawSelectionArea(juce::Graphics &g, const juce::Rectangle<float> &area);
 
-    void drawPositionMarker(juce::Graphics &g, int width, int height, float transportPosition);
+    void drawPositionMarker(juce::Graphics &g, float transportPosition);
+
+    void drawGrid(juce::Graphics &g);
+
+    void setBounds(int width, int height) {
+        this->width = width;
+        this->height = height;
+    }
 
 private:
     EnvelopePointManager &pointManager;
 
-    // Styling properties
+    int horizontalDivisions = 10;
+    int verticalDivisions = 4;
+    int height;
+    int width;
+
     juce::Colour envelopeColor = juce::Colour(0xff52bfd9);
     juce::Colour selectedPointColor = juce::Colours::white;
     juce::Colour pointColor = juce::Colour(0xff52bfd9);

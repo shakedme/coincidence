@@ -5,21 +5,14 @@
 EnvelopeComponent::EnvelopeComponent(TimingManager &tm, EnvelopeParams::ParameterType type)
         : timingManager(tm),
           parameterMapper(type),
-          pointManager(gridSystem),
-          renderer(pointManager),
-          uiControlsManager() {
+          pointManager(),
+          renderer(pointManager) {
 
     // Configure the pointManager
     pointManager.onPointsChanged = [this]() { handlePointsChanged(); };
 
-    // Configure the uiControlsManager
-    uiControlsManager.onRateChanged = [this](float rate) { handleRateChanged(rate); };
-    uiControlsManager.onPresetShapeChanged = [this](
-            EnvelopePresetGenerator::PresetShape shape) { handlePresetShapeChanged(shape); };
-    uiControlsManager.onSnapToGridChanged = [this](bool enabled) { handleSnapToGridChanged(enabled); };
-
-    // Setup UI controls
-    uiControlsManager.setupControls(this);
+    setupRateUI();
+    setupPresetsUI();
 
     // Add the waveform component as a child component
     addAndMakeVisible(waveformComponent);
@@ -45,50 +38,43 @@ EnvelopeComponent::~EnvelopeComponent() {
 }
 
 void EnvelopeComponent::paint(juce::Graphics &g) {
-    // Draw background
     g.fillAll(juce::Colour(0xff222222));
 
-    // Draw grid
-    gridSystem.drawGrid(g, getWidth(), getHeight(), gridSystem.isSnapToGridEnabled());
+    renderer.drawGrid(g);
 
-    // Calculate current transport position
     double ppqPosition = timingManager.getPpqPosition();
     float cycle = std::fmod(static_cast<float>(ppqPosition * parameterMapper.getRate()), 1.0f);
 
-    // Draw envelope (includes line, points, and position marker)
-    renderer.drawEnvelope(g, getWidth(), getHeight(), cycle);
+    renderer.drawEnvelope(g, cycle);
 
-    // Draw selection area if active
     if (isCreatingSelectionArea) {
         renderer.drawSelectionArea(g, selectionArea);
     }
 }
 
 void EnvelopeComponent::resized() {
-    // Resize UI controls
-    uiControlsManager.resizeControls(getWidth());
+    resizeControls(getWidth());
 
-    // Calculate space for the UI controls
+    pointManager.setBounds(getWidth(), getHeight() - removeFromTop);
+    renderer.setBounds(getWidth(), getHeight() - removeFromTop);
+
     const int controlHeight = 25;
     const int padding = 5;
     const int topControlArea = controlHeight + (2 * padding);
 
-    // Position the waveform component below the controls
     auto waveformBounds = getLocalBounds();
     waveformBounds.removeFromTop(topControlArea);
     waveformComponent.setBounds(waveformBounds);
 }
 
 void EnvelopeComponent::mouseDown(const juce::MouseEvent &e) {
-    // Get component dimensions
     int width = getWidth();
-    int height = getHeight();
+    int height = getHeight() - removeFromTop; // Exclude the control area
 
-    // Reset drag tracking
     draggedPointIndex = -1;
 
     // Check if clicking on an existing point
-    int pointIndex = pointManager.findPointAt(e.position.toFloat(), 6.0f, width, height);
+    int pointIndex = pointManager.findPointAt(e.position.toFloat(), 6.0f);
     if (pointIndex >= 0) {
         // If clicking on an already selected point, don't clear other selections
         // unless shift is not held
@@ -106,7 +92,7 @@ void EnvelopeComponent::mouseDown(const juce::MouseEvent &e) {
     // Check if Alt is held and clicking on a line segment to adjust curvature
     if (e.mods.isAltDown()) {
         // Find the line segment closest to the click point
-        int segmentIndex = pointManager.findClosestSegmentIndex(e.position.toFloat(), 10.0f, width, height);
+        int segmentIndex = pointManager.findClosestSegmentIndex(e.position.toFloat(), 10.0f);
         if (segmentIndex >= 0) {
             curveEditingSegment = segmentIndex;
             // Start with current curvature value
@@ -135,7 +121,7 @@ void EnvelopeComponent::mouseDown(const juce::MouseEvent &e) {
 void EnvelopeComponent::mouseDrag(const juce::MouseEvent &e) {
     // Get component dimensions
     int width = getWidth();
-    int height = getHeight();
+    int height = getHeight() - removeFromTop;
 
     // Check if we're editing a curve
     if (curveEditingSegment >= 0) {
@@ -147,7 +133,7 @@ void EnvelopeComponent::mouseDrag(const juce::MouseEvent &e) {
         pointManager.setCurvature(curveEditingSegment, juce::jlimit(-1.0f, 1.0f, initialCurvature + verticalDelta));
 
         // Set the UI to Custom preset shape
-        uiControlsManager.setCurrentPresetShape(EnvelopePresetGenerator::PresetShape::Custom);
+        setCurrentPresetShape(EnvelopePresetGenerator::PresetShape::Custom);
 
         repaint();
         return;
@@ -160,7 +146,7 @@ void EnvelopeComponent::mouseDrag(const juce::MouseEvent &e) {
         float normY = 1.0f - (float) e.y / height; // Invert Y to match the display
 
         // Set to custom shape since user is modifying points
-        uiControlsManager.setCurrentPresetShape(EnvelopePresetGenerator::PresetShape::Custom);
+        setCurrentPresetShape(EnvelopePresetGenerator::PresetShape::Custom);
 
         // Move the point
         pointManager.movePoint(draggedPointIndex, normX, normY);
@@ -180,7 +166,7 @@ void EnvelopeComponent::mouseDrag(const juce::MouseEvent &e) {
         selectionArea.setBounds(left, top, right - left, bottom - top);
 
         // Select points within the area as we drag
-        pointManager.selectPointsInArea(selectionArea, width, height);
+        pointManager.selectPointsInArea(selectionArea);
 
         repaint();
     }
@@ -208,28 +194,25 @@ void EnvelopeComponent::mouseUp(const juce::MouseEvent &) {
 void EnvelopeComponent::mouseDoubleClick(const juce::MouseEvent &e) {
     // Get component dimensions
     int width = getWidth();
-    int height = getHeight();
+    int height = getHeight() - removeFromTop;
 
     // First check if double-clicking on an existing point to delete it
-    int pointIndex = pointManager.findPointAt(e.position.toFloat(), 6.0f, width, height);
+    int pointIndex = pointManager.findPointAt(e.position.toFloat(), 6.0f);
     if (pointIndex >= 0) {
         // Try to remove the point (this will fail for first and last points)
         if (pointManager.removePoint(pointIndex)) {
-            // Set the current preset shape to Custom since points changed
-            uiControlsManager.setCurrentPresetShape(EnvelopePresetGenerator::PresetShape::Custom);
+
+            setCurrentPresetShape(EnvelopePresetGenerator::PresetShape::Custom);
             repaint();
         }
         return;
     }
 
     // Check if clicking on a curve segment to reset curvature
-    int segmentIndex = pointManager.findClosestSegmentIndex(e.position.toFloat(), 10.0f, width, height);
+    int segmentIndex = pointManager.findClosestSegmentIndex(e.position.toFloat(), 10.0f);
     if (segmentIndex >= 0) {
         pointManager.setCurvature(segmentIndex, 0.0f);
-
-        // Set the current preset shape to Custom since curves changed
-        uiControlsManager.setCurrentPresetShape(EnvelopePresetGenerator::PresetShape::Custom);
-
+        setCurrentPresetShape(EnvelopePresetGenerator::PresetShape::Custom);
         repaint();
         return;
     }
@@ -241,8 +224,7 @@ void EnvelopeComponent::mouseDoubleClick(const juce::MouseEvent &e) {
     pointManager.deselectAllPoints();
     pointManager.addPoint(normX, normY);
 
-    // Set the current preset shape to Custom since user added a point
-    uiControlsManager.setCurrentPresetShape(EnvelopePresetGenerator::PresetShape::Custom);
+    setCurrentPresetShape(EnvelopePresetGenerator::PresetShape::Custom);
 
     repaint();
 }
@@ -251,21 +233,13 @@ bool EnvelopeComponent::keyPressed(const juce::KeyPress &key) {
     // Handle backspace key to delete selected points
     if (key == juce::KeyPress::backspaceKey) {
         if (pointManager.getSelectedPointsCount() > 0) {
-            // This will only remove non-fixed points
             pointManager.clearSelectedPoints();
-
-            // Set the current preset shape to Custom
-            uiControlsManager.setCurrentPresetShape(EnvelopePresetGenerator::PresetShape::Custom);
-
+            setCurrentPresetShape(EnvelopePresetGenerator::PresetShape::Custom);
             repaint();
             return true;
         }
     }
     return false;
-}
-
-void EnvelopeComponent::setWaveformScaleFactor(float scale) {
-    waveformComponent.setWaveformScaleFactor(scale);
 }
 
 void EnvelopeComponent::setSampleRate(float newSampleRate) {
@@ -288,14 +262,8 @@ float EnvelopeComponent::getCurrentValue() const {
 
 void EnvelopeComponent::setRate(float newRate) {
     parameterMapper.setRate(newRate);
-
-    // Update UI control manager
-    uiControlsManager.setRate(newRate);
-
-    // Update time range
     updateTimeRangeFromRate();
 
-    // Notify listeners of rate change if callback is set
     if (onRateChanged) {
         onRateChanged(newRate);
     }
@@ -321,18 +289,8 @@ void EnvelopeComponent::timerCallback() {
 }
 
 void EnvelopeComponent::updateTimeRangeFromRate() {
-    float timeRangeInSeconds = uiControlsManager.calculateTimeRangeInSeconds(timingManager.getBpm());
+    float timeRangeInSeconds = calculateTimeRangeInSeconds(timingManager.getBpm());
     setTimeRange(timeRangeInSeconds);
-}
-
-void EnvelopeComponent::setSnapToGrid(bool shouldSnap) {
-    gridSystem.setSnapToGridEnabled(shouldSnap);
-    uiControlsManager.setSnapToGridEnabled(shouldSnap);
-    repaint();
-}
-
-const std::vector<std::unique_ptr<EnvelopePoint>> &EnvelopeComponent::getPoints() const {
-    return pointManager.getPoints();
 }
 
 void EnvelopeComponent::handlePointsChanged() {
@@ -346,25 +304,162 @@ void EnvelopeComponent::handlePointsChanged() {
     repaint();
 }
 
-void EnvelopeComponent::handlePresetShapeChanged(EnvelopePresetGenerator::PresetShape shape) {
-    applyPresetShape(shape);
+void EnvelopeComponent::setupRateUI() {
+    // Create rate combo box
+    rateComboBox = std::make_unique<juce::ComboBox>("rateComboBox");
+    rateComboBox->addItem("2/1", static_cast<int>(Rate::TwoWhole) + 1);
+    rateComboBox->addItem("1/1", static_cast<int>(Rate::Whole) + 1);
+    rateComboBox->addItem("1/2", static_cast<int>(Rate::Half) + 1);
+    rateComboBox->addItem("1/4", static_cast<int>(Rate::Quarter) + 1);
+    rateComboBox->addItem("1/8", static_cast<int>(Rate::Eighth) + 1);
+    rateComboBox->addItem("1/16", static_cast<int>(Rate::Sixteenth) + 1);
+    rateComboBox->addItem("1/32", static_cast<int>(Rate::ThirtySecond) + 1);
+    rateComboBox->setSelectedId(static_cast<int>(Rate::Quarter) + 1);
+    rateComboBox->onChange = [this] {
+        updateRateFromComboBox();
+    };
+    addAndMakeVisible(rateComboBox.get());
 }
 
-void EnvelopeComponent::handleSnapToGridChanged(bool enabled) {
-    setSnapToGrid(enabled);
-}
+void EnvelopeComponent::setupPresetsUI() {
+    // Create preset shape buttons
+    const std::vector<EnvelopePresetGenerator::PresetShape> shapes = {
+            EnvelopePresetGenerator::PresetShape::Sine,
+            EnvelopePresetGenerator::PresetShape::Triangle,
+            EnvelopePresetGenerator::PresetShape::Square,
+            EnvelopePresetGenerator::PresetShape::RampUp,
+            EnvelopePresetGenerator::PresetShape::RampDown
+    };
 
-void EnvelopeComponent::handleRateChanged(float rate) {
-    parameterMapper.setRate(rate);
-    updateTimeRangeFromRate();
+    const std::vector<juce::String> shapeNames = {
+            "Sine", "Triangle", "Square", "Ramp Up", "Ramp Down"
+    };
 
-    // Notify listeners
-    if (onRateChanged) {
-        onRateChanged(rate);
+    // Create buttons for each shape
+    for (size_t i = 0; i < shapes.size(); ++i) {
+        auto button = std::make_unique<EnvelopeShapeButton>(shapeNames[i], shapes[i]);
+
+        // Set up the click callback
+        button->onClick = [this, shape = shapes[i]]() {
+            handlePresetButtonClick(shape);
+        };
+
+        presetButtons.push_back(std::move(button));
+        addAndMakeVisible(presetButtons.back().get());
     }
 }
 
-void EnvelopeComponent::applyPresetShape(EnvelopePresetGenerator::PresetShape shape) {
+void EnvelopeComponent::resizeControls(int width, int topPadding) {
+    // Calculate space for the rate controls
+    const int controlHeight = 25;
+    const int comboWidth = 100;
+    const int bottomPadding = 10;
+    int bottomEdge = getHeight() - bottomPadding;
+
+    // Position rate controls at the top left
+    rateComboBox->setBounds(10, bottomEdge - 20 , comboWidth, controlHeight);
+
+    // Position preset shape buttons in the bottom right corner
+    const int buttonSize = 40;
+    const int buttonPadding = 5;
+
+    // Calculate the bottom right position
+    int rightEdge = width - buttonPadding;
+
+    // Position buttons horizontally
+    for (int i = presetButtons.size() - 1; i >= 0; --i) {
+        presetButtons[i]->setBounds(rightEdge - buttonSize, bottomEdge - buttonSize, buttonSize, buttonSize);
+        rightEdge -= (buttonSize + buttonPadding);
+    }
+}
+
+void EnvelopeComponent::updateRateFromComboBox() {
+    // Update the current rate enum
+    currentRateEnum = static_cast<Rate>(rateComboBox->getSelectedId() - 1);
+
+    // Calculate and set the appropriate rate based on selection
+    float newRate = 1.0f;
+    switch (currentRateEnum) {
+        case Rate::TwoWhole:
+            newRate = 0.125f;
+            break;
+        case Rate::Whole:
+            newRate = 0.25f;
+            break;
+        case Rate::Half:
+            newRate = 0.5f;
+            break;
+        case Rate::Quarter:
+            newRate = 1.0f;
+            break;
+        case Rate::Eighth:
+            newRate = 2.0f;
+            break;
+        case Rate::Sixteenth:
+            newRate = 4.0f;
+            break;
+        case Rate::ThirtySecond:
+            newRate = 8.0f;
+            break;
+    }
+
+    // Set the rate
+    setRate(newRate);
+}
+
+void EnvelopeComponent::setCurrentPresetShape(EnvelopePresetGenerator::PresetShape shape) {
+    currentPresetShape = shape;
+
+    // Update button states - highlight the selected shape
+    for (size_t i = 0; i < presetButtons.size(); ++i) {
+        auto buttonShape = static_cast<EnvelopePresetGenerator::PresetShape>(i);
+        presetButtons[i]->setToggleState(buttonShape == shape, juce::dontSendNotification);
+    }
+
+    repaint();
+}
+
+float EnvelopeComponent::calculateTimeRangeInSeconds(double bpm) const {
+    const double beatsPerSecond = bpm / 60.0;
+
+    // Calculate time range based on selected rate - this should match exactly one envelope cycle
+    float timeRangeInSeconds = 1.0f;
+
+    switch (currentRateEnum) {
+        case Rate::TwoWhole:
+            timeRangeInSeconds = static_cast<float>(8.0 / beatsPerSecond);
+            break;
+        case Rate::Whole:
+            // One whole note = 4 quarter notes
+            timeRangeInSeconds = static_cast<float>(4.0 / beatsPerSecond);
+            break;
+        case Rate::Half:
+            // One half note = 2 quarter notes
+            timeRangeInSeconds = static_cast<float>(2.0 / beatsPerSecond);
+            break;
+        case Rate::Quarter:
+            // One quarter note
+            timeRangeInSeconds = static_cast<float>(1.0 / beatsPerSecond);
+            break;
+        case Rate::Eighth:
+            // One eighth note = 0.5 quarter notes
+            timeRangeInSeconds = static_cast<float>(0.5 / beatsPerSecond);
+            break;
+        case Rate::Sixteenth:
+            // One sixteenth note = 0.25 quarter notes
+            timeRangeInSeconds = static_cast<float>(0.25 / beatsPerSecond);
+            break;
+        case Rate::ThirtySecond:
+            // One thirty-second note = 0.125 quarter notes
+            timeRangeInSeconds = static_cast<float>(0.125 / beatsPerSecond);
+            break;
+    }
+
+    return timeRangeInSeconds;
+}
+
+void EnvelopeComponent::handlePresetButtonClick(EnvelopePresetGenerator::PresetShape shape) {
+    currentPresetShape = shape;
     auto newPoints = EnvelopePresetGenerator::createShape(shape);
     pointManager.setPoints(std::move(newPoints));
     repaint();

@@ -22,25 +22,14 @@ public:
 
     void resized() override;
 
-    // Create envelope components for all registered types
     void createEnvelopeComponents();
 
-    // Access to components by type
     std::weak_ptr<EnvelopeComponent> getEnvelopeComponent(EnvelopeParams::ParameterType type);
 
 private:
-    // Set up UI controls and tabs
-    void setupControls();
-
-    void setupScaleSlider();
-
-    // Tab component for envelope selection
     std::unique_ptr<EnvelopeTabs> envTabs;
-
-    // Map of envelope components by type
     std::map<EnvelopeParams::ParameterType, std::shared_ptr<EnvelopeComponent>> envelopeComponents;
 
-    // UI controls
     std::unique_ptr<juce::Label> scaleLabel;
     std::unique_ptr<juce::Slider> scaleSlider;
 }; 

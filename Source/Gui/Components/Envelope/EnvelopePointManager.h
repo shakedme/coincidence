@@ -4,7 +4,6 @@
 #include <memory>
 #include <functional>
 #include "../../../Shared/Envelope/EnvelopePoint.h"
-#include "EnvelopeGridSystem.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
 /**
@@ -12,11 +11,13 @@
  */
 class EnvelopePointManager {
 public:
-    explicit EnvelopePointManager(EnvelopeGridSystem &gridSystem);
+    explicit EnvelopePointManager(
+            int horizontalDivisions = 10,
+            int verticalDivisions = 4
+    );
 
     ~EnvelopePointManager() = default;
 
-    // Point management
     void addPoint(float x, float y, bool editable = true);
 
     bool removePoint(int index);
@@ -27,16 +28,15 @@ public:
 
     void deselectAllPoints();
 
-    void selectPointsInArea(const juce::Rectangle<float> &area, int componentWidth = 800, int componentHeight = 600);
+    void selectPointsInArea(const juce::Rectangle<float> &area);
 
-    int getSelectedPointsCount() const;
+    [[nodiscard]] int getSelectedPointsCount() const;
 
     // Point finding
-    int findPointAt(const juce::Point<float> &position, float radius, int componentWidth = 800,
-                    int componentHeight = 600) const;
+    [[nodiscard]] int findPointAt(const juce::Point<float> &position, float radius) const;
 
-    int findClosestSegmentIndex(const juce::Point<float> &position, float threshold = 10.0f, int componentWidth = 800,
-                                int componentHeight = 600) const;
+    [[nodiscard]] int
+    findClosestSegmentIndex(const juce::Point<float> &position, float threshold = 10.0f) const;
 
     // Point movement
     void movePoint(int index, float x, float y);
@@ -46,34 +46,43 @@ public:
     // Curve handling
     void setCurvature(int segmentIndex, float curvature);
 
-    float getCurvature(int segmentIndex) const;
+    [[nodiscard]] float getCurvature(int segmentIndex) const;
 
     // Drawing
-    juce::Point<float> getPointScreenPosition(int index, int width, int height) const;
+    [[nodiscard]] juce::Point<float> getPointScreenPosition(int index) const;
 
-    juce::Point<float> getPointScreenPosition(const EnvelopePoint &point, int width, int height) const;
+    [[nodiscard]] juce::Point<float> getPointScreenPosition(const EnvelopePoint &point) const;
 
     // Point utility functions
-    float
+    [[nodiscard]] float
     distanceToLineSegment(const juce::Point<float> &p, const juce::Point<float> &v, const juce::Point<float> &w) const;
 
-    float
+    [[nodiscard]] float
     distanceToCurve(const juce::Point<float> &point, const juce::Point<float> &start, const juce::Point<float> &end,
                     float curvature) const;
 
     // Access points
-    const std::vector<std::unique_ptr<EnvelopePoint>> &getPoints() const;
+    [[nodiscard]] const std::vector<std::unique_ptr<EnvelopePoint>> &getPoints() const;
 
     void setPoints(std::vector<std::unique_ptr<EnvelopePoint>> newPoints);
 
     void sortPoints();
 
+    void setBounds(int width, int height);
+
+    [[nodiscard]] juce::Point<float> snapToGrid(const juce::Point<float> &point) const;
+
     // Callback for point changes
     std::function<void()> onPointsChanged;
 
 private:
+    int horizontalDivisions = 10;
+    int verticalDivisions = 4;
+
+    int width;
+    int height;
+
     std::vector<std::unique_ptr<EnvelopePoint>> points;
-    EnvelopeGridSystem &gridSystem;
 
     void notifyPointsChanged();
 

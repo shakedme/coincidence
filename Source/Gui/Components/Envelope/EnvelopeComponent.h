@@ -7,16 +7,16 @@
 #include "../../../Shared/Envelope/EnvelopeParameterMapper.h"
 #include "../../../Shared/Envelope/EnvelopeParameterTypes.h"
 #include "../../../Shared/Envelope/EnvelopePoint.h"
-#include "EnvelopePresetGenerator.h"
-#include "EnvelopeGridSystem.h"
-#include "EnvelopePointManager.h"
-#include "EnvelopeRenderer.h"
-#include "EnvelopeUIControlsManager.h"
 #include "../../../Shared/TimingManager.h"
 #include "../WaveformComponent.h"
+#include "EnvelopePresetGenerator.h"
+#include "EnvelopePointManager.h"
+#include "EnvelopeRenderer.h"
+#include "EnvelopeShapeButton.h"
 
 class EnvelopeComponent : public juce::Component, private juce::Timer {
 public:
+
     explicit EnvelopeComponent(
             TimingManager &tm,
             EnvelopeParams::ParameterType type = EnvelopeParams::ParameterType::Amplitude);
@@ -52,22 +52,11 @@ public:
 
     void setParameterType(EnvelopeParams::ParameterType type);
 
-    void setWaveformScaleFactor(float scale);
-
     // Get the current envelope value
     float getCurrentValue() const;
 
     // Set envelope rate
     void setRate(float newRate);
-
-    // Access envelope points
-    const std::vector<std::unique_ptr<EnvelopePoint>> &getPoints() const;
-
-    // Preset shape methods
-    void applyPresetShape(EnvelopePresetGenerator::PresetShape shape);
-
-    // Snap-to-grid functionality
-    void setSnapToGrid(bool shouldSnap);
 
     void setSettings(EnvelopeParams::ParameterSettings settings) {
         parameterMapper.setSettings(settings);
@@ -77,19 +66,43 @@ public:
     std::function<void(const std::vector<std::unique_ptr<EnvelopePoint>> &points)> onPointsChanged;
     std::function<void(float)> onRateChanged;
 
+    enum class Rate {
+        TwoWhole = 0,
+        Whole,
+        Half,
+        Quarter,
+        Eighth,
+        Sixteenth,
+        ThirtySecond
+    };
+
 private:
     // Handler methods for utility class callbacks
     void handlePointsChanged();
 
-    void handlePresetShapeChanged(EnvelopePresetGenerator::PresetShape shape);
-
-    void handleSnapToGridChanged(bool enabled);
-
-    void handleRateChanged(float rate);
-
     void timerCallback() override;
 
     void updateTimeRangeFromRate();
+
+    void resizeControls(int width, int topPadding = 5);
+
+    void updateRateFromComboBox();
+
+    void setCurrentPresetShape(EnvelopePresetGenerator::PresetShape shape);
+
+    void setupRateUI();
+
+    void setupPresetsUI();
+
+    void handlePresetButtonClick(EnvelopePresetGenerator::PresetShape shape);
+
+    [[nodiscard]] float calculateTimeRangeInSeconds(double bpm) const;
+
+    int removeFromTop = 65;
+
+    std::unique_ptr<juce::ComboBox> rateComboBox;
+    Rate currentRateEnum = Rate::Quarter;
+    float currentRate = 1.0f;
 
     // Selection area
     bool isCreatingSelectionArea = false;
@@ -113,10 +126,12 @@ private:
     TimingManager &timingManager;
 
     // Utility classes
-    EnvelopeGridSystem gridSystem;
     EnvelopePointManager pointManager;
     EnvelopeRenderer renderer;
-    EnvelopeUIControlsManager uiControlsManager;
+
+    // Preset shape buttons
+    std::vector<std::unique_ptr<EnvelopeShapeButton>> presetButtons;
+    EnvelopePresetGenerator::PresetShape currentPresetShape = EnvelopePresetGenerator::PresetShape::Sine;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(EnvelopeComponent)
 }; 

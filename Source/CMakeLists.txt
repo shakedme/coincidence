@@ -45,10 +45,9 @@ target_sources(${BaseTargetName} PRIVATE
         Gui/Components/HeaderComponent.h
         Gui/Components/WaveformComponent.cpp
         Gui/Components/Envelope/EnvelopePresetGenerator.cpp
-        Gui/Components/Envelope/EnvelopeGridSystem.cpp
         Gui/Components/Envelope/EnvelopePointManager.cpp
         Gui/Components/Envelope/EnvelopeRenderer.cpp
-        Gui/Components/Envelope/EnvelopeUIControlsManager.cpp
+        Gui/Components/Envelope/EnvelopeShapeButton.h
 
         Shared/Models.h
         Shared/ParameterBinding.cpp
