@@ -67,7 +67,7 @@ public:
     WaveformComponent *getWaveformComponent() { return &waveformComponent; }
 
     // Callbacks for parameter change notifications
-    std::function<void()> onPointsChanged;
+    std::function<void(const std::vector<std::unique_ptr<EnvelopePoint>> & points)> onPointsChanged;
     std::function<void(float)> onRateChanged;
 
     // Parameter mapping

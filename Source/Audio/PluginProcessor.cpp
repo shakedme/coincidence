@@ -18,13 +18,14 @@ PluginProcessor::PluginProcessor()
     noteGenerator = std::make_unique<NoteGenerator>(*this);
     fxEngine = std::make_unique<FxEngine>(*this);
 
-//    auto *fileLogger = new FileLogger();
-//    juce::Logger::setCurrentLogger(fileLogger);
+    auto *fileLogger = new FileLogger();
+    juce::Logger::setCurrentLogger(fileLogger);
 
     forceParameterUpdates();
 }
 
 PluginProcessor::~PluginProcessor() {
+
 }
 
 //==============================================================================

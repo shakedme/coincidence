@@ -688,7 +688,7 @@ void EnvelopeComponent::setRate(float newRate) {
 
 void EnvelopeComponent::notifyPointsChanged() {
     if (onPointsChanged) {
-        onPointsChanged();
+        onPointsChanged(getPoints());
     }
 }
 

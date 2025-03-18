@@ -52,7 +52,10 @@ private:
     void timerCallback() override;
     
     // Waveform visualization
-    AudioBufferQueue* audioBufferQueue = nullptr;
+    // strong ref for the gui thread
+    std::shared_ptr<AudioBufferQueue> audioBufferQueue;
+    // weak ref for the audio thread (to avoid trying to write to buffer when gui thread already shutdown)
+    std::weak_ptr<AudioBufferQueue> audioBufferQueueWeak;
     std::vector<float> waveformData;
     
     struct PeakData {

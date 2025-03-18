@@ -8,6 +8,8 @@
 #include "BaseEffect.h"
 #include <vector>
 #include "../../Shared/ParameterBinding.h"
+#include "../Envelope/EnvelopeManager.h"
+#include "../Envelope/EnvelopeParameterMapper.h"
 
 class PluginProcessor;
 
@@ -35,4 +37,11 @@ private:
 
     // JUCE reverb processor
     juce::dsp::Reverb reverbProcessor;
+    
+    // Buffer for wet signal processing
+    juce::AudioBuffer<float> wetBuffer;
+    
+    // Envelope modulation support
+    EnvelopeManager* envelopeManagerPtr = nullptr;
+    EnvelopeParameterMapper* reverbEnvelopeMapper = nullptr;
 };

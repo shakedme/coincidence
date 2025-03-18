@@ -29,13 +29,10 @@ public:
     EnvelopeParameterMapper *getMapper(EnvelopeParams::ParameterType type);
 
     // Connect a UI component to a parameter type
-    void connectComponent(EnvelopeComponent *component, EnvelopeParams::ParameterType type);
+    void connectComponent(const std::weak_ptr<EnvelopeComponent>& component, EnvelopeParams::ParameterType type);
 
     // Auto-connect all components from an EnvelopeSection
     void connectAllComponents(EnvelopeSectionComponent *section);
-
-    // Apply an envelope's modulation to an audio buffer
-    void applyEnvelopeToBuffer(EnvelopeParams::ParameterType type, juce::AudioBuffer<float> &buffer);
 
     // Send audio data to all envelope components for visualization
     void pushAudioBuffer(const float *audioData, int numSamples);
@@ -51,7 +48,7 @@ private:
     std::map<EnvelopeParams::ParameterType, std::unique_ptr<EnvelopeParameterMapper>> envelopeParamsMap;
 
     // Mapping of UI components to parameter types
-    std::map<EnvelopeParams::ParameterType, EnvelopeComponent *> envelopeComponentMap;
+    std::map<EnvelopeParams::ParameterType, std::weak_ptr<EnvelopeComponent>> envelopeComponentMap;
 
     // Reference to envelope registry
     EnvelopeParams::Registry &registry;

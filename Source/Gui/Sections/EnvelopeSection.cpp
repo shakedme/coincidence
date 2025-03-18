@@ -36,15 +36,15 @@ void EnvelopeSectionComponent::createEnvelopeComponents() {
             envTabs->addTab(typeInfo.name, juce::Colours::transparentBlack, new juce::Component(), true);
 
             // Create envelope component
-            auto component = std::make_unique<EnvelopeComponent>(
+            auto component = std::make_shared<EnvelopeComponent>(
                     processor.getTimingManager(), typeInfo.type);
 
             // Initially all components are hidden
-            component->setVisible(false);
             addAndMakeVisible(component.get());
+            component->setVisible(false);
 
             // Store the component
-            envelopeComponents[typeInfo.type] = std::move(component);
+            envelopeComponents[typeInfo.type] = component;
 
             tabIndex++;
         }
@@ -67,12 +67,12 @@ void EnvelopeSectionComponent::createEnvelopeComponents() {
     };
 }
 
-EnvelopeComponent *EnvelopeSectionComponent::getEnvelopeComponent(EnvelopeParams::ParameterType type) {
+std::weak_ptr<EnvelopeComponent> EnvelopeSectionComponent::getEnvelopeComponent(EnvelopeParams::ParameterType type) {
     auto it = envelopeComponents.find(type);
     if (it != envelopeComponents.end()) {
-        return it->second.get();
+        return it->second;
     }
-    return nullptr;
+    return {};
 }
 
 void EnvelopeSectionComponent::setupScaleSlider() {
