@@ -160,4 +160,5 @@ private:
     juce::Colour normalColour = juce::Colours::lightgrey;
     juce::Colour activeColour = juce::Colour(0xff52bfd9);
     bool isActive = false;
+    bool isDisabled = false;
 };

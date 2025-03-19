@@ -6,7 +6,7 @@
 #include "../../Sections/BaseSection.h"
 
 class GroupListView
-        : public juce::Component, public juce::Slider::Listener, public juce::Timer {
+        : public juce::Component, public juce::Timer {
 public:
     explicit GroupListView(PluginProcessor &p)
             : processor(p) {
@@ -21,10 +21,13 @@ public:
             slider->setDoubleClickReturnValue(true, 100.0);
             slider->setNumDecimalPlacesToDisplay(0);
             slider->setTextBoxStyle(juce::Slider::NoTextBox, false, 50, 6);
-            slider->addListener(this);
             slider->setTooltip("Group probability (0-100%)");
             slider->setColour(juce::Slider::rotarySliderFillColourId, getGroupColor(i));
             slider->setColour(juce::Slider::thumbColourId, getGroupColor(i));
+            slider->onValueChange = [&]() {
+                float normalizedValue = static_cast<float>(slider->getValue()) / 100.0f;
+                processor.getSampleManager().setGroupProbability(i, normalizedValue);
+            };
             addAndMakeVisible(slider.get());
 
             // Group title label
@@ -253,19 +256,6 @@ public:
                 if (rateIcons1_8[i]) rateIcons1_8[i]->setVisible(false);
                 if (rateIcons1_16[i]) rateIcons1_16[i]->setVisible(false);
                 if (rateIcons1_32[i]) rateIcons1_32[i]->setVisible(false);
-            }
-        }
-    }
-
-    void sliderValueChanged(juce::Slider *slider) override {
-        // Find which slider changed
-        for (int i = 0; i < MAX_GROUPS; ++i) {
-            if (slider == probabilitySliders[i].get()) {
-                // Convert from 0-100 range to 0-1 range for the SampleManager
-                float normalizedValue = static_cast<float>(slider->getValue()) / 100.0f;
-                // Update the group probability
-                processor.getSampleManager().setGroupProbability(i, normalizedValue);
-                break;
             }
         }
     }
@@ -509,6 +499,7 @@ private:
         } else {
             icon->setActive(false);
         }
+
     }
 
     void updateEffectIconState(TextIcon *icon, int groupIndex, Models::EffectType effectType) {

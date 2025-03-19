@@ -3,8 +3,8 @@
 #include <random>
 #include <utility>
 
-SampleManager::SampleInfo::SampleInfo(juce::String n, const juce::File &f, int idx)
-        : name(std::move(n)), file(f), index(idx) {
+SampleManager::SampleInfo::SampleInfo(juce::String n, juce::File f, int idx)
+        : name(std::move(n)), file(std::move(f)), index(idx) {
     // Initialize all rates to enabled by default
     for (int i = 0; i < Models::NUM_RATE_OPTIONS; ++i) {
         rateEnabled[static_cast<Models::RateOption>(i)] = true;
@@ -689,18 +689,16 @@ bool SampleManager::isSampleRateEnabled(int sampleIndex, Models::RateOption rate
     if (sampleIndex >= 0 && sampleIndex < sampleList.size()) {
         const auto &sample = sampleList[sampleIndex];
 
-        // Return false early if sample itself has the rate disabled
+        // group state is more important than individual sample state
+        if (sample->groupIndex >= 0 && sample->groupIndex < groups.size()) {
+            return isGroupRateEnabled(sample->groupIndex, rate);
+        }
+
         auto it = sample->rateEnabled.find(rate);
         if (it == sample->rateEnabled.end() || !it->second) {
             return false;
         }
 
-        // Check if sample is in a valid group
-        if (sample->groupIndex >= 0 && sample->groupIndex < groups.size()) {
-            return isGroupRateEnabled(sample->groupIndex, rate);
-        }
-
-        // If no group or invalid group, and the sample has the rate enabled
         return true;
     }
     return false;

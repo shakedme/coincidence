@@ -7,13 +7,13 @@ SampleList::SampleList(PluginProcessor &p)
     sampleListBox = std::make_unique<juce::TableListBox>("Sample List", this);
     sampleListBox->setHeaderHeight(0); // Remove the header by setting height to 0
     sampleListBox->setMultipleSelectionEnabled(true); // Enable multiple selections
-    
+
     // Set a fixed row height to improve scrolling performance
     sampleListBox->setRowHeight(25);
 
     // Disable automatic row selection toggling - we'll handle this manually
     sampleListBox->setClickingTogglesRowSelection(false);
-    
+
     // Disable horizontal scrolling to prevent overflow
     sampleListBox->getHorizontalScrollBar().setVisible(false);
 
@@ -292,20 +292,11 @@ void SampleList::toggleOnsetRandomization(int sampleIndex) {
                         "OK",
                         this);
             } else {
-                // Toggle onset randomization and ensure state changes are immediately visible
                 bool oldState = sound->isOnsetRandomizationEnabled();
                 bool newState = !oldState;
-                
-                // Update the model
+
                 sound->setOnsetRandomizationEnabled(newState);
-                
-                // Note: The row component itself will handle updating the icon now
-                // through its click handler. We'll just ensure the table is updated.
-                
-                // Force an immediate repaint of the specific row
                 sampleListBox->repaintRow(sampleIndex);
-                
-                // Also update content to ensure model consistency
                 updateContent();
             }
         }

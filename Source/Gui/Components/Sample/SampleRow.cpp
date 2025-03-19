@@ -250,13 +250,13 @@ void SampleRow::setupRateIcon(std::unique_ptr<TextIcon> &icon,
 void SampleRow::updateRateIcon(Models::RateOption rate) {
     if (auto *icon = getRateIcon(rate)) {
         bool isEnabled = ownerList->processor.getSampleManager().isSampleRateEnabled(rowNumber, rate);
-        if (isEnabled) {
-            icon->setActive(true, juce::Colour(0xff52bfd9));
-        } else {
-            icon->setActive(false);
-        }
+        icon->setActive(isEnabled);
         // Add click handler
         icon->onClicked = [this, icon, rate]() {
+            auto *sound = ownerList->processor.getSampleManager().getSampleSound(rowNumber);
+            if (sound->getGroupIndex() != -1) {
+                return;
+            }
             bool currentState = ownerList->processor.getSampleManager().isSampleRateEnabled(rowNumber, rate);
             ownerList->processor.getSampleManager().setSampleRateEnabled(rowNumber, rate, !currentState);
             if (!currentState) {

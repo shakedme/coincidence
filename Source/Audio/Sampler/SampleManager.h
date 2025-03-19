@@ -26,7 +26,7 @@ public:
 
         std::unordered_map<Models::RateOption, bool> rateEnabled;
 
-        SampleInfo(juce::String n, const juce::File &f, int idx);
+        SampleInfo(juce::String n, juce::File f, int idx);
     };
 
     // Group of samples

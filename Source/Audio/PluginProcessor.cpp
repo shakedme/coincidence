@@ -184,7 +184,14 @@ void PluginProcessor::getStateInformation(juce::MemoryBlock &destData) {
 
     // Add groups to the XML
     auto *groupsXml = new juce::XmlElement("Groups");
-
+    std::unordered_map<juce::String, Models::RateOption> rateMap = {
+            {"rate_1_1_enabled",  Models::RATE_1_1},
+            {"rate_1_2_enabled",  Models::RATE_1_2},
+            {"rate_1_4_enabled",  Models::RATE_1_4},
+            {"rate_1_8_enabled",  Models::RATE_1_8},
+            {"rate_1_16_enabled", Models::RATE_1_16},
+            {"rate_1_32_enabled", Models::RATE_1_32}
+    };
     // Add each group
     for (int i = 0; i < sampleManager.getNumGroups(); ++i) {
         if (const auto *group = sampleManager.getGroup(i)) {
@@ -196,6 +203,11 @@ void PluginProcessor::getStateInformation(juce::MemoryBlock &destData) {
             // Add group name if available
             if (group->name.isNotEmpty())
                 groupXml->setAttribute("name", group->name);
+
+            // Add group rate toggle values
+            for (const auto &pair: rateMap) {
+                groupXml->setAttribute(pair.first, sampleManager.isGroupRateEnabled(i, pair.second));
+            }
 
             // Add group probability
             groupXml->setAttribute("probability", sampleManager.getGroupProbability(i));
@@ -333,7 +345,14 @@ void PluginProcessor::setStateInformation(const void *data, int sizeInBytes) {
 
             // After loading all samples, restore groups
             if (juce::XmlElement *groupsXml = xmlState->getChildByName("Groups")) {
-                int groupCount = 0;
+                std::unordered_map<juce::String, Models::RateOption> rateMap = {
+                        {"rate_1_1_enabled",  Models::RATE_1_1},
+                        {"rate_1_2_enabled",  Models::RATE_1_2},
+                        {"rate_1_4_enabled",  Models::RATE_1_4},
+                        {"rate_1_8_enabled",  Models::RATE_1_8},
+                        {"rate_1_16_enabled", Models::RATE_1_16},
+                        {"rate_1_32_enabled", Models::RATE_1_32}
+                };
 
                 // Load each group
                 for (int i = 0; i < groupsXml->getNumChildElements(); ++i) {
@@ -356,11 +375,17 @@ void PluginProcessor::setStateInformation(const void *data, int sizeInBytes) {
                                 // Create the group if there are samples in it
                                 if (!sampleIndices.isEmpty()) {
                                     sampleManager.createGroup(sampleIndices);
-                                    groupCount++;
+
+                                    for (auto &ratePair: rateMap) {
+                                        if (groupXml->hasAttribute(ratePair.first)) {
+                                            bool enabled = groupXml->getBoolAttribute(ratePair.first, true);
+                                            sampleManager.setGroupRateEnabled(groupIndex, ratePair.second, enabled);
+                                        }
+                                    }
 
                                     // Set group probability if it exists
                                     if (groupXml->hasAttribute("probability")) {
-                                        float probability = (float) groupXml->getDoubleAttribute("probability", 1.0);
+                                        auto probability = (float) groupXml->getDoubleAttribute("probability", 1.0);
                                         sampleManager.setGroupProbability(groupIndex, probability);
                                     }
                                 }
