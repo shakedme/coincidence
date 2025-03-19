@@ -1,10 +1,13 @@
 #include "EnvelopeComponent.h"
 #include <juce_graphics/juce_graphics.h>
 
+#include <utility>
+
 //==============================================================================
-EnvelopeComponent::EnvelopeComponent(TimingManager &tm, EnvelopeParams::ParameterType type)
-        : timingManager(tm),
-          parameterMapper(type),
+EnvelopeComponent::EnvelopeComponent(PluginProcessor &p,
+                                     juce::Identifier paramId)
+        : processor(p),
+          parameterMapper(std::move(paramId)),
           pointManager(),
           renderer(pointManager) {
 
@@ -42,7 +45,7 @@ void EnvelopeComponent::paint(juce::Graphics &g) {
 
     renderer.drawGrid(g);
 
-    double ppqPosition = timingManager.getPpqPosition();
+    double ppqPosition = processor.getTimingManager().getPpqPosition();
     float cycle = std::fmod(static_cast<float>(ppqPosition * parameterMapper.getRate()), 1.0f);
 
     renderer.drawEnvelope(g, cycle);
@@ -65,6 +68,14 @@ void EnvelopeComponent::resized() {
     auto waveformBounds = getLocalBounds();
     waveformBounds.removeFromTop(topControlArea);
     waveformComponent.setBounds(waveformBounds);
+}
+
+void EnvelopeComponent::timerCallback() {
+    parameterMapper.setTransportPosition(processor.getTimingManager().getPpqPosition());
+    if (auto *param = processor.getAPVTS().getParameter(parameterMapper.getParameterId())) {
+        param->setValueNotifyingHost(parameterMapper.getCurrentValue());
+    }
+    repaint();
 }
 
 void EnvelopeComponent::mouseDown(const juce::MouseEvent &e) {
@@ -256,22 +267,9 @@ void EnvelopeComponent::setParameterRange(float min, float max, bool exponential
     parameterMapper.setParameterRange(min, max, exponential);
 }
 
-float EnvelopeComponent::getCurrentValue() const {
-    return parameterMapper.getCurrentValue();
-}
-
 void EnvelopeComponent::setRate(float newRate) {
     parameterMapper.setRate(newRate);
     updateTimeRangeFromRate();
-
-    if (onRateChanged) {
-        onRateChanged(newRate);
-    }
-}
-
-void EnvelopeComponent::setParameterType(EnvelopeParams::ParameterType type) {
-    parameterMapper.setParameterType(type);
-    repaint();
 }
 
 void EnvelopeComponent::pushAudioBuffer(const float *audioData, int numSamples) {
@@ -280,27 +278,13 @@ void EnvelopeComponent::pushAudioBuffer(const float *audioData, int numSamples) 
     waveformComponent.pushAudioBuffer(audioData, numSamples);
 }
 
-void EnvelopeComponent::timerCallback() {
-    // Update transport position if timing manager is available
-    double ppqPosition = timingManager.getPpqPosition();
-    parameterMapper.setTransportPosition(ppqPosition);
-    // Always repaint to show current envelope position in sync with transport
-    repaint();
-}
-
 void EnvelopeComponent::updateTimeRangeFromRate() {
-    float timeRangeInSeconds = calculateTimeRangeInSeconds(timingManager.getBpm());
+    float timeRangeInSeconds = calculateTimeRangeInSeconds(processor.getTimingManager().getBpm());
     setTimeRange(timeRangeInSeconds);
 }
 
 void EnvelopeComponent::handlePointsChanged() {
-    // Update parameter mapper with new points
     parameterMapper.setPoints(pointManager.getPoints());
-
-    if (onPointsChanged) {
-        onPointsChanged(pointManager.getPoints());
-    }
-    // Request repaint
     repaint();
 }
 
@@ -357,7 +341,7 @@ void EnvelopeComponent::resizeControls(int width, int topPadding) {
     int bottomEdge = getHeight() - bottomPadding;
 
     // Position rate controls at the top left
-    rateComboBox->setBounds(10, bottomEdge - 20 , comboWidth, controlHeight);
+    rateComboBox->setBounds(10, bottomEdge - 20, comboWidth, controlHeight);
 
     // Position preset shape buttons in the bottom right corner
     const int buttonSize = 40;

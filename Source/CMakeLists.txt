@@ -48,15 +48,12 @@ target_sources(${BaseTargetName} PRIVATE
         Gui/Components/Envelope/EnvelopePointManager.cpp
         Gui/Components/Envelope/EnvelopeRenderer.cpp
         Gui/Components/Envelope/EnvelopeShapeButton.h
+        Gui/Components/Envelope/EnvelopeParameterMapper.cpp
+        Gui/Components/Envelope/EnvelopePoint.h
 
         Shared/Models.h
         Shared/ParameterBinding.cpp
         Shared/TimingManager.cpp
-        Shared/Envelope/EnvelopeParameterMapper.cpp
-        Shared/Envelope/EnvelopeParameterTypes.h
-        Shared/Envelope/EnvelopeManager.cpp
-        Shared/Envelope/EnvelopeParameterRegistry.cpp
-        Shared/Envelope/EnvelopePoint.h
 
         Audio/PluginProcessor.cpp
         Audio/Sampler/SampleManager.cpp

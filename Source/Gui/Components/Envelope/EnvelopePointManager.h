@@ -3,7 +3,7 @@
 #include <vector>
 #include <memory>
 #include <functional>
-#include "../../../Shared/Envelope/EnvelopePoint.h"
+#include "EnvelopePoint.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
 /**

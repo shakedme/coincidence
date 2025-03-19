@@ -8,11 +8,6 @@ void Reverb::initialize(PluginProcessor &p) {
     BaseEffect::initialize(p);
     paramBinding = AppState::createParameterBinding<Models::ReverbSettings>(settings, p.getAPVTS());
     paramBinding->registerParameters(AppState::createReverbParameters());
-    envelopeManagerPtr = &p.getEnvelopeManager();
-
-    juce::Timer::callAfterDelay(2000, [this]() {
-        reverbEnvelopeMapper = envelopeManagerPtr->getMapper(EnvelopeParams::ParameterType::Reverb);
-    });
 }
 
 void Reverb::prepare(const juce::dsp::ProcessSpec &spec) {
@@ -51,14 +46,7 @@ void Reverb::process(const juce::dsp::ProcessContextReplacing<float> &context) {
     reverbProcessor.process(wetContext);
 
     // Calculate the mix value with envelope modulation
-    float baseMix = settings.reverbMix;
-    float mixValue = baseMix;
-
-    // Apply envelope modulation to the mix if we have a valid envelope mapper
-    if (reverbEnvelopeMapper != nullptr) {
-        float envelopeValue = reverbEnvelopeMapper->getCurrentValue();
-        mixValue = baseMix * envelopeValue;
-    }
+    float mixValue = settings.reverbMix * settings.reverbEnvelope;
 
     // Mix wet and dry signals using the BaseEffect helper method
     for (int channel = 0; channel < numChannels; ++channel) {

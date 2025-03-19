@@ -2,8 +2,8 @@
 #include "EnvelopePoint.h"
 #include <cmath>
 
-EnvelopeParameterMapper::EnvelopeParameterMapper(EnvelopeParams::ParameterType type)
-        : parameterType(type) {
+EnvelopeParameterMapper::EnvelopeParameterMapper(juce::Identifier paramId)
+        : paramId(paramId) {
     // Create initial buffers
     auto initialBuffer = new PointBuffer();
     addDefaultPointsToBuffer(initialBuffer);
@@ -95,10 +95,6 @@ void EnvelopeParameterMapper::updateTime(float deltaTime) {
 
 void EnvelopeParameterMapper::setRate(float newRate) {
     rate = newRate;
-}
-
-void EnvelopeParameterMapper::setParameterType(EnvelopeParams::ParameterType type) {
-    parameterType = type;
 }
 
 void EnvelopeParameterMapper::setParameterRange(float min, float max, bool isExponential) {

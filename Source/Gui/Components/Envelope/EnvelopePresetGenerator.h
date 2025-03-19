@@ -2,7 +2,7 @@
 
 #include <vector>
 #include <memory>
-#include "../../../Shared/Envelope/EnvelopePoint.h"
+#include "EnvelopePoint.h"
 #include <juce_core/juce_core.h>
 
 /**

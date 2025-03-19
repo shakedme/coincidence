@@ -3,9 +3,10 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <juce_dsp/juce_dsp.h>
 #include "../../Shared/Models.h"
+#include "../../Shared/ParameterBinding.h"
 #include "BaseEffect.h"
-#include "../../Shared/Envelope/EnvelopeManager.h"
 #include <vector>
+#include <memory>
 
 /**
  * Gain processor that applies amplitude envelope modulation
@@ -27,6 +28,7 @@ public:
     void reset() override;
 
 private:
-    EnvelopeManager* envelopeManagerPtr = nullptr;
-    EnvelopeParameterMapper* amplitudeEnvelopeMapper = nullptr;
+    float envelopeValue = 1.0f;
+    juce::dsp::Gain<float> gain;
+    std::unique_ptr<AppState::SingleParameterBinding<float>> paramBinding;
 }; 

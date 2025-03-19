@@ -6,7 +6,6 @@
 #include "Midi/ScaleManager.h"
 #include "Midi/NoteGenerator.h"
 #include "Sampler/Sampler.h"
-#include "../Shared/Envelope/EnvelopeManager.h"
 #include "Sampler/SampleManager.h"
 
 // Forward declarations
@@ -87,15 +86,6 @@ public:
 
     float getCurrentRandomizedVelocity() const { return noteGenerator->getCurrentRandomizedVelocity(); }
 
-    // Connect the envelope section to the envelope manager
-    void connectEnvelopeSection(EnvelopeSectionComponent* section);
-
-    // Access to the envelope manager
-    EnvelopeManager& getEnvelopeManager() { return *envelopeManager; }
-
-    // Access to the envelope registry
-    EnvelopeParams::Registry& getEnvelopeRegistry() { return envelopeRegistry; }
-
     // Force all parameter listeners to update with current values
     void forceParameterUpdates();
 
@@ -108,12 +98,6 @@ private:
     std::unique_ptr<SampleManager> sampleManager;
     std::unique_ptr<FxEngine> fxEngine;
     std::unique_ptr<TimingManager> timingManager;
-    
-    // Envelope registry - instance per plugin
-    EnvelopeParams::Registry envelopeRegistry;
-    
-    // Envelope manager uses the registry
-    std::unique_ptr<EnvelopeManager> envelopeManager;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginProcessor)
 };

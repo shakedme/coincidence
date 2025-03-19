@@ -51,7 +51,7 @@ namespace AppState {
     static const juce::String ID_REVERB_MIX = "reverb_mix";
     static const juce::String ID_REVERB_TIME = "reverb_time";
     static const juce::String ID_REVERB_WIDTH = "reverb_width";
-    static const juce::String ID_REVERB_ENVELOPE_POINTS = "reverb_envelope_points";
+    static const juce::String ID_REVERB_ENV = "reverb_envelope";
 
     // Delay parameters
     static const juce::String ID_DELAY_MIX = "delay_mix";
@@ -59,7 +59,8 @@ namespace AppState {
     static const juce::String ID_DELAY_FEEDBACK = "delay_feedback";
     static const juce::String ID_DELAY_PING_PONG = "delay_ping_pong";
     static const juce::String ID_DELAY_BPM_SYNC = "delay_bpm_sync";
-    static const juce::String ID_DELAY_ENVELOPE_POINTS = "delay_envelope_points";
+
+    static const juce::String ID_AMPLITUDE_ENVELOPE = "amplitude_envelope";
 
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
@@ -138,51 +139,51 @@ namespace AppState {
     }
 
 // Parameter binding class to connect APVTS parameters to settings struct members
-template<typename SettingsType>
-class ParameterBinding : public juce::AudioProcessorValueTreeState::Listener {
-public:
-    ParameterBinding(SettingsType &settingsStruct, juce::AudioProcessorValueTreeState &apvts)
-            : settings(settingsStruct), audioParamsTree(apvts) {
-    }
+    template<typename SettingsType>
+    class ParameterBinding : public juce::AudioProcessorValueTreeState::Listener {
+    public:
+        ParameterBinding(SettingsType &settingsStruct, juce::AudioProcessorValueTreeState &apvts)
+                : settings(settingsStruct), audioParamsTree(apvts) {
+        }
 
-    ~ParameterBinding() {
-        removeAllListeners();
-    }
+        ~ParameterBinding() {
+            removeAllListeners();
+        }
 
-    // Register a single parameter descriptor
-    void registerParameter(const ParameterDescriptor<SettingsType> &descriptor) {
-        parameterMap[descriptor.paramID] = descriptor.setter;
-        audioParamsTree.addParameterListener(descriptor.paramID, this);
+        // Register a single parameter descriptor
+        void registerParameter(const ParameterDescriptor<SettingsType> &descriptor) {
+            parameterMap[descriptor.paramID] = descriptor.setter;
+            audioParamsTree.addParameterListener(descriptor.paramID, this);
 
-        // Initialize with current value
-        if (auto *param = audioParamsTree.getParameter(descriptor.paramID))
-            descriptor.setter(settings, param->getValue());
-    }
+            // Initialize with current value
+            if (auto *param = audioParamsTree.getParameter(descriptor.paramID))
+                descriptor.setter(settings, param->getValue());
+        }
 
-    // Register a list of parameter descriptors
-    void registerParameters(const std::vector<ParameterDescriptor<SettingsType>> &descriptors) {
-        for (const auto &descriptor: descriptors)
-            registerParameter(descriptor);
-    }
+        // Register a list of parameter descriptors
+        void registerParameters(const std::vector<ParameterDescriptor<SettingsType>> &descriptors) {
+            for (const auto &descriptor: descriptors)
+                registerParameter(descriptor);
+        }
 
-    // Implement the listener callback
-    void parameterChanged(const juce::String &parameterID, float newValue) override {
-        auto it = parameterMap.find(parameterID);
-        if (it != parameterMap.end())
-            it->second(settings, newValue);
-    }
+        // Implement the listener callback
+        void parameterChanged(const juce::String &parameterID, float newValue) override {
+            auto it = parameterMap.find(parameterID);
+            if (it != parameterMap.end())
+                it->second(settings, newValue);
+        }
 
-    void removeAllListeners() {
-        for (const auto &mapping: parameterMap)
-            audioParamsTree.removeParameterListener(mapping.first, this);
-        parameterMap.clear();
-    }
+        void removeAllListeners() {
+            for (const auto &mapping: parameterMap)
+                audioParamsTree.removeParameterListener(mapping.first, this);
+            parameterMap.clear();
+        }
 
-private:
-    SettingsType &settings;
-    juce::AudioProcessorValueTreeState &audioParamsTree;
-    std::unordered_map<juce::String, std::function<void(SettingsType &, float)>> parameterMap;
-};
+    private:
+        SettingsType &settings;
+        juce::AudioProcessorValueTreeState &audioParamsTree;
+        std::unordered_map<juce::String, std::function<void(SettingsType &, float)>> parameterMap;
+    };
 
     template<typename SettingsType>
     std::unique_ptr<ParameterBinding<SettingsType>>
@@ -191,87 +192,106 @@ private:
     }
 
     // Create a set of sample parameters
-    inline std::vector<ParameterDescriptor<Models::SamplerSettings>> createSampleParameters() {
-        return {
-                createEnumParam<Models::SamplerSettings, Models::DirectionType>(ID_SAMPLE_DIRECTION,
-                                                                                &Models::SamplerSettings::sampleDirection),
-                createBoolParam<Models::SamplerSettings>(ID_SAMPLE_PITCH_FOLLOW,
-                                                         &Models::SamplerSettings::samplePitchFollow)
-        };
-    }
+    std::vector<ParameterDescriptor<Models::SamplerSettings>> createSampleParameters();
 
     // Create a set of stutter parameters
-    inline std::vector<ParameterDescriptor<Models::StutterSettings>> createStutterParameters() {
-        return {
-                createPercentageParam<Models::StutterSettings>(ID_STUTTER_PROBABILITY,
-                                                               &Models::StutterSettings::stutterProbability),
-        };
-    }
+    std::vector<ParameterDescriptor<Models::StutterSettings>> createStutterParameters();
 
-// Create a set of delay parameters
-    inline std::vector<ParameterDescriptor<Models::DelaySettings>> createDelayParameters() {
-        return {
-                createPercentageParam<Models::DelaySettings>(ID_DELAY_MIX, &Models::DelaySettings::delayMix),
-                createPercentageParam<Models::DelaySettings>(ID_DELAY_FEEDBACK, &Models::DelaySettings::delayFeedback),
-                createPercentageParam<Models::DelaySettings>(ID_DELAY_RATE, &Models::DelaySettings::delayRate),
-                createBoolParam<Models::DelaySettings>(ID_DELAY_PING_PONG, &Models::DelaySettings::delayPingPong),
-                createBoolParam<Models::DelaySettings>(ID_DELAY_BPM_SYNC, &Models::DelaySettings::delayBpmSync)
-        };
-    }
+    // Create a set of delay parameters
+    std::vector<ParameterDescriptor<Models::DelaySettings>> createDelayParameters();
 
-// Create a set of reverb parameters
-    inline std::vector<ParameterDescriptor<Models::ReverbSettings>> createReverbParameters() {
-        return {
-                createPercentageParam<Models::ReverbSettings>(ID_REVERB_MIX, &Models::ReverbSettings::reverbMix),
-                createPercentageParam<Models::ReverbSettings>(ID_REVERB_TIME, &Models::ReverbSettings::reverbTime),
-                createPercentageParam<Models::ReverbSettings>(ID_REVERB_WIDTH, &Models::ReverbSettings::reverbWidth)
-        };
-    }
+    // Create a set of reverb parameters
+    std::vector<ParameterDescriptor<Models::ReverbSettings>> createReverbParameters();
 
     // Create melody parameters
-    inline std::vector<ParameterDescriptor<Models::MelodySettings>> createMelodyParameters() {
-        return {
-                createIntParam<Models::MelodySettings>(ID_SEMITONES, &Models::MelodySettings::semitoneValue),
-                createIntParam<Models::MelodySettings>(ID_OCTAVES, &Models::MelodySettings::octaveValue),
-                createPercentageParam<Models::MelodySettings>(ID_SEMITONES_PROB,
-                                                              &Models::MelodySettings::semitoneProbability),
-                createPercentageParam<Models::MelodySettings>(ID_OCTAVES_PROB,
-                                                              &Models::MelodySettings::octaveProbability),
-                createEnumParam<Models::MelodySettings, Models::DirectionType>(ID_SEMITONES_DIRECTION,
-                                                                               &Models::MelodySettings::semitoneDirection),
-                createEnumParam<Models::MelodySettings, Models::ScaleType>(ID_SCALE_TYPE,
-                                                                           &Models::MelodySettings::scaleType)
-        };
+    std::vector<ParameterDescriptor<Models::MelodySettings>> createMelodyParameters();
+
+    // Create MIDI parameters
+    std::vector<ParameterDescriptor<Models::MidiSettings>> createMidiParameters();
+
+    // Single parameter binding class for binding directly to class member variables
+    template<typename ValueType>
+    class SingleParameterBinding : public juce::AudioProcessorValueTreeState::Listener {
+    public:
+        SingleParameterBinding(ValueType &memberVariable,
+                               juce::AudioProcessorValueTreeState &apvts,
+                               juce::String paramID,
+                               std::function<ValueType(float)> converter)
+                : memberVar(memberVariable),
+                  audioParamsTree(apvts),
+                  parameterID(std::move(paramID)),
+                  valueConverter(converter) {
+            audioParamsTree.addParameterListener(parameterID, this);
+
+            // Initialize with current value
+            if (auto *param = audioParamsTree.getParameter(parameterID))
+                memberVar = valueConverter(param->getValue());
+        }
+
+        ~SingleParameterBinding() {
+            audioParamsTree.removeParameterListener(parameterID, this);
+        }
+
+        void parameterChanged(const juce::String &paramID, float newValue) override {
+            if (paramID == parameterID)
+                memberVar = valueConverter(newValue);
+        }
+
+    private:
+        ValueType &memberVar;
+        juce::AudioProcessorValueTreeState &audioParamsTree;
+        juce::String parameterID;
+        std::function<ValueType(float)> valueConverter;
+    };
+
+    // Helper function to create a single parameter binding
+    template<typename ValueType>
+    std::unique_ptr<SingleParameterBinding<ValueType>>
+    createSingleParameterBinding(ValueType &memberVariable,
+                                 juce::AudioProcessorValueTreeState &apvts,
+                                 const juce::String &paramID,
+                                 std::function<ValueType(float)> converter) {
+        return std::make_unique<SingleParameterBinding<ValueType>>(
+                memberVariable, apvts, paramID, converter);
     }
 
-    inline std::vector<ParameterDescriptor<Models::MidiSettings>> createMidiParameters() {
-        return {
-                createPercentageParam<Models::MidiSettings>(ID_GATE, &Models::MidiSettings::gateValue),
-                createPercentageParam<Models::MidiSettings>(ID_GATE_RANDOMIZE, &Models::MidiSettings::gateRandomize),
-                createEnumParam<Models::MidiSettings, Models::DirectionType>(ID_GATE_DIRECTION,
-                                                                             &Models::MidiSettings::gateDirection),
-                createPercentageParam<Models::MidiSettings>(ID_VELOCITY, &Models::MidiSettings::velocityValue),
-                createPercentageParam<Models::MidiSettings>(ID_VELOCITY_RANDOMIZE,
-                                                            &Models::MidiSettings::velocityRandomize),
-                createEnumParam<Models::MidiSettings, Models::DirectionType>(ID_VELOCITY_DIRECTION,
-                                                                             &Models::MidiSettings::velocityDirection),
-                createPercentageParam<Models::MidiSettings>(ID_PROBABILITY, &Models::MidiSettings::probability),
-                createEnumParam<Models::MidiSettings, Models::RhythmMode>(ID_RHYTHM_MODE,
-                                                                          &Models::MidiSettings::rhythmMode),
-                createPercentageParam<Models::MidiSettings>(ID_RHYTHM_1_1, &Models::MidiSettings::barProbability),
-                createPercentageParam<Models::MidiSettings>(ID_RHYTHM_1_2,
-                                                            &Models::MidiSettings::halfBarProbability),
-                createPercentageParam<Models::MidiSettings>(ID_RHYTHM_1_4,
-                                                            &Models::MidiSettings::quarterBarProbability),
-                createPercentageParam<Models::MidiSettings>(ID_RHYTHM_1_8,
-                                                            &Models::MidiSettings::eighthBarProbability),
-                createPercentageParam<Models::MidiSettings>(ID_RHYTHM_1_16,
-                                                            &Models::MidiSettings::sixteenthBarProbability),
-                createPercentageParam<Models::MidiSettings>(ID_RHYTHM_1_32,
-                                                            &Models::MidiSettings::thirtySecondBarProbability)
-        };
+    // Convenience functions for common parameter types
+    inline std::unique_ptr<SingleParameterBinding<float>>
+    createPercentageParameterBinding(float& memberVariable,
+                                     juce::AudioProcessorValueTreeState& apvts,
+                                     const juce::String& paramID) {
+        return createSingleParameterBinding<float>(
+                memberVariable, apvts, paramID,
+                [](float value) { return value / 100.0f; });
     }
 
+    inline std::unique_ptr<SingleParameterBinding<bool>>
+    createBoolParameterBinding(bool& memberVariable,
+                               juce::AudioProcessorValueTreeState& apvts,
+                               const juce::String& paramID) {
+        return createSingleParameterBinding<bool>(
+                memberVariable, apvts, paramID,
+                [](float value) { return value > 0.5f; });
+    }
+
+    inline std::unique_ptr<SingleParameterBinding<int>>
+    createIntParameterBinding(int& memberVariable,
+                              juce::AudioProcessorValueTreeState& apvts,
+                              const juce::String& paramID) {
+        return createSingleParameterBinding<int>(
+                memberVariable, apvts, paramID,
+                [](float value) { return static_cast<int>(value); });
+    }
+
+    template<typename EnumType>
+    std::unique_ptr<SingleParameterBinding<EnumType>>
+    createEnumParameterBinding(EnumType& memberVariable,
+                               juce::AudioProcessorValueTreeState& apvts,
+                               const juce::String& paramID) {
+        return createSingleParameterBinding<EnumType>(
+                memberVariable, apvts, paramID,
+                [](float value) { return static_cast<EnumType>(static_cast<int>(value)); });
+    }
 
 } // namespace AppState
 

@@ -12,7 +12,7 @@ class EnvelopePoint;
 // Class to map envelope parameters for real-time audio processing
 class EnvelopeParameterMapper {
 public:
-    EnvelopeParameterMapper(EnvelopeParams::ParameterType type);
+    EnvelopeParameterMapper(juce::Identifier paramId);
     ~EnvelopeParameterMapper();
 
     // Get current value (thread-safe)
@@ -54,7 +54,7 @@ public:
     void clearPoints();
 
     // Get the parameter type
-    EnvelopeParams::ParameterType getParameterType() const { return parameterType; }
+    juce::Identifier getParameterId() const { return paramId; }
 
 private:
     // Lock-free buffer structure for points
@@ -78,7 +78,7 @@ private:
     float getPointValue(const EnvelopePoint &point) const;
 
     // The parameter type this mapper controls
-    EnvelopeParams::ParameterType parameterType;
+    juce::Identifier paramId;
 
     // Parameter settings
     EnvelopeParams::ParameterSettings settings;

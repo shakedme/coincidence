@@ -1,10 +1,8 @@
 #include "PluginEditor.h"
 
 //==============================================================================
-PluginEditor::PluginEditor(PluginProcessor& p)
-    : AudioProcessorEditor(&p)
-    , audioProcessor(p)
-{
+PluginEditor::PluginEditor(PluginProcessor &p)
+        : AudioProcessorEditor(&p), audioProcessor(p) {
     // Set custom look and feel
     setLookAndFeel(&customLookAndFeel);
 
@@ -30,9 +28,6 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     envelopeSection = std::make_unique<EnvelopeSectionComponent>(*this, audioProcessor);
     addChildComponent(envelopeSection.get());
 
-    // Connect the envelope section to the processor
-    audioProcessor.connectEnvelopeSection(envelopeSection.get());
-
     tooltipWindow = std::make_unique<juce::TooltipWindow>(this, 0);
 
     // Set up keyboard
@@ -45,45 +40,39 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     startTimerHz(30);
 }
 
-PluginEditor::~PluginEditor()
-{
+PluginEditor::~PluginEditor() {
     stopTimer();
     setLookAndFeel(nullptr);
 }
 
 //==============================================================================
-void PluginEditor::paint(juce::Graphics& g)
-{
+void PluginEditor::paint(juce::Graphics &g) {
     g.fillAll(juce::Colour(0xff222222));
 }
 
-void PluginEditor::resized()
-{
+void PluginEditor::resized() {
     // Set the header at the top
     const int headerHeight = 40;
     header->setBounds(0, 0, getWidth(), headerHeight);
-    
+
     // Calculate main area for sections
     auto area = getLocalBounds().withTrimmedTop(headerHeight);
-    
+
     // Position the keyboard at the bottom
     const int keyboardWidth = area.getWidth() - 20;
     const int keyboardHeight = 40;
     const int keyboardX = (getWidth() - keyboardWidth) / 2;
     const int keyboardY = area.getBottom() - keyboardHeight - 10;
-    
+
     keyboardComponent->setBounds(keyboardX, keyboardY, keyboardWidth, keyboardHeight);
-    
+
     auto contentArea = area.withTrimmedBottom(keyboardHeight + 15);
-    
+
     // Set bounds for both Main and Env sections
-    if (envelopeSection->isVisible())
-    {
+    if (envelopeSection->isVisible()) {
         // Position envelope section in the content area
         envelopeSection->setBounds(contentArea);
-    }
-    else
-    {
+    } else {
         // Calculate dimensions for the main sections with better proportions
         int topSectionY = contentArea.getY();
         int sectionPadding = 5;
@@ -107,11 +96,10 @@ void PluginEditor::resized()
 }
 
 //==============================================================================
-void PluginEditor::setupKeyboard()
-{
+void PluginEditor::setupKeyboard() {
     keyboardState = std::make_unique<juce::MidiKeyboardState>();
     keyboardComponent = std::make_unique<juce::MidiKeyboardComponent>(
-        *keyboardState, juce::MidiKeyboardComponent::horizontalKeyboard);
+            *keyboardState, juce::MidiKeyboardComponent::horizontalKeyboard);
 
     keyboardComponent->setKeyWidth(16.0f);
     keyboardComponent->setAvailableRange(12, 96); // C2 to C7
@@ -127,10 +115,8 @@ void PluginEditor::setupKeyboard()
     addAndMakeVisible(keyboardComponent.get());
 }
 
-void PluginEditor::updateKeyboardState(bool isNoteOn, int noteNumber, int velocity)
-{
-    if (keyboardState != nullptr)
-    {
+void PluginEditor::updateKeyboardState(bool isNoteOn, int noteNumber, int velocity) {
+    if (keyboardState != nullptr) {
         if (isNoteOn)
             keyboardState->noteOn(1, noteNumber, static_cast<float>(velocity) / 127.0f);
         else
@@ -140,56 +126,48 @@ void PluginEditor::updateKeyboardState(bool isNoteOn, int noteNumber, int veloci
     }
 }
 
-void PluginEditor::switchTab(HeaderComponent::Tab tab)
-{
+void PluginEditor::switchTab(HeaderComponent::Tab tab) {
     // Show/hide sections based on selected tab
     bool isMainTab = (tab == HeaderComponent::Tab::Main);
-    
+
     grooveSection->setVisible(isMainTab);
     pitchSection->setVisible(isMainTab);
     sampleSection->setVisible(isMainTab);
     fxSection->setVisible(isMainTab);
 
     envelopeSection->setVisible(!isMainTab);
-    
+
     // Update layout
     resized();
 }
 
-void PluginEditor::timerCallback()
-{
-    if (grooveSection && grooveSection->isVisible())
-    {
+void PluginEditor::timerCallback() {
+    if (grooveSection && grooveSection->isVisible()) {
         grooveSection->repaintRandomizationControls();
         grooveSection->updateRateLabelsForRhythmMode();
     }
 
-    if (keyboardNeedsUpdate && keyboardComponent != nullptr)
-    {
+    if (keyboardNeedsUpdate && keyboardComponent != nullptr) {
         keyboardComponent->repaint();
         keyboardNeedsUpdate = false;
     }
 
     // Handle any stray notes by making sure keyboard state is correct
     if (isShowing() && keyboardComponent != nullptr && !audioProcessor.isNoteActive()
-        && keyboardState != nullptr)
-    {
+        && keyboardState != nullptr) {
         keyboardState->allNotesOff(1);
         keyboardComponent->repaint();
     }
 }
 
-bool PluginEditor::isInterestedInFileDrag(const juce::StringArray& files)
-{
+bool PluginEditor::isInterestedInFileDrag(const juce::StringArray &files) {
     if (sampleSection && sampleSection->isVisible())
         return sampleSection->isInterestedInFileDrag(files);
     return false;
 }
 
-void PluginEditor::filesDropped(const juce::StringArray& files, int x, int y)
-{
-    if (sampleSection && sampleSection->isVisible())
-    {
+void PluginEditor::filesDropped(const juce::StringArray &files, int x, int y) {
+    if (sampleSection && sampleSection->isVisible()) {
         // Convert coordinates to sample section's local space
         juce::Point<int> localPoint(x, y);
         localPoint = sampleSection->getLocalPoint(this, localPoint);
@@ -197,10 +175,8 @@ void PluginEditor::filesDropped(const juce::StringArray& files, int x, int y)
     }
 }
 
-void PluginEditor::fileDragEnter(const juce::StringArray& files, int x, int y)
-{
-    if (sampleSection && sampleSection->isVisible())
-    {
+void PluginEditor::fileDragEnter(const juce::StringArray &files, int x, int y) {
+    if (sampleSection && sampleSection->isVisible()) {
         // Convert coordinates to sample section's local space
         juce::Point<int> localPoint(x, y);
         localPoint = sampleSection->getLocalPoint(this, localPoint);
@@ -210,8 +186,7 @@ void PluginEditor::fileDragEnter(const juce::StringArray& files, int x, int y)
     repaint();
 }
 
-void PluginEditor::fileDragExit(const juce::StringArray& files)
-{
+void PluginEditor::fileDragExit(const juce::StringArray &files) {
     if (sampleSection && sampleSection->isVisible())
         sampleSection->fileDragExit(files);
     repaint();

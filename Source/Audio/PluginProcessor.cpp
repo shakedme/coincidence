@@ -13,7 +13,6 @@ PluginProcessor::PluginProcessor()
 
     // Create specialized components
     timingManager = std::make_unique<TimingManager>();
-    envelopeManager = std::make_unique<EnvelopeManager>(envelopeRegistry);
     sampleManager = std::make_unique<::SampleManager>(*this);
     noteGenerator = std::make_unique<NoteGenerator>(*this);
     fxEngine = std::make_unique<FxEngine>(*this);
@@ -114,16 +113,15 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
         sampleManager->processAudio(buffer, processedMidi);
         fxEngine->processAudio(buffer, processedMidi);
 
-        // After processing is done, send the processed audio data to envelope components for visualization
-        if (buffer.getNumChannels() > 0 && buffer.getNumSamples() > 0) {
-            envelopeManager->pushAudioBuffer(buffer.getReadPointer(0), buffer.getNumSamples());
-        }
+//        // After processing is done, send the processed audio data to envelope components for visualization
+//        if (buffer.getNumChannels() > 0 && buffer.getNumSamples() > 0) {
+//            envelopeManager->pushAudioBuffer(buffer.getReadPointer(0), buffer.getNumSamples());
+//        }
     } else {
         // Pass on generated midi to the next plugin in the signal chain
         midiMessages.swapWith(processedMidi);
     }
 
-    envelopeManager->updateTransportPosition(timingManager->getPpqPosition());
     timingManager->updateSamplePosition(buffer.getNumSamples());
 }
 
@@ -389,10 +387,4 @@ Models::DirectionType PluginProcessor::getSampleDirectionType() const {
         return static_cast<Models::DirectionType>(index);
     }
     return Models::RIGHT; // Default to random
-}
-
-void PluginProcessor::connectEnvelopeSection(EnvelopeSectionComponent *section) {
-    if (section != nullptr) {
-        envelopeManager->connectAllComponents(section);
-    }
 }

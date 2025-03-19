@@ -8,8 +8,7 @@
 #include "BaseEffect.h"
 #include <vector>
 #include "../../Shared/ParameterBinding.h"
-#include "../../Shared/Envelope/EnvelopeManager.h"
-#include "../../Shared/Envelope/EnvelopeParameterMapper.h"
+#include "../../Gui/Components/Envelope/EnvelopeParameterMapper.h"
 
 class PluginProcessor;
 
@@ -35,13 +34,6 @@ private:
     Models::ReverbSettings settings;
     std::unique_ptr<AppState::ParameterBinding<Models::ReverbSettings>> paramBinding;
 
-    // JUCE reverb processor
     juce::dsp::Reverb reverbProcessor;
-    
-    // Buffer for wet signal processing
     juce::AudioBuffer<float> wetBuffer;
-    
-    // Envelope modulation support
-    EnvelopeManager* envelopeManagerPtr = nullptr;
-    EnvelopeParameterMapper* reverbEnvelopeMapper = nullptr;
 };

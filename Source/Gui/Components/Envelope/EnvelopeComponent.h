@@ -4,9 +4,9 @@
 #include <memory>
 #include <atomic>
 #include <mutex>
-#include "../../../Shared/Envelope/EnvelopeParameterMapper.h"
-#include "../../../Shared/Envelope/EnvelopeParameterTypes.h"
-#include "../../../Shared/Envelope/EnvelopePoint.h"
+#include "EnvelopeParameterMapper.h"
+#include "EnvelopeParameterTypes.h"
+#include "EnvelopePoint.h"
 #include "../../../Shared/TimingManager.h"
 #include "../WaveformComponent.h"
 #include "EnvelopePresetGenerator.h"
@@ -18,8 +18,8 @@ class EnvelopeComponent : public juce::Component, private juce::Timer {
 public:
 
     explicit EnvelopeComponent(
-            TimingManager &tm,
-            EnvelopeParams::ParameterType type = EnvelopeParams::ParameterType::Amplitude);
+            PluginProcessor &p,
+            juce::Identifier paramId);
 
     ~EnvelopeComponent() override;
 
@@ -50,21 +50,12 @@ public:
     // Parameter mapping
     void setParameterRange(float min, float max, bool exponential = false);
 
-    void setParameterType(EnvelopeParams::ParameterType type);
-
-    // Get the current envelope value
-    float getCurrentValue() const;
-
     // Set envelope rate
     void setRate(float newRate);
 
     void setSettings(EnvelopeParams::ParameterSettings settings) {
         parameterMapper.setSettings(settings);
     }
-
-    // Callbacks for parameter change notifications
-    std::function<void(const std::vector<std::unique_ptr<EnvelopePoint>> &points)> onPointsChanged;
-    std::function<void(float)> onRateChanged;
 
     enum class Rate {
         TwoWhole = 0,
@@ -123,7 +114,7 @@ private:
     // Parameter mapper
     EnvelopeParameterMapper parameterMapper;
 
-    TimingManager &timingManager;
+    PluginProcessor &processor;
 
     // Utility classes
     EnvelopePointManager pointManager;
