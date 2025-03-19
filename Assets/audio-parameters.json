@@ -1,0 +1,216 @@
+[
+  {
+    "type": "int",
+    "id": "probability",
+    "name": "Probability",
+    "min": 0,
+    "max": 100,
+    "default": 100
+  },
+  {
+    "type": "int",
+    "id": "gate",
+    "name": "Gate",
+    "min": 0,
+    "max": 100,
+    "default": 100
+  },
+  {
+    "type": "int",
+    "id": "gate_randomize",
+    "name": "Gate Randomize",
+    "min": 0,
+    "max": 100,
+    "default": 0
+  },
+  {
+    "type": "int",
+    "id": "velocity",
+    "name": "Velocity",
+    "min": 0,
+    "max": 100,
+    "default": 100
+  },
+  {
+    "type": "int",
+    "id": "velocity_randomize",
+    "name": "Velocity Randomize",
+    "min": 0,
+    "max": 100,
+    "default": 0
+  },
+  {
+    "type": "choice",
+    "id": "rhythm_mode",
+    "name": "Rhythm Mode",
+    "options": ["Normal", "Dotted", "Triplet"],
+    "default": 0
+  },
+  {
+    "type": "choice",
+    "id": "scale_type",
+    "name": "Scale Type",
+    "options": ["Major", "Minor", "Pentatonic"],
+    "default": 0
+  },
+  {
+    "type": "int",
+    "id": "semitones",
+    "name": "Semitones",
+    "min": 0,
+    "max": 12,
+    "default": 0
+  },
+  {
+    "type": "int",
+    "id": "semitones_prob",
+    "name": "Semitones Probability",
+    "min": 0,
+    "max": 100,
+    "default": 0
+  },
+  {
+    "type": "int",
+    "id": "octaves",
+    "name": "Octaves",
+    "min": 0,
+    "max": 3,
+    "default": 0
+  },
+  {
+    "type": "int",
+    "id": "octaves_prob",
+    "name": "Octaves Probability",
+    "min": 0,
+    "max": 100,
+    "default": 0
+  },
+  {
+    "type": "choice",
+    "id": "sample_direction",
+    "name": "Sample Direction",
+    "options": ["Left", "Bidirectional", "Right", "Random"],
+    "default": 1
+  },
+  {
+    "type": "choice",
+    "id": "gate_direction",
+    "name": "Gate Direction",
+    "options": ["Left", "Bidirectional", "Right", "Random"],
+    "default": 1
+  },
+  {
+    "type": "choice",
+    "id": "velocity_direction",
+    "name": "Velocity Direction",
+    "options": ["Left", "Bidirectional", "Right", "Random"],
+    "default": 1
+  },
+  {
+    "type": "choice",
+    "id": "semitones_direction",
+    "name": "Semitones Direction",
+    "options": ["Left", "Bidirectional", "Right", "Random"],
+    "default": 1
+  },
+  {
+    "type": "float",
+    "id": "stutter_probability",
+    "name": "Stutter Amount",
+    "min": 0.0,
+    "max": 100.0,
+    "default": 0.0
+  },
+  {
+    "type": "bool",
+    "id": "sample_pitch_follow",
+    "name": "Sample Pitch Follow",
+    "default": false
+  },
+  {
+    "type": "float",
+    "id": "reverb_mix",
+    "name": "Reverb Mix",
+    "min": 0.0,
+    "max": 100.0,
+    "default": 0.0
+  },
+  {
+    "type": "float",
+    "id": "reverb_time",
+    "name": "Reverb Time",
+    "min": 0.0,
+    "max": 100.0,
+    "default": 20.0
+  },
+  {
+    "type": "float",
+    "id": "reverb_width",
+    "name": "Reverb Width",
+    "min": 0.0,
+    "max": 100.0,
+    "default": 50.0
+  },
+  {
+    "type": "float",
+    "id": "reverb_envelope",
+    "name": "Reverb Envelope",
+    "min": 0.0,
+    "max": 100.0,
+    "default": 0.0
+  },
+  {
+    "type": "float",
+    "id": "delay_mix",
+    "name": "Delay Mix",
+    "min": 0.0,
+    "max": 100.0,
+    "default": 0.0
+  },
+  {
+    "type": "float",
+    "id": "delay_rate",
+    "name": "Delay Rate",
+    "min": 0.0,
+    "max": 100.0,
+    "default": 50.0
+  },
+  {
+    "type": "float",
+    "id": "delay_feedback",
+    "name": "Delay Feedback",
+    "min": 0.0,
+    "max": 100.0,
+    "default": 50.0
+  },
+  {
+    "type": "bool",
+    "id": "delay_ping_pong",
+    "name": "Delay Ping Pong",
+    "default": false
+  },
+  {
+    "type": "bool",
+    "id": "delay_bpm_sync",
+    "name": "Delay BPM Sync",
+    "default": true
+  },
+  {
+    "type": "float",
+    "id": "amplitude_envelope",
+    "name": "Amplitude Envelope",
+    "min": 0.0,
+    "max": 100.0,
+    "default": 0.0
+  },
+  {
+    "type": "dynamic",
+    "id": "rates",
+    "names": "Rate $NAME Value",
+    "ids": "Models::rateBaseNames",
+    "parameter_type": "int",
+    "min": 0.0,
+    "max": 100.0,
+    "default": 0.0
+  }
+] 

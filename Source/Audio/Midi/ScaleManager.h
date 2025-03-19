@@ -2,7 +2,8 @@
 
 #include <juce_audio_utils/juce_audio_utils.h>
 #include "../../Shared/Models.h"
-#include "../../Audio/PluginProcessor.h"
+
+class PluginProcessor;
 
 /**
  * Class to manage musical scales and note modifications

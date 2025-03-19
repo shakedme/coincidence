@@ -79,9 +79,6 @@ void EnvelopeComponent::timerCallback() {
 }
 
 void EnvelopeComponent::mouseDown(const juce::MouseEvent &e) {
-    int width = getWidth();
-    int height = getHeight() - removeFromTop; // Exclude the control area
-
     draggedPointIndex = -1;
 
     // Check if clicking on an existing point

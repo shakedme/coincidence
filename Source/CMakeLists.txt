@@ -53,6 +53,7 @@ target_sources(${BaseTargetName} PRIVATE
 
         Shared/Models.h
         Shared/ParameterBinding.cpp
+        Shared/ParameterLoader.cpp
         Shared/TimingManager.cpp
 
         Audio/PluginProcessor.cpp
@@ -81,9 +82,10 @@ target_compile_definitions(${BaseTargetName}
 
 juce_add_binary_data(CoincidenceAssets
         SOURCES
-        ../Assets/Icons/pencil.svg
-        ../Assets/Icons/three-lines.svg
-        ../Assets/Icons/delete.svg
+        ${CMAKE_SOURCE_DIR}/Assets/Icons/pencil.svg
+        ${CMAKE_SOURCE_DIR}/Assets/Icons/three-lines.svg
+        ${CMAKE_SOURCE_DIR}/Assets/Icons/delete.svg
+        ${CMAKE_SOURCE_DIR}/Assets/audio-parameters.json
         )
 
 target_link_libraries(${BaseTargetName} PRIVATE
