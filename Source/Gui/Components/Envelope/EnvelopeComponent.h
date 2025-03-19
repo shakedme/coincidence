@@ -17,9 +17,7 @@
 class EnvelopeComponent : public juce::Component, private juce::Timer {
 public:
 
-    explicit EnvelopeComponent(
-            PluginProcessor &p,
-            juce::Identifier paramId);
+    explicit EnvelopeComponent(PluginProcessor &p);
 
     ~EnvelopeComponent() override;
 
@@ -49,6 +47,8 @@ public:
 
     // Parameter mapping
     void setParameterRange(float min, float max, bool exponential = false);
+
+    void setParameterId(juce::Identifier paramId);
 
     // Set envelope rate
     void setRate(float newRate);

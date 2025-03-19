@@ -3,6 +3,8 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <juce_audio_utils/juce_audio_utils.h>
+#include "../../../Shared/ParameterBinding.h"
 
 namespace EnvelopeParams {
     enum class ParameterType {

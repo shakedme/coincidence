@@ -2,6 +2,7 @@
 
 #include <juce_audio_utils/juce_audio_utils.h>
 #include "../../Shared/Models.h"
+#include "../../Shared/ParameterBinding.h"
 
 class PluginProcessor;
 

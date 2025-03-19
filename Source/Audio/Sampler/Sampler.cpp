@@ -47,6 +47,9 @@ void SamplerVoice::reset()
     pitchRatio = 1.0;
     lgain = 0.0f;
     rgain = 0.0f;
+    
+    // Reset the ADSR envelope
+    adsr.reset();
 }
 
 bool SamplerVoice::canPlaySound(juce::SynthesiserSound* sound)
@@ -69,12 +72,6 @@ bool SamplerVoice::canPlaySound(juce::SynthesiserSound* sound)
     
     // If no specific sample index is set, any sampler sound can be played
     return true;
-}
-
-// New helper method to check if the voice is active
-bool SamplerVoice::isVoiceActive() const
-{
-    return playing && getCurrentlyPlayingSound() != nullptr;
 }
 
 void SamplerVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
@@ -117,6 +114,11 @@ void SamplerVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
     const int numChannels = data.getNumChannels();
     const int numSourceSamples = data.getNumSamples();
 
+    // Create a temporary buffer for processing the ADSR envelope
+    juce::AudioBuffer<float> tempBuffer;
+    tempBuffer.setSize(outputBuffer.getNumChannels(), numSamples);
+    tempBuffer.clear();
+
     // For each sample to render
     for (int sampleIndex = 0; sampleIndex < numSamples; ++sampleIndex)
     {
@@ -136,13 +138,13 @@ void SamplerVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
 
         // For each channel
         for (int channel = 0;
-             channel < std::min(numChannels, outputBuffer.getNumChannels());
+             channel < std::min(numChannels, tempBuffer.getNumChannels());
              ++channel)
         {
             // Get sample data pointers
             const float* const inBuffer = data.getReadPointer(channel);
             float* const outBuffer =
-                outputBuffer.getWritePointer(channel, startSample + sampleIndex);
+                tempBuffer.getWritePointer(channel, sampleIndex);
 
             // Ensure we don't access memory out of bounds
             if (sourcePos < 0 || sourcePos >= numSourceSamples - 1)
@@ -157,11 +159,27 @@ void SamplerVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
 
             // Apply gain (ensuring it's properly scaled)
             const float gain = (channel == 0) ? lgain : rgain;
-            *outBuffer += interpolatedSample * gain;
+            *outBuffer = interpolatedSample * gain;
         }
 
         // Move to next sample position
         sourceSamplePosition += pitchRatio;
+    }
+
+    // Apply ADSR envelope to the temporary buffer
+    adsr.applyEnvelopeToBuffer(tempBuffer, 0, numSamples);
+
+    // Mix the processed temporary buffer into the output buffer
+    for (int channel = 0; channel < outputBuffer.getNumChannels(); ++channel)
+    {
+        outputBuffer.addFrom(channel, startSample, tempBuffer, channel, 0, numSamples);
+    }
+    
+    // If the ADSR has finished its release phase, stop the voice
+    if (!adsr.isActive())
+    {
+        clearCurrentNote();
+        playing = false;
     }
 }
 
@@ -210,62 +228,62 @@ void SamplerVoice::startNote(int midiNoteNumber,
 
         // Apply pitch ratio based on the global setting
         if (voiceState->isPitchFollowEnabled()) {
+            // If pitch follow is enabled, pitch-shift the sample based on MIDI note
             pitchRatio = midiNoteHz / soundMidiNoteHz;
         } else {
-            pitchRatio = 1.0; // Original pitch
+            // Otherwise, play at original pitch
+            pitchRatio = 1.0;
         }
 
-        // Account for source sample rate difference
-        pitchRatio *= getSampleRate() / samplerSound->getSourceSampleRate();
+        // Apply sample rate adjustment
+        double ratio = pitchRatio * getSampleRate()
+                 / samplerSound->getSourceSampleRate();
 
-        // Apply start marker position to calculate starting sample position
-        auto& data = *samplerSound->getAudioData();
-        int numSamples = data.getNumSamples();
+        // Set up sample playback positions
+        int numSamples = samplerSound->getAudioData()->getNumSamples();
+        float startMarker = samplerSound->getStartMarkerPosition();
+        float endMarker = samplerSound->getEndMarkerPosition();
 
-        if (samplerSound->isOnsetRandomizationEnabled()) {
-            // Get onset markers
-            const auto& onsetMarkers = samplerSound->getOnsetMarkers();
+        sourceSamplePosition = static_cast<double>(numSamples) * startMarker;
+        sourceEndPosition = static_cast<double>(numSamples) * endMarker;
 
-            // If we have onset markers, use them
-            if (!onsetMarkers.empty()) {
-                // Random index into onset markers array
-                int randomIndex = juce::Random::getSystemRandom().nextInt(onsetMarkers.size());
+        // Apply the new sample rate ratio
+        pitchRatio = ratio;
 
-                // Use the random onset position
-                sourceSamplePosition = numSamples * onsetMarkers[randomIndex];
-            } else {
-                // Fallback to start marker if no onset markers
-                sourceSamplePosition = numSamples * samplerSound->getStartMarkerPosition();
-            }
-        } else {
-            // Normal playback - use start marker
-            sourceSamplePosition = numSamples * samplerSound->getStartMarkerPosition();
-        }
-
-        sourceEndPosition = numSamples * samplerSound->getEndMarkerPosition();
-            
-        // Set the output gains based on velocity (0.0-1.0)
-        // MIDI velocity is 0-127, so if velocity is already in that range, don't divide
-        float velocityGain = (velocity <= 1.0f) ? velocity : (velocity / 127.0f);
+        // Use velocity to determine volume
+        // Scale it from 0.0 to 1.0 range
+        const float velocityGain = velocity * 0.01f;
         lgain = velocityGain;
         rgain = velocityGain;
-            
-        // Flag that we're now playing
+
+        // Set the ADSR parameters from the voice state
+        updateADSRParameters(voiceState->getADSRParameters());
+        
+        // Start the ADSR envelope
+        adsr.noteOn();
+
+        // Set the voice as playing
         playing = true;
     }
 }
 
 void SamplerVoice::stopNote(float /*velocity*/, bool allowTailOff)
 {
-    // If allowTailOff is true, we should allow the note to fade out naturally
-    // But for now, we're just stopping immediately regardless
-    playing = false;
-    
-    // Clear the current note to release this voice back to the pool
-    clearCurrentNote();
-    
-    // Reset all voice state
-    reset();
+    // Trigger the ADSR release phase
+    if (allowTailOff)
+    {
+        adsr.noteOff();
+        
+        // Don't clear the note yet - we'll let the ADSR envelope finish its release phase
+        // The voice will be stopped in renderNextBlock when adsr.isActive() becomes false
+    }
+    else
+    {
+        // Immediate note off - no release phase
+        playing = false;
+        clearCurrentNote();
+        reset();
+    }
 }
 
 void SamplerVoice::pitchWheelMoved(int newPitchWheelValue)
@@ -301,4 +319,10 @@ void SamplerVoice::controllerMoved(int controllerNumber, int newControllerValue)
     }
     
     // Other controllers can be handled here if needed
+}
+
+// New helper method to check if the voice is active
+bool SamplerVoice::isVoiceActive() const
+{
+    return playing && getCurrentlyPlayingSound() != nullptr;
 }

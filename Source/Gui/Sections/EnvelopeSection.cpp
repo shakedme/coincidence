@@ -1,50 +1,70 @@
 #include "EnvelopeSection.h"
-#include "../Components/Envelope/EnvelopeComponent.h"
 #include <memory>
 
 EnvelopeSectionComponent::EnvelopeSectionComponent(PluginEditor &editor, PluginProcessor &processor)
         : BaseSectionComponent(editor, processor, "", juce::Colour(0xff8a6e9e)) {
 
-    envTabs = std::make_unique<EnvelopeTabs>(juce::TabbedButtonBar::TabsAtTop);
-    envTabs->setOutline(0);
-    envTabs->setTabBarDepth(30);
-    addAndMakeVisible(envTabs.get());
+    // Create ADSR component
+    adsrComponent = std::make_unique<ADSREnvelopeComponent>(processor);
+    addAndMakeVisible(adsrComponent.get());
 
-    createEnvelopeComponents();
+    // Create LFO tabs and components
+    lfoTabs = std::make_unique<EnvelopeTabs>(juce::TabbedButtonBar::TabsAtTop);
+    lfoTabs->setOutline(0);
+    lfoTabs->setTabBarDepth(30);
+    addAndMakeVisible(lfoTabs.get());
+
+    createLFOComponents();
 }
 
-void EnvelopeSectionComponent::createEnvelopeComponents() {
-    for (const auto &typeInfo: EnvelopeParams::getAvailableTypes()) {
-        envTabs->addTab(typeInfo.name, juce::Colours::transparentBlack, nullptr, false);
-        auto component = std::make_unique<EnvelopeComponent>(processor, typeInfo.id);
-        addAndMakeVisible(component.get());
-        component->setVisible(false);
-        envelopeComponents[typeInfo.type] = std::move(component);
+void EnvelopeSectionComponent::createLFOComponents() {
+    lfoTabs->addTab("LFO 1", juce::Colours::transparentBlack, nullptr, false);
+    lfoTabs->addTab("LFO 2", juce::Colours::transparentBlack, nullptr, false);
+    lfoTabs->addTab("LFO 3", juce::Colours::transparentBlack, nullptr, false);
+
+    for (int i = 0; i < 3; ++i) {
+        auto component = std::make_unique<EnvelopeComponent>(processor);
+        addChildComponent(component.get());
+        lfoComponents.insert(std::make_pair(i, std::move(component)));
     }
 
-    envelopeComponents[EnvelopeParams::ParameterType::Amplitude]->setVisible(true);
+    lfoComponents[0]->setVisible(true);
 
-    envTabs->onTabChanged = [this](int tabIndex) {
-        for (auto &pair: envelopeComponents) {
+    lfoTabs->onTabChanged = [this](int tabIndex) {
+        for (auto &pair: lfoComponents) {
             pair.second->setVisible(false);
         }
-        const auto typeInfo = EnvelopeParams::getAvailableTypes()[tabIndex];
-        envelopeComponents[typeInfo.type]->setVisible(true);
+        lfoComponents[tabIndex]->setVisible(true);
     };
 }
 
 void EnvelopeSectionComponent::paint(juce::Graphics &g) {
     BaseSectionComponent::paint(g);
+
+    auto bounds = getLocalBounds().toFloat();
+
+    // Draw a subtle divider line between ADSR and LFO sections
+    float dividerX = bounds.getWidth() / 3.0f;
+    g.setColour(juce::Colours::white.withAlpha(0.2f));
+    g.drawLine(dividerX, bounds.getY() + 30, dividerX, bounds.getBottom(), 1.0f);
 }
 
 void EnvelopeSectionComponent::resized() {
     auto area = getLocalBounds();
 
-    const int tabsHeight = 30;
-    envTabs->setBounds(area.removeFromTop(tabsHeight));
+    // Divide the section: 1/3 for ADSR, 2/3 for LFO
+    auto adsrArea = area.removeFromLeft(area.getWidth() / 3);
+    auto lfoArea = area;
 
-    auto envelopeArea = area.reduced(10, 10);
-    for (auto &pair: envelopeComponents) {
-        pair.second->setBounds(envelopeArea);
+    // Position ADSR component
+    adsrComponent->setBounds(adsrArea.reduced(10, 10));
+
+    // Position LFO tabs and components
+    const int tabsHeight = 30;
+    lfoTabs->setBounds(lfoArea.removeFromTop(tabsHeight));
+
+    auto lfoComponentArea = lfoArea.reduced(10, 10);
+    for (auto &pair: lfoComponents) {
+        pair.second->setBounds(lfoComponentArea);
     }
 } 

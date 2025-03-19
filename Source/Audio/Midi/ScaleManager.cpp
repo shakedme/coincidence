@@ -1,4 +1,5 @@
 #include "ScaleManager.h"
+#include "../../Audio/PluginProcessor.h"
 
 using namespace AppState;
 

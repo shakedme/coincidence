@@ -2,8 +2,7 @@
 #include "EnvelopePoint.h"
 #include <cmath>
 
-EnvelopeParameterMapper::EnvelopeParameterMapper(juce::Identifier paramId)
-        : paramId(paramId) {
+EnvelopeParameterMapper::EnvelopeParameterMapper() {
     // Create initial buffers
     auto initialBuffer = new PointBuffer();
     addDefaultPointsToBuffer(initialBuffer);

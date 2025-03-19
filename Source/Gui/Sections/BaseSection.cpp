@@ -95,14 +95,14 @@ void BaseSectionComponent::drawMetallicPanel(juce::Graphics& g)
                bounds.getY() + 1,
                1.0f);
 
-    auto* lf = dynamic_cast<LookAndFeel*>(&getLookAndFeel());
-    if (lf != nullptr)
-    {
-        lf->drawScrew(g, bounds.getX() + 10, bounds.getY() + 10, 8);
-        lf->drawScrew(g, bounds.getRight() - 10, bounds.getY() + 10, 8);
-        lf->drawScrew(g, bounds.getX() + 10, bounds.getBottom() - 10, 8);
-        lf->drawScrew(g, bounds.getRight() - 10, bounds.getBottom() - 10, 8);
-    }
+//    auto* lf = dynamic_cast<LookAndFeel*>(&getLookAndFeel());
+//    if (lf != nullptr)
+//    {
+//        lf->drawScrew(g, bounds.getX() + 10, bounds.getY() + 10, 8);
+//        lf->drawScrew(g, bounds.getRight() - 10, bounds.getY() + 10, 8);
+//        lf->drawScrew(g, bounds.getX() + 10, bounds.getBottom() - 10, 8);
+//        lf->drawScrew(g, bounds.getRight() - 10, bounds.getBottom() - 10, 8);
+//    }
 }
 
 void BaseSectionComponent::initKnob(std::unique_ptr<juce::Slider>& knob,

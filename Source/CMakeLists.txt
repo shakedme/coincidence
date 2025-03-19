@@ -50,6 +50,7 @@ target_sources(${BaseTargetName} PRIVATE
         Gui/Components/Envelope/EnvelopeShapeButton.h
         Gui/Components/Envelope/EnvelopeParameterMapper.cpp
         Gui/Components/Envelope/EnvelopePoint.h
+        Gui/Components/Envelope/ADSREnvelopeComponent.cpp
 
         Shared/Models.h
         Shared/ParameterBinding.cpp

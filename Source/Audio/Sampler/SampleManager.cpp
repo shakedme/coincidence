@@ -14,6 +14,12 @@ SampleManager::SampleInfo::SampleInfo(juce::String n, juce::File f, int idx)
 SampleManager::SampleManager(PluginProcessor &p) : processor(p) {
     processor.getAPVTS().addParameterListener(AppState::ID_SAMPLE_DIRECTION, this);
     processor.getAPVTS().addParameterListener(AppState::ID_SAMPLE_PITCH_FOLLOW, this);
+    
+    // Add listeners for ADSR parameters
+    processor.getAPVTS().addParameterListener(AppState::ID_ADSR_ATTACK, this);
+    processor.getAPVTS().addParameterListener(AppState::ID_ADSR_DECAY, this);
+    processor.getAPVTS().addParameterListener(AppState::ID_ADSR_SUSTAIN, this);
+    processor.getAPVTS().addParameterListener(AppState::ID_ADSR_RELEASE, this);
 
     // Initialize format manager
     formatManager.registerBasicFormats();
@@ -38,6 +44,41 @@ void SampleManager::parameterChanged(const juce::String &parameterID, float newV
         sampleDirection = static_cast<Models::DirectionType>(static_cast<int>(newValue));
     } else if (parameterID == AppState::ID_SAMPLE_PITCH_FOLLOW) {
         voiceState.setPitchFollowEnabled(newValue > 0.5f);
+    } 
+    else if (parameterID == AppState::ID_ADSR_ATTACK) {
+        float attackMs = newValue * 5000.0f;
+        auto params = voiceState.getADSRParameters();
+        setADSRParameters(attackMs, params.decay * 1000.0f, params.sustain, params.release * 1000.0f);
+    }
+    else if (parameterID == AppState::ID_ADSR_DECAY) {
+        // Convert normalized value to milliseconds (0-5000ms)
+        float decayMs = newValue * 5000.0f;
+        
+        // Get current parameters
+        auto params = voiceState.getADSRParameters();
+        
+        // Update decay and apply to all voices
+        setADSRParameters(params.attack * 1000.0f, decayMs, params.sustain, params.release * 1000.0f);
+    }
+    else if (parameterID == AppState::ID_ADSR_SUSTAIN) {
+        // Sustain is already normalized 0-1
+        float sustain = newValue;
+        
+        // Get current parameters
+        auto params = voiceState.getADSRParameters();
+        
+        // Update sustain and apply to all voices
+        setADSRParameters(params.attack * 1000.0f, params.decay * 1000.0f, sustain, params.release * 1000.0f);
+    }
+    else if (parameterID == AppState::ID_ADSR_RELEASE) {
+        // Convert normalized value to milliseconds (0-5000ms)
+        float releaseMs = newValue * 5000.0f;
+        
+        // Get current parameters
+        auto params = voiceState.getADSRParameters();
+        
+        // Update release and apply to all voices
+        setADSRParameters(params.attack * 1000.0f, params.decay * 1000.0f, params.sustain, releaseMs);
     }
 }
 

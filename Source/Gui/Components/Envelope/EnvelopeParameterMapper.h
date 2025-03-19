@@ -12,7 +12,8 @@ class EnvelopePoint;
 // Class to map envelope parameters for real-time audio processing
 class EnvelopeParameterMapper {
 public:
-    EnvelopeParameterMapper(juce::Identifier paramId);
+    EnvelopeParameterMapper();
+
     ~EnvelopeParameterMapper();
 
     // Get current value (thread-safe)
@@ -29,12 +30,14 @@ public:
 
     // Set the rate multiplier
     void setRate(float newRate);
-    
+
     // Get the current rate
     float getRate() const { return rate; }
 
     // Set parameter type
     void setParameterType(EnvelopeParams::ParameterType type);
+
+    void setParameterId(juce::Identifier paramId) { paramId = paramId; }
 
     // Set the value range for the parameter
     void setParameterRange(float min, float max, bool isExponential);

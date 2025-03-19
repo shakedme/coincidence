@@ -62,6 +62,12 @@ namespace AppState {
     static const juce::String ID_DELAY_PING_PONG = "delay_ping_pong";
     static const juce::String ID_DELAY_BPM_SYNC = "delay_bpm_sync";
 
+    // ADSR parameters
+    static const juce::String ID_ADSR_ATTACK = "adsr_attack";
+    static const juce::String ID_ADSR_DECAY = "adsr_decay";
+    static const juce::String ID_ADSR_SUSTAIN = "adsr_sustain";
+    static const juce::String ID_ADSR_RELEASE = "adsr_release";
+
     // Internal state params
 
     static const juce::Identifier ID_AMPLITUDE_ENVELOPE = "amplitude_envelope";
@@ -143,6 +149,19 @@ namespace AppState {
         );
     }
 
+//    for generic param which accepts function to convert float to desired type
+    template<typename SettingsType, typename ValueType>
+    ParameterDescriptor<SettingsType> createGenericParam(
+            const juce::String &paramID,
+            ValueType SettingsType::* memberPtr,
+            std::function<ValueType(float)> converter) {
+        return ParameterDescriptor<SettingsType>(
+                paramID,
+                memberPtr,
+                converter
+        );
+    }
+
 
 // Parameter binding class to connect APVTS parameters to settings struct members
     template<typename SettingsType>
@@ -214,6 +233,8 @@ namespace AppState {
 
     // Create MIDI parameters
     std::vector<ParameterDescriptor<Models::MidiSettings>> createMidiParameters();
+
+    std::vector<ParameterDescriptor<Models::ADSRSettings>> createADSRParameters();
 
     template<typename ValueType>
     class SingleParameterBinding : public juce::ValueTree::Listener {

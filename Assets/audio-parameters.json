@@ -188,6 +188,38 @@
     "default": true
   },
   {
+    "type": "float",
+    "id": "adsr_attack",
+    "name": "ADSR Attack",
+    "min": 0.0,
+    "max": 1.0,
+    "default": 0.1
+  },
+  {
+    "type": "float",
+    "id": "adsr_decay",
+    "name": "ADSR Decay",
+    "min": 0.0,
+    "max": 1.0,
+    "default": 0.2
+  },
+  {
+    "type": "float",
+    "id": "adsr_sustain",
+    "name": "ADSR Sustain",
+    "min": 0.0,
+    "max": 1.0,
+    "default": 0.5
+  },
+  {
+    "type": "float",
+    "id": "adsr_release",
+    "name": "ADSR Release",
+    "min": 0.0,
+    "max": 1.0,
+    "default": 0.2
+  },
+  {
     "type": "dynamic",
     "id": "rates",
     "names": "Rate $NAME Value",

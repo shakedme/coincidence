@@ -35,6 +35,14 @@ namespace Models {
         NUM_SCALE_TYPES
     };
 
+    // Create ADSR parameters
+    struct ADSRSettings {
+        float attack = 100.0f;   // milliseconds
+        float decay = 200.0f;    // milliseconds
+        float sustain = 0.5f;    // 0.0 to 1.0
+        float release = 200.0f;  // milliseconds
+    };
+
 // Rhythm modes
     enum RhythmMode {
         RHYTHM_NORMAL = 0,

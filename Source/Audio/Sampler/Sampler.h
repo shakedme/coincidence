@@ -129,10 +129,28 @@ public:
     bool isPitchFollowEnabled() const { return pitchFollowEnabled; }
     void setPitchFollowEnabled(bool enabled) { pitchFollowEnabled = enabled; }
     
+    // ADSR parameters
+    void setADSRParameters(float attackMs, float decayMs, float sustain, float releaseMs) {
+        adsrParams.attack = attackMs;
+        adsrParams.decay = decayMs;
+        adsrParams.sustain = sustain;
+        adsrParams.release = releaseMs;
+    }
+    
+    const juce::ADSR::Parameters& getADSRParameters() const { return adsrParams; }
+    
 private:
     int currentSampleIndex;
     std::map<int, SamplerSound*> indexToSoundMap;
     bool pitchFollowEnabled;
+    
+    // ADSR parameters (in milliseconds except sustain which is 0-1)
+    juce::ADSR::Parameters adsrParams {
+        0.1f,   // attack (seconds)
+        0.1f,   // decay (seconds)
+        0.8f,   // sustain level (0-1)
+        0.1f    // release (seconds)
+    };
 };
 
 /**
@@ -167,6 +185,21 @@ public:
 
     // Helper method to check if voice is active
     [[nodiscard]] bool isVoiceActive() const override;
+    
+    // Update the ADSR parameters for this voice
+    void updateADSRParameters(const juce::ADSR::Parameters& newParams) {
+        adsr.setParameters(newParams);
+    }
+    
+    // Set ADSR parameters directly (convenience method)
+    void setADSRParameters(float attackMs, float decayMs, float sustain, float releaseMs) {
+        juce::ADSR::Parameters params;
+        params.attack = attackMs / 1000.0f;  // Convert from ms to seconds
+        params.decay = decayMs / 1000.0f;    // Convert from ms to seconds
+        params.sustain = sustain;
+        params.release = releaseMs / 1000.0f; // Convert from ms to seconds
+        adsr.setParameters(params);
+    }
 
 private:
     double pitchRatio = 1.0;
@@ -175,6 +208,9 @@ private:
     float lgain = 0.0f, rgain = 0.0f;
     bool playing = false;
     int currentSampleIndex = -1;
+    
+    // ADSR envelope processor
+    juce::ADSR adsr;
     
     // Non-static pointer to the voice state (owned by SampleManager)
     SamplerVoiceState* voiceState = nullptr;

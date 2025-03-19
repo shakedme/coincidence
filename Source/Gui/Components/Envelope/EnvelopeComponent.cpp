@@ -4,10 +4,9 @@
 #include <utility>
 
 //==============================================================================
-EnvelopeComponent::EnvelopeComponent(PluginProcessor &p,
-                                     juce::Identifier paramId)
+EnvelopeComponent::EnvelopeComponent(PluginProcessor &p)
         : processor(p),
-          parameterMapper(std::move(paramId)),
+          parameterMapper(),
           pointManager(),
           renderer(pointManager) {
 
@@ -72,7 +71,7 @@ void EnvelopeComponent::resized() {
 
 void EnvelopeComponent::timerCallback() {
     parameterMapper.setTransportPosition(processor.getTimingManager().getPpqPosition());
-    auto& tree = processor.getAPVTS().state;
+    auto &tree = processor.getAPVTS().state;
     tree.setProperty(parameterMapper.getParameterId(), parameterMapper.getCurrentValue(), nullptr);
     repaint();
 }
@@ -261,6 +260,10 @@ void EnvelopeComponent::setTimeRange(float seconds) {
 
 void EnvelopeComponent::setParameterRange(float min, float max, bool exponential) {
     parameterMapper.setParameterRange(min, max, exponential);
+}
+
+void EnvelopeComponent::setParameterId(juce::Identifier paramId) {
+    parameterMapper.setParameterId(paramId);
 }
 
 void EnvelopeComponent::setRate(float newRate) {

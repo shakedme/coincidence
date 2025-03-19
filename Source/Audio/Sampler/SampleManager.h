@@ -107,6 +107,18 @@ public:
     SamplerSound *getCorrectSoundForIndex(int index) { return voiceState.getCorrectSoundForIndex(index); }
 
     void clearSoundRegistrations() { voiceState.clearSoundRegistrations(); }
+    
+    // ADSR controls
+    void setADSRParameters(float attackMs, float decayMs, float sustain, float releaseMs) {
+        voiceState.setADSRParameters(attackMs, decayMs, sustain, releaseMs);
+//
+//        // Update all voices with new parameters
+//        for (int i = 0; i < sampler.getNumVoices(); ++i) {
+//            if (auto* voice = dynamic_cast<SamplerVoice*>(sampler.getVoice(i))) {
+//                voice->setADSRParameters(attackMs, decayMs, sustain, releaseMs);
+//            }
+//        }
+    }
 
     // Setup
     void prepareToPlay(double sampleRate);

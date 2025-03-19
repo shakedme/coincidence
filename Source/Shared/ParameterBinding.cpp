@@ -12,9 +12,9 @@ namespace AppState {
         juce::AudioProcessorValueTreeState::ParameterLayout layout;
 
         juce::var parametersJson = ParameterLoader::loadParametersJson();
-        
-        if (auto* parametersArray = parametersJson.getArray()) {
-            for (auto& paramData : *parametersArray) {
+
+        if (auto *parametersArray = parametersJson.getArray()) {
+            for (auto &paramData: *parametersArray) {
                 ParameterLoader::addParameterFromJson(layout, paramData);
             }
         }
@@ -97,6 +97,31 @@ namespace AppState {
                                                             &Models::MidiSettings::sixteenthBarProbability),
                 createPercentageParam<Models::MidiSettings>(ID_RHYTHM_1_32,
                                                             &Models::MidiSettings::thirtySecondBarProbability)
+        };
+    }
+
+    std::vector<ParameterDescriptor<Models::ADSRSettings>> createADSRParameters() {
+        return {
+                createGenericParam<Models::ADSRSettings, float>(
+                        ID_ADSR_ATTACK,
+                        &Models::ADSRSettings::attack,
+                        [](float value) { return value * 5000.0f; }  // 0-5000ms (5 seconds)
+                ),
+                createGenericParam<Models::ADSRSettings, float>(
+                        ID_ADSR_DECAY,
+                        &Models::ADSRSettings::decay,
+                        [](float value) { return value * 5000.0f; }  // 0-5000ms (5 seconds)
+                ),
+                createGenericParam<Models::ADSRSettings, float>(
+                        ID_ADSR_SUSTAIN,
+                        &Models::ADSRSettings::sustain,
+                        [](float value) { return value; }            // 0.0-1.0
+                ),
+                createGenericParam<Models::ADSRSettings, float>(
+                        ID_ADSR_RELEASE,
+                        &Models::ADSRSettings::release,
+                        [](float value) { return value * 5000.0f; }  // 0-5000ms (5 seconds)
+                )
         };
     }
 
