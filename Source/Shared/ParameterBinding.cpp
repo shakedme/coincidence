@@ -53,8 +53,7 @@ namespace AppState {
         return {
                 createPercentageParam<Models::ReverbSettings>(ID_REVERB_MIX, &Models::ReverbSettings::reverbMix),
                 createPercentageParam<Models::ReverbSettings>(ID_REVERB_TIME, &Models::ReverbSettings::reverbTime),
-                createPercentageParam<Models::ReverbSettings>(ID_REVERB_WIDTH, &Models::ReverbSettings::reverbWidth),
-                createPercentageParam<Models::ReverbSettings>(ID_REVERB_ENV, &Models::ReverbSettings::reverbEnvelope)
+                createPercentageParam<Models::ReverbSettings>(ID_REVERB_WIDTH, &Models::ReverbSettings::reverbWidth)
         };
     }
 

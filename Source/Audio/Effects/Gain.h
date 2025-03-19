@@ -11,16 +11,14 @@
 /**
  * Gain processor that applies amplitude envelope modulation
  */
-class Gain : public BaseEffect {
+class Gain : public BaseEffect{
 public:
     Gain();
 
     ~Gain() override = default;
 
-    // Initialize after default construction
     void initialize(PluginProcessor &p);
 
-    // Override ProcessorBase methods
     void prepare(const juce::dsp::ProcessSpec &spec) override;
 
     void process(const juce::dsp::ProcessContextReplacing<float> &context) override;
@@ -29,6 +27,7 @@ public:
 
 private:
     float envelopeValue = 1.0f;
+    std::unique_ptr<AppState::SingleParameterBinding<float>> envelopeBinding;
+
     juce::dsp::Gain<float> gain;
-    std::unique_ptr<AppState::SingleParameterBinding<float>> paramBinding;
 }; 

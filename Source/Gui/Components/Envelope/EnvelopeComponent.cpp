@@ -72,9 +72,8 @@ void EnvelopeComponent::resized() {
 
 void EnvelopeComponent::timerCallback() {
     parameterMapper.setTransportPosition(processor.getTimingManager().getPpqPosition());
-    if (auto *param = processor.getAPVTS().getParameter(parameterMapper.getParameterId())) {
-        param->setValueNotifyingHost(parameterMapper.getCurrentValue());
-    }
+    auto& tree = processor.getAPVTS().state;
+    tree.setProperty(parameterMapper.getParameterId(), parameterMapper.getCurrentValue(), nullptr);
     repaint();
 }
 

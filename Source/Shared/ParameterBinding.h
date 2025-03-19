@@ -14,6 +14,9 @@
 
 namespace AppState {
 
+
+    // Audio params
+
     // Probability parameters
     static const juce::String ID_PROBABILITY = "probability";
     // Gate parameters
@@ -51,7 +54,6 @@ namespace AppState {
     static const juce::String ID_REVERB_MIX = "reverb_mix";
     static const juce::String ID_REVERB_TIME = "reverb_time";
     static const juce::String ID_REVERB_WIDTH = "reverb_width";
-    static const juce::String ID_REVERB_ENV = "reverb_envelope";
 
     // Delay parameters
     static const juce::String ID_DELAY_MIX = "delay_mix";
@@ -60,7 +62,10 @@ namespace AppState {
     static const juce::String ID_DELAY_PING_PONG = "delay_ping_pong";
     static const juce::String ID_DELAY_BPM_SYNC = "delay_bpm_sync";
 
-    static const juce::String ID_AMPLITUDE_ENVELOPE = "amplitude_envelope";
+    // Internal state params
+
+    static const juce::Identifier ID_AMPLITUDE_ENVELOPE = "amplitude_envelope";
+    static const juce::Identifier ID_REVERB_ENV = "reverb_envelope";
 
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
@@ -138,6 +143,7 @@ namespace AppState {
         );
     }
 
+
 // Parameter binding class to connect APVTS parameters to settings struct members
     template<typename SettingsType>
     class ParameterBinding : public juce::AudioProcessorValueTreeState::Listener {
@@ -209,18 +215,48 @@ namespace AppState {
     // Create MIDI parameters
     std::vector<ParameterDescriptor<Models::MidiSettings>> createMidiParameters();
 
+    template<typename ValueType>
+    class SingleParameterBinding : public juce::ValueTree::Listener {
+    public:
+        SingleParameterBinding(ValueType &memberVariable, juce::ValueTree &tree, juce::Identifier paramID)
+                : memberVar(memberVariable), valueTree(tree), parameterID(std::move(paramID)) {
+
+            if (!valueTree.hasProperty(parameterID)) {
+                valueTree.setProperty(parameterID, memberVar, nullptr);
+            };
+
+            valueTree.addListener(this);
+            // Initialize with current value
+            memberVar = valueTree.getProperty(parameterID);
+        }
+
+        ~SingleParameterBinding() {
+            valueTree.removeListener(this);
+        }
+
+        void valueTreePropertyChanged(juce::ValueTree &tree, const juce::Identifier &property) override {
+            if (property == parameterID)
+                memberVar = tree.getProperty(property);
+        }
+
+    private:
+        ValueType &memberVar;
+        juce::ValueTree &valueTree;
+        juce::Identifier parameterID;
+    };
+
     // Single parameter binding class for binding directly to class member variables
     template<typename ValueType>
-    class SingleParameterBinding : public juce::AudioProcessorValueTreeState::Listener {
+    class SingleAudioParameterBinding : public juce::AudioProcessorValueTreeState::Listener {
     public:
-        SingleParameterBinding(ValueType &memberVariable,
-                               juce::AudioProcessorValueTreeState &apvts,
-                               juce::String paramID,
-                               std::function<ValueType(float)> converter)
+        SingleAudioParameterBinding(ValueType &memberVariable,
+                                    juce::AudioProcessorValueTreeState &apvts,
+                                    juce::String paramID,
+                                    std::function<ValueType(float)> converter)
                 : memberVar(memberVariable),
                   audioParamsTree(apvts),
                   parameterID(std::move(paramID)),
-                  valueConverter(converter) {
+                  valueConverter(std::move(converter)) {
             audioParamsTree.addParameterListener(parameterID, this);
 
             // Initialize with current value
@@ -228,7 +264,7 @@ namespace AppState {
                 memberVar = valueConverter(param->getValue());
         }
 
-        ~SingleParameterBinding() {
+        ~SingleAudioParameterBinding() {
             audioParamsTree.removeParameterListener(parameterID, this);
         }
 
@@ -246,48 +282,48 @@ namespace AppState {
 
     // Helper function to create a single parameter binding
     template<typename ValueType>
-    std::unique_ptr<SingleParameterBinding<ValueType>>
+    std::unique_ptr<SingleAudioParameterBinding<ValueType>>
     createSingleParameterBinding(ValueType &memberVariable,
                                  juce::AudioProcessorValueTreeState &apvts,
                                  const juce::String &paramID,
                                  std::function<ValueType(float)> converter) {
-        return std::make_unique<SingleParameterBinding<ValueType>>(
+        return std::make_unique<SingleAudioParameterBinding<ValueType>>(
                 memberVariable, apvts, paramID, converter);
     }
 
     // Convenience functions for common parameter types
-    inline std::unique_ptr<SingleParameterBinding<float>>
-    createPercentageParameterBinding(float& memberVariable,
-                                     juce::AudioProcessorValueTreeState& apvts,
-                                     const juce::String& paramID) {
+    inline std::unique_ptr<SingleAudioParameterBinding<float>>
+    createPercentageParameterBinding(float &memberVariable,
+                                     juce::AudioProcessorValueTreeState &apvts,
+                                     const juce::String &paramID) {
         return createSingleParameterBinding<float>(
                 memberVariable, apvts, paramID,
                 [](float value) { return value / 100.0f; });
     }
 
-    inline std::unique_ptr<SingleParameterBinding<bool>>
-    createBoolParameterBinding(bool& memberVariable,
-                               juce::AudioProcessorValueTreeState& apvts,
-                               const juce::String& paramID) {
+    inline std::unique_ptr<SingleAudioParameterBinding<bool>>
+    createBoolParameterBinding(bool &memberVariable,
+                               juce::AudioProcessorValueTreeState &apvts,
+                               const juce::String &paramID) {
         return createSingleParameterBinding<bool>(
                 memberVariable, apvts, paramID,
                 [](float value) { return value > 0.5f; });
     }
 
-    inline std::unique_ptr<SingleParameterBinding<int>>
-    createIntParameterBinding(int& memberVariable,
-                              juce::AudioProcessorValueTreeState& apvts,
-                              const juce::String& paramID) {
+    inline std::unique_ptr<SingleAudioParameterBinding<int>>
+    createIntParameterBinding(int &memberVariable,
+                              juce::AudioProcessorValueTreeState &apvts,
+                              const juce::String &paramID) {
         return createSingleParameterBinding<int>(
                 memberVariable, apvts, paramID,
                 [](float value) { return static_cast<int>(value); });
     }
 
     template<typename EnumType>
-    std::unique_ptr<SingleParameterBinding<EnumType>>
-    createEnumParameterBinding(EnumType& memberVariable,
-                               juce::AudioProcessorValueTreeState& apvts,
-                               const juce::String& paramID) {
+    std::unique_ptr<SingleAudioParameterBinding<EnumType>>
+    createEnumParameterBinding(EnumType &memberVariable,
+                               juce::AudioProcessorValueTreeState &apvts,
+                               const juce::String &paramID) {
         return createSingleParameterBinding<EnumType>(
                 memberVariable, apvts, paramID,
                 [](float value) { return static_cast<EnumType>(static_cast<int>(value)); });

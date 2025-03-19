@@ -29,10 +29,15 @@ public:
 
     void reset() override;
 
+    // ValueTree::Listener
+//    void valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property) override;
 
 private:
     Models::ReverbSettings settings;
-    std::unique_ptr<AppState::ParameterBinding<Models::ReverbSettings>> paramBinding;
+    std::unique_ptr<AppState::ParameterBinding<Models::ReverbSettings>> audioParamBinding;
+
+    float envelopeValue = 1.0f;
+    std::unique_ptr<AppState::SingleParameterBinding<float>> envelopeBinding;
 
     juce::dsp::Reverb reverbProcessor;
     juce::AudioBuffer<float> wetBuffer;

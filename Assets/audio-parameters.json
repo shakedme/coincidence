@@ -153,14 +153,6 @@
   },
   {
     "type": "float",
-    "id": "reverb_envelope",
-    "name": "Reverb Envelope",
-    "min": 0.0,
-    "max": 100.0,
-    "default": 0.0
-  },
-  {
-    "type": "float",
     "id": "delay_mix",
     "name": "Delay Mix",
     "min": 0.0,
@@ -194,14 +186,6 @@
     "id": "delay_bpm_sync",
     "name": "Delay BPM Sync",
     "default": true
-  },
-  {
-    "type": "float",
-    "id": "amplitude_envelope",
-    "name": "Amplitude Envelope",
-    "min": 0.0,
-    "max": 100.0,
-    "default": 0.0
   },
   {
     "type": "dynamic",

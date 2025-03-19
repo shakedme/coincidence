@@ -65,7 +65,6 @@ namespace Models {
         float reverbMix = 50.0f;              // 0-100% (dry/wet mix)
         float reverbTime = 50.0f;             // 0-100% (reverb decay time)
         float reverbWidth = 100.0f;           // 0-100% (stereo width)
-        float reverbEnvelope = 1.0f;          // 0-1 (envelope modulation)
     };
 
     struct DelaySettings {

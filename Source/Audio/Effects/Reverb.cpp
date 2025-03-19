@@ -6,8 +6,10 @@ Reverb::Reverb()
 
 void Reverb::initialize(PluginProcessor &p) {
     BaseEffect::initialize(p);
-    paramBinding = AppState::createParameterBinding<Models::ReverbSettings>(settings, p.getAPVTS());
-    paramBinding->registerParameters(AppState::createReverbParameters());
+    audioParamBinding = AppState::createParameterBinding<Models::ReverbSettings>(settings, p.getAPVTS());
+    audioParamBinding->registerParameters(AppState::createReverbParameters());
+    envelopeBinding = std::make_unique<AppState::SingleParameterBinding<float>>(envelopeValue, p.getAPVTS().state,
+                                                                                AppState::ID_REVERB_ENV);
 }
 
 void Reverb::prepare(const juce::dsp::ProcessSpec &spec) {
@@ -46,7 +48,7 @@ void Reverb::process(const juce::dsp::ProcessContextReplacing<float> &context) {
     reverbProcessor.process(wetContext);
 
     // Calculate the mix value with envelope modulation
-    float mixValue = settings.reverbMix * settings.reverbEnvelope;
+    float mixValue = settings.reverbMix * envelopeValue;
 
     // Mix wet and dry signals using the BaseEffect helper method
     for (int channel = 0; channel < numChannels; ++channel) {

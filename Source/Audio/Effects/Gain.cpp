@@ -6,11 +6,8 @@ Gain::Gain()
 
 void Gain::initialize(PluginProcessor &p) {
     BaseEffect::initialize(p);
-
-    paramBinding = AppState::createPercentageParameterBinding(
-            envelopeValue,
-            p.getAPVTS(),
-            AppState::ID_AMPLITUDE_ENVELOPE);
+    envelopeBinding = std::make_unique<AppState::SingleParameterBinding<float>>(envelopeValue, p.getAPVTS().state,
+                                                                                AppState::ID_AMPLITUDE_ENVELOPE);
 }
 
 void Gain::prepare(const juce::dsp::ProcessSpec &spec) {
@@ -30,4 +27,4 @@ void Gain::process(const juce::dsp::ProcessContextReplacing<float> &context) {
 void Gain::reset() {
     BaseEffect::reset();
     gain.reset();
-} 
+}

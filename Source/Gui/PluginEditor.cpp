@@ -18,15 +18,15 @@ PluginEditor::PluginEditor(PluginProcessor &p)
     pitchSection = std::make_unique<PitchSectionComponent>(*this, audioProcessor);
     addAndMakeVisible(pitchSection.get());
 
-    fxSection = std::make_unique<EffectsSection>(*this, audioProcessor);
-    addAndMakeVisible(fxSection.get());
-
     sampleSection = std::make_unique<SampleSectionComponent>(*this, audioProcessor);
     addAndMakeVisible(sampleSection.get());
 
-    // Create the envelope section (initially hidden)
     envelopeSection = std::make_unique<EnvelopeSectionComponent>(*this, audioProcessor);
-    addChildComponent(envelopeSection.get());
+    addAndMakeVisible(envelopeSection.get());
+
+    // second tab
+    fxSection = std::make_unique<EffectsSection>(*this, audioProcessor);
+    addChildComponent(fxSection.get());
 
     tooltipWindow = std::make_unique<juce::TooltipWindow>(this, 0);
 
@@ -34,7 +34,7 @@ PluginEditor::PluginEditor(PluginProcessor &p)
     setupKeyboard();
 
     // Set editor size
-    setSize(800, 700);
+    setSize(800, 800);
 
     // Start the timer for UI updates
     startTimerHz(30);
@@ -69,17 +69,17 @@ void PluginEditor::resized() {
     auto contentArea = area.withTrimmedBottom(keyboardHeight + 15);
 
     // Set bounds for both Main and Env sections
-    if (envelopeSection->isVisible()) {
+    if (fxSection->isVisible()) {
         // Position envelope section in the content area
-        envelopeSection->setBounds(contentArea);
+        fxSection->setBounds(contentArea);
     } else {
         // Calculate dimensions for the main sections with better proportions
         int topSectionY = contentArea.getY();
         int sectionPadding = 5;
         int xPadding = 10;
-        int topSectionHeight = static_cast<int>(contentArea.getHeight() * 0.44);
-        int glitchHeight = static_cast<int>(contentArea.getHeight() * 0.20);
-        int sampleHeight = static_cast<int>(contentArea.getHeight() * 0.34);
+        int topSectionHeight = static_cast<int>(contentArea.getHeight() * 0.4);
+        int envelopesHeight = static_cast<int>(contentArea.getHeight() * 0.3);
+        int sampleHeight = static_cast<int>(contentArea.getHeight() * 0.3);
         int grooveWidth = static_cast<int>(getWidth() * 0.7f) - 15;
         int pitchWidth = getWidth() - grooveWidth - 25;
         int pitchX = xPadding + grooveWidth + sectionPadding;
@@ -91,7 +91,7 @@ void PluginEditor::resized() {
         sampleSection->setBounds(xPadding, sampleY, getWidth() - xPadding * 2, sampleHeight);
 
         int fxY = sampleY + sampleHeight + sectionPadding;
-        fxSection->setBounds(xPadding, fxY, getWidth() - xPadding * 2, glitchHeight);
+        envelopeSection->setBounds(xPadding, fxY, getWidth() - xPadding * 2, envelopesHeight);
     }
 }
 
@@ -133,9 +133,9 @@ void PluginEditor::switchTab(HeaderComponent::Tab tab) {
     grooveSection->setVisible(isMainTab);
     pitchSection->setVisible(isMainTab);
     sampleSection->setVisible(isMainTab);
-    fxSection->setVisible(isMainTab);
+    envelopeSection->setVisible(isMainTab);
 
-    envelopeSection->setVisible(!isMainTab);
+    fxSection->setVisible(!isMainTab);
 
     // Update layout
     resized();
