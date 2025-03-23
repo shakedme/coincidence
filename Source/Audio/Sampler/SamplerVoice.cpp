@@ -5,7 +5,8 @@
 #include "SamplerVoice.h"
 
 
-SamplerVoice::SamplerVoice() {
+SamplerVoice::SamplerVoice(SamplerVoiceState* state)
+        : voiceState(state) {
     // Initialize state
     reset();
 }
@@ -273,20 +274,7 @@ void SamplerVoice::stopNote(float /*velocity*/, bool allowTailOff) {
 
 void SamplerVoice::pitchWheelMoved(int newPitchWheelValue) {}
 
-void SamplerVoice::controllerMoved(int controllerNumber, int newControllerValue) {
-    if (controllerNumber == 32) {
-        // Store the sample index for use when playing
-        // Make sure the index exists before setting it
-        if (voiceState && voiceState->getCorrectSoundForIndex(newControllerValue) != nullptr) {
-            // Store the sample index for use when playing
-            currentSampleIndex = newControllerValue;
-
-            // Also update the global sample index
-            voiceState->setCurrentSampleIndex(newControllerValue);
-        }
-    }
-    // Other controllers can be handled here if needed
-}
+void SamplerVoice::controllerMoved(int controllerNumber, int newControllerValue) {}
 
 // New helper method to check if the voice is active
 bool SamplerVoice::isVoiceActive() const {

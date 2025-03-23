@@ -20,15 +20,9 @@ SampleManager::SampleManager(PluginProcessor &p) : processor(p) {
     processor.getAPVTS().addParameterListener(AppState::ID_ADSR_RELEASE, this);
 
     formatManager.registerBasicFormats();
+    // we're monophonic, so one should do the trick
+    sampler.addVoice(new SamplerVoice(&voiceState));
 
-    // Set up synth voices - increase from 32 to 64 voices for more polyphony
-    for (int i = 0; i < 64; ++i) {
-        auto *voice = new SamplerVoice();
-        voice->setVoiceState(&voiceState); // Set the voice state
-        sampler.addVoice(voice);
-    }
-
-    // Enable voice stealing to handle when all voices are in use
     sampler.setNoteStealingEnabled(true);
 }
 
@@ -63,92 +57,23 @@ void SampleManager::parameterChanged(const juce::String &parameterID, float newV
 
 void SampleManager::prepareToPlay(double sampleRate) {
     sampler.setCurrentPlaybackSampleRate(sampleRate);
-
-    // Reset all voices to ensure they're in a clean state
     sampler.allNotesOff(0, true);
 }
 
 void SampleManager::processAudio(juce::AudioBuffer<float> &buffer,
                                  juce::MidiBuffer &processedMidi) {
-    // Get the current active sample index from the note generator
     int currentSampleIdx = processor.getNoteGenerator().getCurrentActiveSampleIdx();
-
-    static int lastLoggedSampleIdx = -1;
-    if (currentSampleIdx != lastLoggedSampleIdx) {
-        lastLoggedSampleIdx = currentSampleIdx;
+    if (currentSampleIdx < 0 || currentSampleIdx >= getNumSamples()) {
+        return;
     }
 
-    // Set the global sample index directly
-    if (currentSampleIdx >= 0 && currentSampleIdx < getNumSamples()) {
-        // Update the sample index in the voice state
-        setCurrentSampleIndex(currentSampleIdx);
-
-        // If the sample index has changed, we need to stop any active notes
-        // to make sure we use the new sample for upcoming notes
-        static int lastPlayedSampleIdx = -1;
-        if (currentSampleIdx != lastPlayedSampleIdx) {
-            // Stop all notes but don't reset voices completely
-            // This allows for quicker sample switching without audio dropouts
-            sampler.allNotesOff(0, false);
-
-            lastPlayedSampleIdx = currentSampleIdx;
-        }
+    voiceState.setCurrentSampleIndex(currentSampleIdx);
+    if (currentSampleIdx != voiceState.getCurrentSampleIndex()) {
+        sampler.allNotesOff(0, false);
     }
 
-    // Create a new MIDI buffer with modified messages that include the sample index
-    juce::MidiBuffer modifiedMidi;
-
-    // Only process if we have a valid sample index
-    if (currentSampleIdx >= 0 && currentSampleIdx < getNumSamples()) {
-        // Process each MIDI message in the buffer
-        for (const auto metadata: processedMidi) {
-            auto msg = metadata.getMessage();
-            const int samplePosition = metadata.samplePosition;
-
-            // Only modify note-on messages - this will trigger sample playback
-            if (msg.isNoteOn()) {
-                // Create a new note-on message with the note number and the sample index in the MIDI channel
-                // This will make the sample at currentSampleIdx play for this note
-                int channel = 1; // Default MIDI channel 1
-                int noteNumber = msg.getNoteNumber();
-                int velocity = msg.getVelocity();
-
-                // Create a MIDI message that our sampler will use to play the right sample
-                juce::MidiMessage noteOnMsg = juce::MidiMessage::noteOn(channel, noteNumber, (juce::uint8) velocity);
-
-                // Create a controller change message for controller 32 with the sample index value
-                juce::MidiMessage controllerMsg = juce::MidiMessage::controllerEvent(channel, 32, currentSampleIdx);
-
-                // Log whenever we send a controller message for sample selection
-                static int lastLoggedControllerValue = -1;
-                if (currentSampleIdx != lastLoggedControllerValue) {
-                    lastLoggedControllerValue = currentSampleIdx;
-                }
-
-                // Add both messages to our new buffer - controller first, then note
-                modifiedMidi.addEvent(controllerMsg, samplePosition);
-                modifiedMidi.addEvent(noteOnMsg, samplePosition);
-            } else if (msg.isNoteOff()) {
-                // Pass through note-off messages to properly end notes
-                modifiedMidi.addEvent(msg, samplePosition);
-            } else {
-                // Pass through all other messages
-                modifiedMidi.addEvent(msg, samplePosition);
-            }
-        }
-    } else {
-        // If we don't have a valid index, still process note-offs to avoid stuck notes
-        for (const auto metadata: processedMidi) {
-            auto msg = metadata.getMessage();
-            if (msg.isNoteOff()) {
-                modifiedMidi.addEvent(msg, metadata.samplePosition);
-            }
-        }
-    }
-
-    // Use JUCE's synthesizer to render the audio with our modified MIDI
     sampler.renderNextBlock(
-            buffer, modifiedMidi, 0, buffer.getNumSamples());
+            buffer, processedMidi, 0, buffer.getNumSamples());
 }
 
 void SampleManager::addSample(const juce::File &file) {

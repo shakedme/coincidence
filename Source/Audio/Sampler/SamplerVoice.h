@@ -10,9 +10,7 @@
 
 class SamplerVoice : public juce::SynthesiserVoice {
 public:
-    SamplerVoice();
-
-    void setVoiceState(SamplerVoiceState *state) { voiceState = state; }
+    SamplerVoice(SamplerVoiceState* state);
 
     bool canPlaySound(juce::SynthesiserSound *sound) override;
 
