@@ -59,7 +59,9 @@ target_sources(${BaseTargetName} PRIVATE
 
         Audio/PluginProcessor.cpp
         Audio/Sampler/SampleManager.cpp
-        Audio/Sampler/Sampler.cpp
+        Audio/Sampler/SamplerVoice.cpp
+        Audio/Sampler/SamplerVoiceState.cpp
+        Audio/Sampler/SamplerSound.cpp
         Audio/Sampler/OnsetDetector.cpp
         Audio/Midi/ScaleManager.cpp
         Audio/Midi/NoteGenerator.cpp

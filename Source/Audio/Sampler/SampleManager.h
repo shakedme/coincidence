@@ -1,6 +1,8 @@
 #pragma once
 
-#include "Sampler.h"
+#include "SamplerSound.h"
+#include "SamplerVoice.h"
+#include "SamplerVoiceState.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <utility>
 #include <vector>
@@ -37,16 +39,11 @@ public:
         std::vector<int> sampleIndices;
 
         std::unordered_map<Models::RateOption, bool> rateEnabled;
-        std::unordered_map<Models::EffectType, bool> effectEnabled;
 
         Group(juce::String n, int idx) : name(std::move(n)), index(idx) {
             // Initialize all rates and effects to enabled by default
             for (int i = 0; i < Models::NUM_RATE_OPTIONS; ++i) {
                 rateEnabled[static_cast<Models::RateOption>(i)] = true;
-            }
-
-            for (int i = 0; i < Models::NUM_EFFECT_TYPES; ++i) {
-                effectEnabled[static_cast<Models::EffectType>(i)] = true;
             }
         }
     };
@@ -107,36 +104,18 @@ public:
     SamplerSound *getCorrectSoundForIndex(int index) { return voiceState.getCorrectSoundForIndex(index); }
 
     void clearSoundRegistrations() { voiceState.clearSoundRegistrations(); }
-    
-    // ADSR controls
-    void setADSRParameters(float attackMs, float decayMs, float sustain, float releaseMs) {
-        voiceState.setADSRParameters(attackMs, decayMs, sustain, releaseMs);
-//
-//        // Update all voices with new parameters
-//        for (int i = 0; i < sampler.getNumVoices(); ++i) {
-//            if (auto* voice = dynamic_cast<SamplerVoice*>(sampler.getVoice(i))) {
-//                voice->setADSRParameters(attackMs, decayMs, sustain, releaseMs);
-//            }
-//        }
-    }
 
-    // Setup
+    void setMaxPlayDurationForSample(juce::int64 durationInSamples);
+
     void prepareToPlay(double sampleRate);
 
-    // Sample rate methods
     void setSampleRateEnabled(int sampleIndex, Models::RateOption rate, bool enabled);
 
     bool isSampleRateEnabled(int sampleIndex, Models::RateOption rate) const;
 
-    // Group rate methods
     void setGroupRateEnabled(int groupIndex, Models::RateOption rate, bool enabled);
 
     bool isGroupRateEnabled(int groupIndex, Models::RateOption rate) const;
-
-    // Group effect methods (0=reverb, 1=stutter, 2=delay)
-    void setGroupEffectEnabled(int groupIndex, Models::EffectType effectType, bool enabled);
-
-    bool isGroupEffectEnabled(int groupIndex, Models::EffectType effectType) const;
 
 private:
     // Current sample state (for playback)

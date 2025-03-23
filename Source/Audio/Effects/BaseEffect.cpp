@@ -1,5 +1,4 @@
 #include "BaseEffect.h"
-#include "../Sampler/Sampler.h"
 
 BaseEffect::BaseEffect() {
     sampleRate = 44100.0;
@@ -44,39 +43,6 @@ bool BaseEffect::hasMinTimePassed() {
 
     if (currentSample - lastTriggerSample < minSamplesBetweenTriggers)
         return false;
-
-    return true;
-}
-
-bool BaseEffect::isEffectEnabledForSample(Models::EffectType effectType) {
-    if (!processorPtr) return false;
-
-    int currentSampleIndex = processorPtr->getSampleManager().getCurrentSampleIndex();
-    auto *sound = processorPtr->getSampleManager().getCorrectSoundForIndex(currentSampleIndex);
-
-    if (sound != nullptr) {
-        // Check if this sample belongs to a group
-        int groupIndex = sound->getGroupIndex();
-        if (groupIndex >= 0) {
-            // Check if effect is enabled for this group
-            if (!processorPtr->getSampleManager().isGroupEffectEnabled(groupIndex, effectType)) {
-                return false;
-            }
-        }
-
-        // Check for individual effect enablement based on effect type
-        switch (effectType) {
-            case Models::EffectType::REVERB:
-                if (!sound->isReverbEnabled()) return false;
-                break;
-            case Models::EffectType::DELAY:
-                if (!sound->isDelayEnabled()) return false;
-                break;
-            case Models::EffectType::STUTTER:
-                if (!sound->isStutterEnabled()) return false;
-                break;
-        }
-    }
 
     return true;
 }

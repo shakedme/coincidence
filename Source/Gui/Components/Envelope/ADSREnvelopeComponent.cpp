@@ -96,7 +96,7 @@ void ADSREnvelopeComponent::drawGrid(juce::Graphics& g)
 void ADSREnvelopeComponent::drawTimeMarkers(juce::Graphics& g)
 {
     auto bounds = getLocalBounds().toFloat();
-    bounds.removeFromBottom(60); // Space for knobs
+    bounds.removeFromBottom(80); // Space for knobs
     
     // Draw time markers
     g.setColour(juce::Colours::white);

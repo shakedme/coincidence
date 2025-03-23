@@ -77,9 +77,9 @@ void PluginEditor::resized() {
         int topSectionY = contentArea.getY();
         int sectionPadding = 5;
         int xPadding = 10;
-        int topSectionHeight = static_cast<int>(contentArea.getHeight() * 0.4);
-        int envelopesHeight = static_cast<int>(contentArea.getHeight() * 0.3);
-        int sampleHeight = static_cast<int>(contentArea.getHeight() * 0.3);
+        int topSectionHeight = static_cast<int>(contentArea.getHeight() * 0.38);
+        int envelopesHeight = static_cast<int>(contentArea.getHeight() * 0.37);
+        int sampleHeight = static_cast<int>(contentArea.getHeight() * 0.25);
         int grooveWidth = static_cast<int>(getWidth() * 0.7f) - 15;
         int pitchWidth = getWidth() - grooveWidth - 25;
         int pitchX = xPadding + grooveWidth + sectionPadding;

@@ -14,14 +14,11 @@ SampleManager::SampleInfo::SampleInfo(juce::String n, juce::File f, int idx)
 SampleManager::SampleManager(PluginProcessor &p) : processor(p) {
     processor.getAPVTS().addParameterListener(AppState::ID_SAMPLE_DIRECTION, this);
     processor.getAPVTS().addParameterListener(AppState::ID_SAMPLE_PITCH_FOLLOW, this);
-    
-    // Add listeners for ADSR parameters
     processor.getAPVTS().addParameterListener(AppState::ID_ADSR_ATTACK, this);
     processor.getAPVTS().addParameterListener(AppState::ID_ADSR_DECAY, this);
     processor.getAPVTS().addParameterListener(AppState::ID_ADSR_SUSTAIN, this);
     processor.getAPVTS().addParameterListener(AppState::ID_ADSR_RELEASE, this);
 
-    // Initialize format manager
     formatManager.registerBasicFormats();
 
     // Set up synth voices - increase from 32 to 64 voices for more polyphony
@@ -44,41 +41,23 @@ void SampleManager::parameterChanged(const juce::String &parameterID, float newV
         sampleDirection = static_cast<Models::DirectionType>(static_cast<int>(newValue));
     } else if (parameterID == AppState::ID_SAMPLE_PITCH_FOLLOW) {
         voiceState.setPitchFollowEnabled(newValue > 0.5f);
-    } 
-    else if (parameterID == AppState::ID_ADSR_ATTACK) {
+    } else if (parameterID == AppState::ID_ADSR_ATTACK) {
         float attackMs = newValue * 5000.0f;
         auto params = voiceState.getADSRParameters();
-        setADSRParameters(attackMs, params.decay * 1000.0f, params.sustain, params.release * 1000.0f);
-    }
-    else if (parameterID == AppState::ID_ADSR_DECAY) {
-        // Convert normalized value to milliseconds (0-5000ms)
+        voiceState.setADSRParameters(attackMs, params.decay * 1000.0f, params.sustain, params.release * 1000.0f);
+    } else if (parameterID == AppState::ID_ADSR_DECAY) {
         float decayMs = newValue * 5000.0f;
-        
-        // Get current parameters
         auto params = voiceState.getADSRParameters();
-        
-        // Update decay and apply to all voices
-        setADSRParameters(params.attack * 1000.0f, decayMs, params.sustain, params.release * 1000.0f);
-    }
-    else if (parameterID == AppState::ID_ADSR_SUSTAIN) {
-        // Sustain is already normalized 0-1
+        voiceState.setADSRParameters(params.attack * 1000.0f, decayMs, params.sustain, params.release * 1000.0f);
+    } else if (parameterID == AppState::ID_ADSR_SUSTAIN) {
         float sustain = newValue;
-        
-        // Get current parameters
         auto params = voiceState.getADSRParameters();
-        
-        // Update sustain and apply to all voices
-        setADSRParameters(params.attack * 1000.0f, params.decay * 1000.0f, sustain, params.release * 1000.0f);
-    }
-    else if (parameterID == AppState::ID_ADSR_RELEASE) {
-        // Convert normalized value to milliseconds (0-5000ms)
+        voiceState.setADSRParameters(params.attack * 1000.0f, params.decay * 1000.0f, sustain,
+                                     params.release * 1000.0f);
+    } else if (parameterID == AppState::ID_ADSR_RELEASE) {
         float releaseMs = newValue * 5000.0f;
-        
-        // Get current parameters
         auto params = voiceState.getADSRParameters();
-        
-        // Update release and apply to all voices
-        setADSRParameters(params.attack * 1000.0f, params.decay * 1000.0f, params.sustain, releaseMs);
+        voiceState.setADSRParameters(params.attack * 1000.0f, params.decay * 1000.0f, params.sustain, releaseMs);
     }
 }
 
@@ -520,9 +499,6 @@ int SampleManager::selectGroup(const std::map<int, std::vector<int>> &groupedVal
 }
 
 int SampleManager::selectSampleFromGroup(const std::vector<int> &samplesInGroup) {
-    // First, create a copy that we can shuffle
-    std::vector<int> shuffledSamples = samplesInGroup;
-
     // Calculate total probability for samples in this group
     float totalSampleProbability = 0.0f;
     std::vector<std::pair<int, float>> sampleProbabilities;
@@ -589,7 +565,7 @@ SamplerSound *SampleManager::getSampleSound(int index) const {
 juce::File SampleManager::getSampleFilePath(int index) const {
     if (index >= 0 && index < sampleList.size())
         return sampleList[index]->file;
-    return juce::File();
+    return {};
 }
 
 void SampleManager::createGroup(const juce::Array<int> &sampleIndices) {
@@ -603,8 +579,7 @@ void SampleManager::createGroup(const juce::Array<int> &sampleIndices) {
     auto newGroup = std::make_unique<Group>(groupName, groupIndex);
 
     // Add sample indices to the group
-    for (int i = 0; i < sampleIndices.size(); ++i) {
-        int idx = sampleIndices[i];
+    for (int idx: sampleIndices) {
         if (idx >= 0 && idx < sampleList.size()) {
             newGroup->sampleIndices.push_back(idx);
 
@@ -624,12 +599,12 @@ void SampleManager::removeGroup(int groupIndex) {
         return;
 
     // Remove all samples from this group
-    for (size_t i = 0; i < sampleList.size(); ++i) {
-        if (sampleList[i]->groupIndex == groupIndex) {
-            sampleList[i]->groupIndex = -1;
+    for (const auto &i: sampleList) {
+        if (i->groupIndex == groupIndex) {
+            i->groupIndex = -1;
             // Also update the SamplerSound
-            if (sampleList[i]->sound != nullptr)
-                sampleList[i]->sound->setGroupIndex(-1);
+            if (i->sound != nullptr)
+                i->sound->setGroupIndex(-1);
         }
     }
 
@@ -641,12 +616,12 @@ void SampleManager::removeGroup(int groupIndex) {
         groups[i]->index = i;
 
         // Update sample group indices
-        for (size_t j = 0; j < sampleList.size(); ++j) {
-            if (sampleList[j]->groupIndex == i + 1) {
-                sampleList[j]->groupIndex = i;
+        for (const auto &j: sampleList) {
+            if (j->groupIndex == i + 1) {
+                j->groupIndex = i;
                 // Also update the SamplerSound
-                if (sampleList[j]->sound != nullptr)
-                    sampleList[j]->sound->setGroupIndex(i);
+                if (j->sound != nullptr)
+                    j->sound->setGroupIndex(i);
             }
         }
     }
@@ -782,90 +757,54 @@ bool SampleManager::isGroupRateEnabled(int groupIndex, Models::RateOption rate) 
     if (groupIndex >= 0 && groupIndex < groups.size()) {
         const auto &group = groups[groupIndex];
         auto it = group->rateEnabled.find(rate);
-        return (it != group->rateEnabled.end()) ? it->second : false;
-    }
-    return false;
-}
-
-// Group effect methods implementation
-void SampleManager::setGroupEffectEnabled(int groupIndex, Models::EffectType effectType, bool enabled) {
-    if (groupIndex >= 0 && groupIndex < groups.size()) {
-        auto &group = groups[groupIndex];
-        group->effectEnabled[effectType] = enabled;
-    }
-}
-
-bool SampleManager::isGroupEffectEnabled(int groupIndex, Models::EffectType effectType) const {
-    if (groupIndex >= 0 && groupIndex < groups.size()) {
-        const auto &group = groups[groupIndex];
-        auto it = group->effectEnabled.find(effectType);
-        return (it != group->effectEnabled.end()) && it->second;
+        return it != group->rateEnabled.end() && it->second;
     }
     return false;
 }
 
 void SampleManager::normalizeSamples() {
-    // If no samples loaded, nothing to normalize
-    if (sampleList.empty()) {
-        return;
-    }
+    if (sampleList.empty()) return;
 
-    // First, find the peak amplitude across all samples
+    // Find global peak and store individual sample peaks
     float globalPeak = 0.0f;
+    std::vector<float> samplePeaks(sampleList.size(), 0.0f);
 
-    // Find peak level for each sample
-    for (const auto &sample: sampleList) {
-        if (sample->sound) {
-            juce::AudioBuffer<float> *audioData = sample->sound->getAudioData();
-            if (audioData) {
-                // Find the peak for this sample
-                float samplePeak = 0.0f;
+    // First pass - find peaks
+    for (size_t i = 0; i < sampleList.size(); ++i) {
+        auto &sample = sampleList[i];
+        if (!sample->sound) continue;
 
-                // Check all channels
-                for (int channel = 0; channel < audioData->getNumChannels(); ++channel) {
-                    // Get peak for this channel
-                    float channelPeak = audioData->getMagnitude(channel, 0, audioData->getNumSamples());
-                    samplePeak = std::max(samplePeak, channelPeak);
-                }
+        juce::AudioBuffer<float> *audioData = sample->sound->getAudioData();
+        if (!audioData) continue;
 
-                // Update global peak if this sample has a higher peak
-                globalPeak = std::max(globalPeak, samplePeak);
-            }
+        // Find peak across all channels
+        for (int channel = 0; channel < audioData->getNumChannels(); ++channel) {
+            float channelPeak = audioData->getMagnitude(channel, 0, audioData->getNumSamples());
+            samplePeaks[i] = std::max(samplePeaks[i], channelPeak);
         }
+
+        globalPeak = std::max(globalPeak, samplePeaks[i]);
     }
 
-    // If no audio data or all samples are silent, nothing to normalize
-    if (globalPeak <= 0.0f) {
-        return;
-    }
+    if (globalPeak <= 0.0001f) return; // Avoid division by very small numbers
 
-    // Target level - typically 0.95 (-0.5dB) is a good value to prevent clipping
+    // Target level (using -0.5dB as suggested)
     const float targetLevel = 0.95f;
+    const float globalGain = targetLevel / globalPeak;
 
-    // Normalize each sample to the target level
-    for (auto &sample: sampleList) {
-        if (sample->sound) {
-            juce::AudioBuffer<float> *audioData = sample->sound->getAudioData();
-            if (audioData) {
-                // Find the peak for this sample
-                float samplePeak = 0.0f;
+    // Second pass - apply normalization
+    for (size_t i = 0; i < sampleList.size(); ++i) {
+        auto &sample = sampleList[i];
+        if (!sample->sound) continue;
 
-                // Check all channels
-                for (int channel = 0; channel < audioData->getNumChannels(); ++channel) {
-                    // Get peak for this channel
-                    float channelPeak = audioData->getMagnitude(channel, 0, audioData->getNumSamples());
-                    samplePeak = std::max(samplePeak, channelPeak);
-                }
+        juce::AudioBuffer<float> *audioData = sample->sound->getAudioData();
+        if (!audioData) continue;
 
-                // Calculate gain to apply for normalization
-                // We want the target level to equal the ratio of this sample's peak to the global peak
-                float normalizationGain = (samplePeak > 0.0f) ? (targetLevel / globalPeak) : 1.0f;
-
-                // Apply the gain to all channels
-                for (int channel = 0; channel < audioData->getNumChannels(); ++channel) {
-                    audioData->applyGain(channel, 0, audioData->getNumSamples(), normalizationGain);
-                }
-            }
-        }
+        // Apply same gain to all samples to maintain relative levels
+        audioData->applyGain(globalGain);
     }
+}
+
+void SampleManager::setMaxPlayDurationForSample(juce::int64 durationInSamples) {
+    voiceState.setMaxPlayDuration(durationInSamples);
 }

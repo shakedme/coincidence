@@ -1,91 +1,61 @@
-#include "Sampler.h"
+//
+// Created by Shaked Melman on 21/03/2025.
+//
 
-#include <utility>
+#include "SamplerVoice.h"
 
-SamplerSound::SamplerSound(juce::String  soundName,
-                           juce::AudioFormatReader& source,
-                           juce::BigInteger  midiNotes)
-    : name(std::move(soundName))
-    , midiNotes(std::move(midiNotes))
-    , sourceSampleRate(source.sampleRate)
-{
-    if (source.numChannels > 0)
-    {
-        audioData.setSize(source.numChannels, static_cast<int>(source.lengthInSamples));
 
-        // Read the entire file into memory
-        source.read(
-            &audioData, 0, static_cast<int>(source.lengthInSamples), 0, true, true);
-    }
-}
-
-bool SamplerSound::appliesToNote(int midiNoteNumber)
-{
-    return midiNotes[midiNoteNumber];
-}
-
-bool SamplerSound::appliesToChannel(int /*midiChannel*/)
-{
-    return true;
-}
-
-//==============================================================================
-// SamplerVoice Implementation
-//==============================================================================
-
-SamplerVoice::SamplerVoice()
-{
+SamplerVoice::SamplerVoice() {
     // Initialize state
     reset();
 }
 
-void SamplerVoice::reset()
-{
+void SamplerVoice::reset() {
     playing = false;
     currentSampleIndex = -1;
     sourceSamplePosition = 0.0;
     pitchRatio = 1.0;
     lgain = 0.0f;
     rgain = 0.0f;
-    
+
+    // Reset the counter for maximum playback duration
+    sampleCounter = 0;
+
     // Reset the ADSR envelope
     adsr.reset();
 }
 
-bool SamplerVoice::canPlaySound(juce::SynthesiserSound* sound)
-{
+bool SamplerVoice::canPlaySound(juce::SynthesiserSound *sound) {
     // First check if it's a SamplerSound
-    auto* samplerSound = dynamic_cast<SamplerSound*>(sound);
+    auto *samplerSound = dynamic_cast<SamplerSound *>(sound);
     if (samplerSound == nullptr || voiceState == nullptr)
         return false;
-    
+
     // If we have a valid sample index set through controller, use that instead of the voice's sample index
     // This allows controller-based sample switching to override the assigned sound
     int currentGlobalSampleIndex = voiceState->getCurrentSampleIndex();
     if (currentGlobalSampleIndex >= 0) {
         int soundIndex = samplerSound->getIndex();
-        
+
         // If it matches the global sample index OR if this voice is not currently playing anything,
         // allow it to play this sound
         return soundIndex == currentGlobalSampleIndex || !isVoiceActive();
     }
-    
+
     // If no specific sample index is set, any sampler sound can be played
     return true;
 }
 
-void SamplerVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
+void SamplerVoice::renderNextBlock(juce::AudioBuffer<float> &outputBuffer,
                                    int startSample,
-                                   int numSamples)
-{
+                                   int numSamples) {
     if (!playing || !getCurrentlyPlayingSound() || voiceState == nullptr)
         return;
 
     // Get the sound that the voice was assigned
-    auto* assignedSound = static_cast<SamplerSound*>(getCurrentlyPlayingSound().get());
+    auto *assignedSound = dynamic_cast<SamplerSound *>(getCurrentlyPlayingSound().get());
 
-    if (assignedSound == nullptr)
-    {
+    if (assignedSound == nullptr) {
         // Safety check: if we have no sound but we're still "playing", clear the note
         playing = false;
         clearCurrentNote();
@@ -93,24 +63,22 @@ void SamplerVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
     }
 
     // Try to get the correct sound for the current index if it's different from the assigned sound
-    SamplerSound* soundToUse = assignedSound;
+    SamplerSound *soundToUse = assignedSound;
 
     // Only try to switch samples if we have a specific index set and it's different from the assigned sound
     int assignedIndex = assignedSound->getIndex();
-    if (currentSampleIndex >= 0 && assignedIndex != currentSampleIndex)
-    {
+    if (currentSampleIndex >= 0 && assignedIndex != currentSampleIndex) {
         // Try to find the correct sound by index
-        SamplerSound* correctSound = voiceState->getCorrectSoundForIndex(currentSampleIndex);
+        SamplerSound *correctSound = voiceState->getCorrectSoundForIndex(currentSampleIndex);
 
-        if (correctSound != nullptr && correctSound->isActive())
-        {
+        if (correctSound != nullptr && correctSound->isActive()) {
             // Use the correct sound's audio data
             soundToUse = correctSound;
         }
     }
 
     // Get audio data from the sound we decided to use
-    auto& data = *soundToUse->getAudioData();
+    auto &data = *soundToUse->getAudioData();
     const int numChannels = data.getNumChannels();
     const int numSourceSamples = data.getNumSamples();
 
@@ -120,14 +88,19 @@ void SamplerVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
     tempBuffer.clear();
 
     // For each sample to render
-    for (int sampleIndex = 0; sampleIndex < numSamples; ++sampleIndex)
-    {
+    for (int sampleIndex = 0; sampleIndex < numSamples; ++sampleIndex) {
+        // Check if we've exceeded maximum play duration
+        if (maxPlayDuration > 0 && sampleCounter >= maxPlayDuration) {
+            clearCurrentNote();
+            playing = false;
+            break;
+        }
+
         // Position in the sample data with bounds checking
         const int sourcePos = static_cast<int>(sourceSamplePosition);
 
         // If we've reached the end of the sample data or the end marker, stop playback
-        if (sourcePos >= numSourceSamples - 1 || sourcePos >= sourceEndPosition)
-        {
+        if (sourcePos >= numSourceSamples - 1 || sourcePos >= sourceEndPosition) {
             clearCurrentNote();
             playing = false;
             break;
@@ -139,16 +112,14 @@ void SamplerVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
         // For each channel
         for (int channel = 0;
              channel < std::min(numChannels, tempBuffer.getNumChannels());
-             ++channel)
-        {
+             ++channel) {
             // Get sample data pointers
-            const float* const inBuffer = data.getReadPointer(channel);
-            float* const outBuffer =
-                tempBuffer.getWritePointer(channel, sampleIndex);
+            const float *const inBuffer = data.getReadPointer(channel);
+            float *const outBuffer =
+                    tempBuffer.getWritePointer(channel, sampleIndex);
 
             // Ensure we don't access memory out of bounds
-            if (sourcePos < 0 || sourcePos >= numSourceSamples - 1)
-            {
+            if (sourcePos < 0 || sourcePos >= numSourceSamples - 1) {
                 continue;
             }
 
@@ -164,30 +135,30 @@ void SamplerVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
 
         // Move to next sample position
         sourceSamplePosition += pitchRatio;
+
+        // Increment the sample counter for max duration check
+        sampleCounter++;
     }
 
     // Apply ADSR envelope to the temporary buffer
     adsr.applyEnvelopeToBuffer(tempBuffer, 0, numSamples);
 
     // Mix the processed temporary buffer into the output buffer
-    for (int channel = 0; channel < outputBuffer.getNumChannels(); ++channel)
-    {
+    for (int channel = 0; channel < outputBuffer.getNumChannels(); ++channel) {
         outputBuffer.addFrom(channel, startSample, tempBuffer, channel, 0, numSamples);
     }
-    
+
     // If the ADSR has finished its release phase, stop the voice
-    if (!adsr.isActive())
-    {
+    if (!adsr.isActive()) {
         clearCurrentNote();
         playing = false;
     }
 }
 
 void SamplerVoice::startNote(int midiNoteNumber,
-                            float velocity,
-                            juce::SynthesiserSound* sound,
-                            int /*pitchWheelPosition*/)
-{
+                             float velocity,
+                             juce::SynthesiserSound *sound,
+                             int /*pitchWheelPosition*/) {
     // Reset voice state first
     reset();
 
@@ -196,8 +167,7 @@ void SamplerVoice::startNote(int midiNoteNumber,
         return;
 
     // Cast to our custom sound class
-    if (auto* samplerSound = dynamic_cast<SamplerSound*>(sound))
-    {
+    if (auto *samplerSound = dynamic_cast<SamplerSound *>(sound)) {
         // If we're not actively playing this sound, return
         if (!samplerSound->isActive())
             return;
@@ -209,7 +179,7 @@ void SamplerVoice::startNote(int midiNoteNumber,
             currentSampleIndex = currentGlobalSampleIndex;
 
             // Get the correct sound for this index if it exists
-            if (SamplerSound* correctSound = voiceState->getCorrectSoundForIndex(currentSampleIndex)) {
+            if (SamplerSound *correctSound = voiceState->getCorrectSoundForIndex(currentSampleIndex)) {
                 // If the correct sound exists but isn't the assigned sound,
                 // still use the assigned sound's parameters but note the index change
                 if (correctSound != samplerSound) {
@@ -237,7 +207,7 @@ void SamplerVoice::startNote(int midiNoteNumber,
 
         // Apply sample rate adjustment
         double ratio = pitchRatio * getSampleRate()
-                 / samplerSound->getSourceSampleRate();
+                       / samplerSound->getSourceSampleRate();
 
         // Set up sample playback positions
         int numSamples = samplerSound->getAudioData()->getNumSamples();
@@ -250,35 +220,50 @@ void SamplerVoice::startNote(int midiNoteNumber,
         // Apply the new sample rate ratio
         pitchRatio = ratio;
 
-        // Use velocity to determine volume
-        // Scale it from 0.0 to 1.0 range
-        const float velocityGain = velocity * 0.01f;
+        const float velocityGain = juce::jmap(velocity, 0.0f, 127.0f, 0.1f, 1.0f);
         lgain = velocityGain;
         rgain = velocityGain;
+        juce::Logger::writeToLog("Velocity: " + juce::String(velocity));
+        juce::Logger::writeToLog("VelocityGain: " + juce::String(velocityGain));
 
-        // Set the ADSR parameters from the voice state
         updateADSRParameters(voiceState->getADSRParameters());
-        
-        // Start the ADSR envelope
-        adsr.noteOn();
+        setMaxPlayDuration(voiceState->getMaxPlayDuration());
 
-        // Set the voice as playing
+        adsr.noteOn();
         playing = true;
     }
 }
 
-void SamplerVoice::stopNote(float /*velocity*/, bool allowTailOff)
-{
+void SamplerVoice::stopNote(float /*velocity*/, bool allowTailOff) {
     // Trigger the ADSR release phase
-    if (allowTailOff)
-    {
+    if (allowTailOff) {
+        // If we have a maximum play duration and we've used a significant part of it,
+        // we need to adjust the release time to ensure we don't exceed the duration
+        if (maxPlayDuration > 0 && sampleCounter > 0) {
+            juce::int64 remainingSamples = maxPlayDuration - sampleCounter;
+
+            // If we're close to the maximum duration, adjust release time
+            if (remainingSamples < getSampleRate()) // Less than 1 second remaining
+            {
+                // Get the current ADSR parameters
+                auto params = adsr.getParameters();
+
+                // Calculate a safe release time (in seconds) based on remaining samples
+                float safeReleaseTime = remainingSamples / getSampleRate();
+
+                // If the current release time is longer than what we can afford, reduce it
+                if (params.release > safeReleaseTime) {
+                    params.release = safeReleaseTime;
+                    adsr.setParameters(params);
+                }
+            }
+        }
+
         adsr.noteOff();
-        
+
         // Don't clear the note yet - we'll let the ADSR envelope finish its release phase
         // The voice will be stopped in renderNextBlock when adsr.isActive() becomes false
-    }
-    else
-    {
+    } else {
         // Immediate note off - no release phase
         playing = false;
         clearCurrentNote();
@@ -286,43 +271,24 @@ void SamplerVoice::stopNote(float /*velocity*/, bool allowTailOff)
     }
 }
 
-void SamplerVoice::pitchWheelMoved(int newPitchWheelValue)
-{
-    // The pitch wheel can adjust the pitch ratio
-    // Standard MIDI pitch wheel range is 0-16383, with 8192 as the center (no pitch change)
-    // This allows for +/- 2 semitones of pitch bend by default
+void SamplerVoice::pitchWheelMoved(int newPitchWheelValue) {}
 
-    // Calculate the pitch bend amount (-1.0 to +1.0)
-    float pitchBendAmount = (newPitchWheelValue - 8192) / 8192.0f;
-
-    // Calculate the pitch multiplier (2^(pitchBendAmount/12) for +/- 2 semitones)
-    float pitchMultiplier = std::pow(2.0f, pitchBendAmount / 6.0f); // +/- 2 semitones
-
-    // Update the pitch ratio (the base ratio was set in startNote)
-    // This assumes you store the base pitch ratio somewhere, which isn't shown in the code
-    // So this is just a placeholder, and you might need to adapt it to your design
-    // pitchRatio = basePitchRatio * pitchMultiplier;
-}
-
-void SamplerVoice::controllerMoved(int controllerNumber, int newControllerValue)
-{
+void SamplerVoice::controllerMoved(int controllerNumber, int newControllerValue) {
     if (controllerNumber == 32) {
         // Store the sample index for use when playing
         // Make sure the index exists before setting it
         if (voiceState && voiceState->getCorrectSoundForIndex(newControllerValue) != nullptr) {
             // Store the sample index for use when playing
             currentSampleIndex = newControllerValue;
-            
+
             // Also update the global sample index
             voiceState->setCurrentSampleIndex(newControllerValue);
         }
     }
-    
     // Other controllers can be handled here if needed
 }
 
 // New helper method to check if the voice is active
-bool SamplerVoice::isVoiceActive() const
-{
+bool SamplerVoice::isVoiceActive() const {
     return playing && getCurrentlyPlayingSound() != nullptr;
 }

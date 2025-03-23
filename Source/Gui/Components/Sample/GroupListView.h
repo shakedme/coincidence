@@ -40,16 +40,6 @@ public:
             label->setEnabled(false); // Initially disabled
             addAndMakeVisible(label.get());
 
-            // Create effect section labels
-            auto &effectLabel = effectLabels[i];
-            effectLabel = std::make_unique<juce::Label>();
-            effectLabel->setText("EFFECTS", juce::dontSendNotification);
-            effectLabel->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
-            effectLabel->setColour(juce::Label::textColourId, getGroupColor(i).withAlpha(0.8f));
-            effectLabel->setJustificationType(juce::Justification::centred);
-            effectLabel->setEnabled(false); // Initially disabled
-            addAndMakeVisible(effectLabel.get());
-
             // Create rate section labels
             auto &rateLabel = rateLabels[i];
             rateLabel = std::make_unique<juce::Label>();
@@ -68,19 +58,10 @@ public:
             setupRateIcon(rateIcons1_16[i], "1/16", Models::RATE_1_16, i);
             setupRateIcon(rateIcons1_32[i], "1/32", Models::RATE_1_32, i);
 
-            // Create effect icons with shorter names like in the screenshot
-            setupEffectIcon(reverbIcons[i], "R", i, Models::EffectType::REVERB);
-            setupEffectIcon(stutterIcons[i], "S", i, Models::EffectType::STUTTER);
-            setupEffectIcon(delayIcons[i], "D", i, Models::EffectType::DELAY);
-
             // Initially hide components (will be shown in resized() if group is active)
             label->setVisible(false);
             slider->setVisible(false);
-            effectLabel->setVisible(false);
             rateLabel->setVisible(false);
-            reverbIcons[i]->setVisible(false);
-            stutterIcons[i]->setVisible(false);
-            delayIcons[i]->setVisible(false);
             rateIcons1_1[i]->setVisible(false);
             rateIcons1_2[i]->setVisible(false);
             rateIcons1_4[i]->setVisible(false);
@@ -138,49 +119,21 @@ public:
                         sliderSize
                 );
 
-                effectLabels[i]->setBounds(
-                        workingBounds.getX(),
-                        workingBounds.getY() + labelHeight + padding + sliderSize + 5,
-                        workingBounds.getWidth(),
-                        labelHeight
-                );
 
                 // Position effects in a row
-                const int effectsY = effectLabels[i]->getY() + labelHeight;
-                const int effectsSpacing = effectLabels[i]->getWidth() / 3;
-
-                reverbIcons[i]->setBounds(
-                        workingBounds.getX() + effectsSpacing / 2 - effectIconWidth / 2,
-                        effectsY,
-                        effectIconWidth,
-                        effectIconHeight
-                );
-
-                stutterIcons[i]->setBounds(
-                        workingBounds.getX() + effectsSpacing * 1.5f - effectIconWidth / 2,
-                        effectsY,
-                        effectIconWidth,
-                        effectIconHeight
-                );
-
-                delayIcons[i]->setBounds(
-                        workingBounds.getX() + effectsSpacing * 2.5f - effectIconWidth / 2,
-                        effectsY,
-                        effectIconWidth,
-                        effectIconHeight
-                );
+                const int rateLabelsY = probabilitySliders[i]->getY() + labelHeight;
 
                 // Rate section label at the top
                 rateLabels[i]->setBounds(
                         workingBounds.getX(),
-                        effectsY + effectIconHeight,
+                        rateLabelsY + rateIconHeight,
                         workingBounds.getWidth(),
                         labelHeight
                 );
 
                 // Position rate icons in a grid layout - 2 rows of 3 icons
                 const int ratesY1 = rateLabels[i]->getY() + labelHeight;
-                const int ratesY2 = ratesY1 + effectIconHeight;
+                const int ratesY2 = ratesY1 + rateIconHeight;
                 const int ratesSpacing = workingBounds.getWidth() / 3;
 
                 // First row
@@ -230,11 +183,7 @@ public:
                 // Ensure the components are visible for active groups
                 groupLabels[i]->setVisible(true);
                 probabilitySliders[i]->setVisible(true);
-                effectLabels[i]->setVisible(true);
                 rateLabels[i]->setVisible(true);
-                reverbIcons[i]->setVisible(true);
-                stutterIcons[i]->setVisible(true);
-                delayIcons[i]->setVisible(true);
                 rateIcons1_1[i]->setVisible(true);
                 rateIcons1_2[i]->setVisible(true);
                 rateIcons1_4[i]->setVisible(true);
@@ -245,11 +194,7 @@ public:
                 // Hide components for inactive groups
                 if (groupLabels[i]) groupLabels[i]->setVisible(false);
                 if (probabilitySliders[i]) probabilitySliders[i]->setVisible(false);
-                if (effectLabels[i]) effectLabels[i]->setVisible(false);
                 if (rateLabels[i]) rateLabels[i]->setVisible(false);
-                if (reverbIcons[i]) reverbIcons[i]->setVisible(false);
-                if (stutterIcons[i]) stutterIcons[i]->setVisible(false);
-                if (delayIcons[i]) delayIcons[i]->setVisible(false);
                 if (rateIcons1_1[i]) rateIcons1_1[i]->setVisible(false);
                 if (rateIcons1_2[i]) rateIcons1_2[i]->setVisible(false);
                 if (rateIcons1_4[i]) rateIcons1_4[i]->setVisible(false);
@@ -300,11 +245,6 @@ public:
                         updateRateIconState(rateIcons1_8[i].get(), i, Models::RATE_1_8);
                         updateRateIconState(rateIcons1_16[i].get(), i, Models::RATE_1_16);
                         updateRateIconState(rateIcons1_32[i].get(), i, Models::RATE_1_32);
-
-                        // Update effect icon states
-                        updateEffectIconState(reverbIcons[i].get(), i, Models::EffectType::REVERB);
-                        updateEffectIconState(stutterIcons[i].get(), i, Models::EffectType::STUTTER);
-                        updateEffectIconState(delayIcons[i].get(), i, Models::EffectType::DELAY);
                     }
                 }
             }
@@ -349,14 +289,11 @@ private:
 
     static constexpr int rateIconWidth = 30;
     static constexpr int rateIconHeight = 15;
-    static constexpr int effectIconHeight = 18;
-    static constexpr int effectIconWidth = 18;
     static constexpr int MAX_GROUPS = 8;
 
     std::unique_ptr<juce::Slider> probabilitySliders[MAX_GROUPS];
     std::unique_ptr<juce::Label> groupLabels[MAX_GROUPS];
 
-    // Rate icons (1/2, 1/4, 1/8, 1/16) for each group
     std::unique_ptr<TextIcon> rateIcons1_1[MAX_GROUPS];
     std::unique_ptr<TextIcon> rateIcons1_2[MAX_GROUPS];
     std::unique_ptr<TextIcon> rateIcons1_4[MAX_GROUPS];
@@ -364,16 +301,7 @@ private:
     std::unique_ptr<TextIcon> rateIcons1_16[MAX_GROUPS];
     std::unique_ptr<TextIcon> rateIcons1_32[MAX_GROUPS];
 
-    // Effect icons (reverb, stutter, delay) for each group
-    std::unique_ptr<TextIcon> reverbIcons[MAX_GROUPS];
-    std::unique_ptr<TextIcon> stutterIcons[MAX_GROUPS];
-    std::unique_ptr<TextIcon> delayIcons[MAX_GROUPS];
-
-    // Add a rate label for each group to make the rate section more obvious
     std::unique_ptr<juce::Label> rateLabels[MAX_GROUPS];
-
-    // Add an effect label for each group
-    std::unique_ptr<juce::Label> effectLabels[MAX_GROUPS];
 
     int lastNumGroups = 0;
 
@@ -420,38 +348,6 @@ private:
         addAndMakeVisible(icon.get());
     }
 
-    void
-    setupEffectIcon(std::unique_ptr<TextIcon> &icon, const juce::String &text, int groupIndex,
-                    Models::EffectType effectType) {
-        icon = std::make_unique<TextIcon>(text, effectIconWidth, effectIconHeight);
-        icon->setNormalColour(juce::Colour(0xff888888));
-
-        juce::String effectName;
-        switch (effectType) {
-            case Models::EffectType::REVERB:
-                effectName = "Reverb";
-                break;
-            case Models::EffectType::STUTTER:
-                effectName = "Stutter";
-                break;
-            case Models::EffectType::DELAY:
-                effectName = "Delay";
-                break;
-        }
-
-        icon->setTooltip("Toggle " + effectName + " for Group " + juce::String(groupIndex + 1) +
-                         ". When disabled, the effect will never be applied to this group regardless of probability settings.");
-
-        // Add click handler
-        icon->onClicked = [this, effectType, groupIndex]() {
-            bool currentState = processor.getSampleManager().isGroupEffectEnabled(groupIndex, effectType);
-            processor.getSampleManager().setGroupEffectEnabled(groupIndex, effectType, !currentState);
-            updateEffectIconState(getGroupEffectIcon(groupIndex, effectType), groupIndex, effectType);
-        };
-
-        addAndMakeVisible(icon.get());
-    }
-
     TextIcon *getGroupRateIcon(int groupIndex, Models::RateOption rate) {
         if (groupIndex < 0 || groupIndex >= MAX_GROUPS) return nullptr;
 
@@ -473,21 +369,6 @@ private:
         }
     }
 
-    TextIcon *getGroupEffectIcon(int groupIndex, Models::EffectType effectType) {
-        if (groupIndex < 0 || groupIndex >= MAX_GROUPS) return nullptr;
-
-        switch (effectType) {
-            case Models::EffectType::REVERB:
-                return reverbIcons[groupIndex].get();
-            case Models::EffectType::STUTTER:
-                return stutterIcons[groupIndex].get();
-            case Models::EffectType::DELAY:
-                return delayIcons[groupIndex].get();
-            default:
-                return nullptr;
-        }
-    }
-
     void updateRateIconState(TextIcon *icon, int groupIndex, Models::RateOption rate) {
         if (icon == nullptr) return;
 
@@ -502,15 +383,4 @@ private:
 
     }
 
-    void updateEffectIconState(TextIcon *icon, int groupIndex, Models::EffectType effectType) {
-        if (icon == nullptr)
-            return;
-
-        bool isEnabled = processor.getSampleManager().isGroupEffectEnabled(groupIndex, effectType);
-
-        if (isEnabled)
-            icon->setActive(true, getGroupColor(groupIndex));
-        else
-            icon->setActive(false);
-    }
 }; 

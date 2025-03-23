@@ -30,8 +30,6 @@ protected:
 
     bool hasMinTimePassed();
 
-    bool isEffectEnabledForSample(Models::EffectType effectType);
-
     void mixWetDrySignals(float *dry, const float *wet, float wetMix, int numSamples,
                           float fadeOut = 1.0f);
 

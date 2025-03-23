@@ -5,7 +5,6 @@
 #include "../Shared/TimingManager.h"
 #include "Midi/ScaleManager.h"
 #include "Midi/NoteGenerator.h"
-#include "Sampler/Sampler.h"
 #include "Sampler/SampleManager.h"
 
 // Forward declarations

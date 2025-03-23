@@ -65,8 +65,7 @@ void Stutter::process(const juce::dsp::ProcessContextReplacing<float> &context) 
     // Process stutter effect directly on the blocks
     if (isStuttering) {
         processActiveStutterBlock(outBlock, numSamples, numChannels);
-    } else if (shouldStutter() && !triggerSamplePositions.empty() && hasMinTimePassed() &&
-               isEffectEnabledForSample(Models::EffectType::STUTTER)) {
+    } else if (shouldStutter() && !triggerSamplePositions.empty() && hasMinTimePassed()) {
         // If we need to start stuttering, first copy input to output
         outBlock.copyFrom(inBlock);
 

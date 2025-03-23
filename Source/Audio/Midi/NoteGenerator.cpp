@@ -38,21 +38,15 @@ void NoteGenerator::processIncomingMidi(const juce::MidiBuffer &midiMessages,
         auto message = metadata.getMessage();
         const int time = metadata.samplePosition;
 
-        // Handle note on
         if (message.isNoteOn()) {
             currentInputNote = message.getNoteNumber();
             isInputNoteActive = true;
-        }
-            // Handle note off
-        else if (message.isNoteOff() && message.getNoteNumber() == currentInputNote) {
+        } else if (message.isNoteOff() && message.getNoteNumber() == currentInputNote) {
             isInputNoteActive = false;
-
-            // Send note off for the active note
             if (noteIsActive && currentActiveNote >= 0) {
                 stopActiveNote(processedMidi, time);
             }
         }
-            // Pass through all other MIDI messages
         else if (!message.isNoteOnOrOff()) {
             processedMidi.addEvent(message, time);
         }
@@ -189,7 +183,7 @@ void NoteGenerator::playNewNote(Models::RateOption selectedRate,
     // Determine which sample to use
     int sampleIndex = -1;
     if (processor.getSampleManager().isSampleLoaded()) {
-        sampleIndex = processor.getSampleManager().getNextSampleIndex( selectedRate);
+        sampleIndex = processor.getSampleManager().getNextSampleIndex(selectedRate);
     }
 
     int bufferSize = processor.getBlockSize();
@@ -251,6 +245,11 @@ void NoteGenerator::addNoteWithinCurrentBuffer(juce::MidiBuffer &midiMessages,
     noteStartPosition = absoluteNotePosition;
     noteDurationInSamples = noteLengthSamples;
     noteIsActive = true;
+
+    // Set the maximum play duration on the sampler voice
+    if (sampleIndex >= 0) {
+        processor.getSampleManager().setMaxPlayDurationForSample(noteLengthSamples);
+    }
 
     // Update keyboard state
     if (auto *editor = dynamic_cast<PluginEditor *>(processor.getActiveEditor())) {
