@@ -90,9 +90,7 @@ namespace AppState {
                   }) {}
     };
 
-// Helper functions to create parameter descriptors with common conversions
 
-// For percentage parameters (0-100 to 0.0-1.0)
     template<typename SettingsType>
     ParameterDescriptor<SettingsType> createPercentageParam(
             const juce::String &paramID,
@@ -104,7 +102,6 @@ namespace AppState {
         );
     }
 
-// For boolean parameters
     template<typename SettingsType>
     ParameterDescriptor<SettingsType> createBoolParam(
             const juce::String &paramID,
@@ -136,7 +133,6 @@ namespace AppState {
         );
     }
 
-// For enum parameters (converting float to enum type)
     template<typename SettingsType, typename EnumType>
     ParameterDescriptor<SettingsType> createEnumParam(
             const juce::String &paramID,
@@ -149,7 +145,6 @@ namespace AppState {
         );
     }
 
-//    for generic param which accepts function to convert float to desired type
     template<typename SettingsType, typename ValueType>
     ParameterDescriptor<SettingsType> createGenericParam(
             const juce::String &paramID,
@@ -163,7 +158,6 @@ namespace AppState {
     }
 
 
-// Parameter binding class to connect APVTS parameters to settings struct members
     template<typename SettingsType>
     class ParameterBinding : public juce::AudioProcessorValueTreeState::Listener {
     public:
@@ -216,22 +210,16 @@ namespace AppState {
         return std::make_unique<ParameterBinding<SettingsType>>(settings, apvts);
     }
 
-    // Create a set of sample parameters
     std::vector<ParameterDescriptor<Models::SamplerSettings>> createSampleParameters();
 
-    // Create a set of stutter parameters
     std::vector<ParameterDescriptor<Models::StutterSettings>> createStutterParameters();
 
-    // Create a set of delay parameters
     std::vector<ParameterDescriptor<Models::DelaySettings>> createDelayParameters();
 
-    // Create a set of reverb parameters
     std::vector<ParameterDescriptor<Models::ReverbSettings>> createReverbParameters();
 
-    // Create melody parameters
     std::vector<ParameterDescriptor<Models::MelodySettings>> createMelodyParameters();
 
-    // Create MIDI parameters
     std::vector<ParameterDescriptor<Models::MidiSettings>> createMidiParameters();
 
     std::vector<ParameterDescriptor<Models::ADSRSettings>> createADSRParameters();

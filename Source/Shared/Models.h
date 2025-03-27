@@ -144,7 +144,6 @@ namespace Models {
         bool samplePitchFollow = false; // Whether to follow pitch changes
     };
 
-// Scale patterns (semitone intervals from root)
     static inline const juce::Array<int> majorScale = {0, 2, 4, 5, 7, 9, 11};
     static inline const juce::Array<int> minorScale = {0, 2, 3, 5, 7, 8, 10};
     static inline const juce::Array<int> pentatonicScale = {0, 2, 4, 7, 9};
@@ -152,7 +151,6 @@ namespace Models {
 } // namespace MidiGeneratorParams
 
 
-// Hash functions for enum classes
 namespace std {
     template<>
     struct hash<Models::RateOption> {

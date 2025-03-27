@@ -10,7 +10,7 @@
 
 class SamplerVoiceState {
 public:
-    SamplerVoiceState() : currentSampleIndex(-1), pitchFollowEnabled(false), maxPlayDuration(0) {}
+    SamplerVoiceState() : currentSampleIndex(-1), pitchFollowEnabled(false) {}
 
     void setCurrentSampleIndex(int sampleIndex) { currentSampleIndex = sampleIndex; }
 
@@ -18,17 +18,13 @@ public:
 
     void registerSoundWithIndex(SamplerSound *sound, int index);
 
-    SamplerSound *getCorrectSoundForIndex(int index);
+    SamplerSound *getCurrentSound();
 
     void clearSoundRegistrations() { indexToSoundMap.clear(); }
 
     [[nodiscard]] bool isPitchFollowEnabled() const { return pitchFollowEnabled; }
 
     void setPitchFollowEnabled(bool enabled) { pitchFollowEnabled = enabled; }
-
-    void setMaxPlayDuration(juce::int64 durationInSamples) { maxPlayDuration = durationInSamples; }
-
-    [[nodiscard]] juce::int64 getMaxPlayDuration() const { return maxPlayDuration; }
 
     void setADSRParameters(float attackMs, float decayMs, float sustain, float releaseMs);
 
@@ -38,7 +34,6 @@ private:
     int currentSampleIndex;
     std::map<int, SamplerSound *> indexToSoundMap;
     bool pitchFollowEnabled;
-    juce::int64 maxPlayDuration;
 
     juce::ADSR::Parameters adsrParams{
             0.1f,   // attack (seconds)

@@ -3,14 +3,6 @@
 #include <random>
 #include <utility>
 
-SampleManager::SampleInfo::SampleInfo(juce::String n, juce::File f, int idx)
-        : name(std::move(n)), file(std::move(f)), index(idx) {
-    // Initialize all rates to enabled by default
-    for (int i = 0; i < Models::NUM_RATE_OPTIONS; ++i) {
-        rateEnabled[static_cast<Models::RateOption>(i)] = true;
-    }
-}
-
 SampleManager::SampleManager(PluginProcessor &p) : processor(p) {
     processor.getAPVTS().addParameterListener(AppState::ID_SAMPLE_DIRECTION, this);
     processor.getAPVTS().addParameterListener(AppState::ID_SAMPLE_PITCH_FOLLOW, this);
@@ -20,9 +12,7 @@ SampleManager::SampleManager(PluginProcessor &p) : processor(p) {
     processor.getAPVTS().addParameterListener(AppState::ID_ADSR_RELEASE, this);
 
     formatManager.registerBasicFormats();
-    // we're monophonic, so one should do the trick
-    sampler.addVoice(new SamplerVoice(&voiceState));
-
+    sampler.addVoice(new SamplerVoice(voiceState));
     sampler.setNoteStealingEnabled(true);
 }
 
@@ -38,20 +28,19 @@ void SampleManager::parameterChanged(const juce::String &parameterID, float newV
     } else if (parameterID == AppState::ID_ADSR_ATTACK) {
         float attackMs = newValue * 5000.0f;
         auto params = voiceState.getADSRParameters();
-        voiceState.setADSRParameters(attackMs, params.decay * 1000.0f, params.sustain, params.release * 1000.0f);
+        voiceState.setADSRParameters(attackMs, params.decay, params.sustain, params.release);
     } else if (parameterID == AppState::ID_ADSR_DECAY) {
         float decayMs = newValue * 5000.0f;
         auto params = voiceState.getADSRParameters();
-        voiceState.setADSRParameters(params.attack * 1000.0f, decayMs, params.sustain, params.release * 1000.0f);
+        voiceState.setADSRParameters(params.attack, decayMs, params.sustain, params.release);
     } else if (parameterID == AppState::ID_ADSR_SUSTAIN) {
         float sustain = newValue;
         auto params = voiceState.getADSRParameters();
-        voiceState.setADSRParameters(params.attack * 1000.0f, params.decay * 1000.0f, sustain,
-                                     params.release * 1000.0f);
+        voiceState.setADSRParameters(params.attack, params.decay, sustain, params.release);
     } else if (parameterID == AppState::ID_ADSR_RELEASE) {
         float releaseMs = newValue * 5000.0f;
         auto params = voiceState.getADSRParameters();
-        voiceState.setADSRParameters(params.attack * 1000.0f, params.decay * 1000.0f, params.sustain, releaseMs);
+        voiceState.setADSRParameters(params.attack, params.decay, params.sustain, releaseMs);
     }
 }
 
@@ -80,21 +69,17 @@ void SampleManager::addSample(const juce::File &file) {
     std::unique_ptr<juce::AudioFormatReader> reader(formatManager.createReaderFor(file));
 
     if (reader != nullptr) {
-        // Create a range of notes to trigger this sample
         juce::BigInteger allNotes;
         allNotes.setRange(0, 128, true);
 
-        // Create a new sample info and add to our list
         int sampleIndex = sampleList.size();
 
         auto newSample = std::make_unique<SampleInfo>(
                 file.getFileNameWithoutExtension(), file, sampleIndex);
 
-        // Create the sampler sound
         auto samplerSound =
                 new SamplerSound(file.getFileNameWithoutExtension(), *reader, allNotes);
 
-        // Set the index on the sampler sound so it can be identified later
         samplerSound->setIndex(sampleIndex);
 
         juce::AudioBuffer<float> *audioData = samplerSound->getAudioData();
@@ -107,20 +92,13 @@ void SampleManager::addSample(const juce::File &file) {
 
         newSample->sound.reset(samplerSound);
 
-        // Add the sound to the sampler
         sampler.addSound(samplerSound);
-
-        // Register this sound with our voice state
         registerSoundWithIndex(samplerSound, sampleIndex);
-
-        // Add to our sample list
         sampleList.push_back(std::move(newSample));
 
-        // If it's the first sample, select it
         if (sampleList.size() == 1)
             currentSelectedSample = 0;
 
-        // Update valid samples lists for all rates since we added a new sample
         for (int i = 0; i < Models::NUM_RATE_OPTIONS; ++i) {
             updateValidSamplesForRate(static_cast<Models::RateOption>(i));
         }
@@ -718,8 +696,7 @@ void SampleManager::normalizeSamples() {
     const float globalGain = targetLevel / globalPeak;
 
     // Second pass - apply normalization
-    for (size_t i = 0; i < sampleList.size(); ++i) {
-        auto &sample = sampleList[i];
+    for (auto & sample : sampleList) {
         if (!sample->sound) continue;
 
         juce::AudioBuffer<float> *audioData = sample->sound->getAudioData();
@@ -728,8 +705,4 @@ void SampleManager::normalizeSamples() {
         // Apply same gain to all samples to maintain relative levels
         audioData->applyGain(globalGain);
     }
-}
-
-void SampleManager::setMaxPlayDurationForSample(juce::int64 durationInSamples) {
-    voiceState.setMaxPlayDuration(durationInSamples);
 }

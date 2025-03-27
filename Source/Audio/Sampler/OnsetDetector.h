@@ -14,10 +14,10 @@
 /**
  * Class for detecting onsets in audio data based on spectral difference method
  */
-class OnsetDetector
-{
+class OnsetDetector {
 public:
     OnsetDetector();
+
     ~OnsetDetector() = default;
 
     /**
@@ -26,7 +26,7 @@ public:
      * @param sampleRate The sample rate of the audio
      * @return Vector of onset positions as normalized values (0.0-1.0)
      */
-    std::vector<float> detectOnsets(const juce::AudioBuffer<float>& audioBuffer, double sampleRate);
+    std::vector<float> detectOnsets(const juce::AudioBuffer<float> &audioBuffer, double sampleRate);
 
     /**
      * Set the threshold for onset detection
@@ -41,19 +41,16 @@ public:
     void setSensitivity(float sensitivity) { detectionSensitivity = sensitivity; }
 
 private:
-    // Threshold for onset detection (0.0-1.0)
     float detectionThreshold = 0.3f;
 
-    // Sensitivity for onset detection (0.0-1.0)
     float detectionSensitivity = 0.7f;
 
-    // Spectral difference calculation
-    float calculateSpectralDifference(const juce::AudioBuffer<float>& frame1, const juce::AudioBuffer<float>& frame2);
+    std::vector<float>
+    generateDetectionFunction(const juce::AudioBuffer<float> &audioBuffer, int hopSize, int frameSize);
 
-    // Helper functions for onset detection
-    std::vector<float> generateDetectionFunction(const juce::AudioBuffer<float>& audioBuffer, int hopSize, int frameSize);
-    std::vector<int> findPeaks(const std::vector<float>& detectionFunction, float threshold);
-    void normalizeBuffer(std::vector<float>& buffer);
+    std::vector<int> findPeaks(const std::vector<float> &detectionFunction, float threshold);
+
+    void normalizeBuffer(std::vector<float> &buffer);
 };
 
 #endif //JAMMER_ONSETDETECTOR_H

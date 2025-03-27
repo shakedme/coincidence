@@ -10,7 +10,7 @@
 
 class SamplerVoice : public juce::SynthesiserVoice {
 public:
-    SamplerVoice(SamplerVoiceState* state);
+    explicit SamplerVoice(SamplerVoiceState &state);
 
     bool canPlaySound(juce::SynthesiserSound *sound) override;
 
@@ -29,21 +29,12 @@ public:
 
     void controllerMoved(int controllerNumber, int newControllerValue) override;
 
-    // Reset all voice state
     void reset();
 
-    // Helper method to check if voice is active
     [[nodiscard]] bool isVoiceActive() const override;
 
-    // Update the ADSR parameters for this voice
     void updateADSRParameters(const juce::ADSR::Parameters &newParams) {
         adsr.setParameters(newParams);
-    }
-
-    // Set maximum playback duration in samples
-    void setMaxPlayDuration(juce::int64 durationInSamples) {
-        maxPlayDuration = durationInSamples;
-        sampleCounter = 0;
     }
 
 private:
@@ -54,14 +45,9 @@ private:
     bool playing = false;
     int currentSampleIndex = -1;
 
-    // Maximum playback duration in samples (when > 0)
-    juce::int64 maxPlayDuration = 0;
-    juce::int64 sampleCounter = 0;
-
-    // ADSR envelope processor
     juce::ADSR adsr;
 
-    SamplerVoiceState *voiceState = nullptr;
+    SamplerVoiceState &voiceState;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SamplerVoice)
 };

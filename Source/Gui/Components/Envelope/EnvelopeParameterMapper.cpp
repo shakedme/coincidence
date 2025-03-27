@@ -88,10 +88,6 @@ void EnvelopeParameterMapper::setTransportPosition(double ppqPosition) {
     currentPpqPosition = ppqPosition;
 }
 
-void EnvelopeParameterMapper::updateTime(float deltaTime) {
-    currentTime += deltaTime;
-}
-
 void EnvelopeParameterMapper::setRate(float newRate) {
     rate = newRate;
 }
@@ -211,7 +207,3 @@ float EnvelopeParameterMapper::mapToParameterRange(float normalizedValue) const 
         return settings.minValue + normalizedValue * (settings.maxValue - settings.minValue);
     }
 }
-
-float EnvelopeParameterMapper::getPointValue(const EnvelopePoint &point) const {
-    return point.position.y;
-} 

@@ -10,10 +10,13 @@ SamplerSound::SamplerSound(juce::String soundName,
         : name(std::move(soundName)), midiNotes(std::move(midiNotes)), sourceSampleRate(source.sampleRate) {
     if (source.numChannels > 0) {
         audioData.setSize(source.numChannels, static_cast<int>(source.lengthInSamples));
-
-        // Read the entire file into memory
-        source.read(
-                &audioData, 0, static_cast<int>(source.lengthInSamples), 0, true, true);
+        source.read(&audioData,
+                    0,
+                    static_cast<int>(source.lengthInSamples),
+                    0,
+                    true,
+                    true
+        );
     }
 }
 

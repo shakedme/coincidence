@@ -1,5 +1,4 @@
 #include "NoteGenerator.h"
-#include "../PluginProcessor.h"
 #include "../../Gui/PluginEditor.h"
 
 NoteGenerator::NoteGenerator(PluginProcessor &processorRef)
@@ -245,11 +244,6 @@ void NoteGenerator::addNoteWithinCurrentBuffer(juce::MidiBuffer &midiMessages,
     noteStartPosition = absoluteNotePosition;
     noteDurationInSamples = noteLengthSamples;
     noteIsActive = true;
-
-    // Set the maximum play duration on the sampler voice
-    if (sampleIndex >= 0) {
-        processor.getSampleManager().setMaxPlayDurationForSample(noteLengthSamples);
-    }
 
     // Update keyboard state
     if (auto *editor = dynamic_cast<PluginEditor *>(processor.getActiveEditor())) {

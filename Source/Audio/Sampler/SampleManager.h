@@ -23,15 +23,19 @@ public:
         juce::File file;
         int index;
         std::unique_ptr<SamplerSound> sound;
-        float probability = 1.0f; // Default probability value (1.0 = 100%)
-        int groupIndex = -1;      // -1 means not part of any group, 0-3 for groups
+        float probability = 1.0f;
+        int groupIndex = -1;
 
         std::unordered_map<Models::RateOption, bool> rateEnabled;
 
-        SampleInfo(juce::String n, juce::File f, int idx);
+        SampleInfo(juce::String n, juce::File f, int idx) : name(std::move(n)), file(std::move(f)), index(idx) {
+            // Initialize all rates to enabled by default
+            for (int i = 0; i < Models::NUM_RATE_OPTIONS; ++i) {
+                rateEnabled[static_cast<Models::RateOption>(i)] = true;
+            }
+        }
     };
 
-    // Group of samples
     struct Group {
         juce::String name;
         int index;
@@ -41,7 +45,6 @@ public:
         std::unordered_map<Models::RateOption, bool> rateEnabled;
 
         Group(juce::String n, int idx) : name(std::move(n)), index(idx) {
-            // Initialize all rates and effects to enabled by default
             for (int i = 0; i < Models::NUM_RATE_OPTIONS; ++i) {
                 rateEnabled[static_cast<Models::RateOption>(i)] = true;
             }
@@ -52,7 +55,6 @@ public:
 
     void processAudio(juce::AudioBuffer<float> &buffer, juce::MidiBuffer &processedMidi);
 
-    // Sample management
     void addSample(const juce::File &file);
 
     void removeSamples(int startIdx, int endIdx);
@@ -85,7 +87,6 @@ public:
 
     float getGroupProbability(int groupIndex) const;
 
-    // Getters
     size_t getNumSamples() const { return sampleList.size(); }
 
     juce::String getSampleName(int index) const;
@@ -94,18 +95,9 @@ public:
 
     SamplerSound *getSampleSound(int index) const;
 
-    // Voice state control (replacing static methods in SamplerVoice)
-    void setCurrentSampleIndex(int sampleIndex) { voiceState.setCurrentSampleIndex(sampleIndex); }
-
-    int getCurrentSampleIndex() const { return voiceState.getCurrentSampleIndex(); }
-
     void registerSoundWithIndex(SamplerSound *sound, int index) { voiceState.registerSoundWithIndex(sound, index); }
 
-    SamplerSound *getCorrectSoundForIndex(int index) { return voiceState.getCorrectSoundForIndex(index); }
-
     void clearSoundRegistrations() { voiceState.clearSoundRegistrations(); }
-
-    void setMaxPlayDurationForSample(juce::int64 durationInSamples);
 
     void prepareToPlay(double sampleRate);
 
@@ -118,23 +110,32 @@ public:
     bool isGroupRateEnabled(int groupIndex, Models::RateOption rate) const;
 
 private:
-    // Current sample state (for playback)
+    PluginProcessor &processor;
+
+    std::vector<std::unique_ptr<Group>> groups;
+
+    juce::Synthesiser sampler;
+
+    SamplerVoiceState voiceState;
+
+    juce::AudioFormatManager formatManager;
+
+    OnsetDetector onsetDetector;
+
+    Models::DirectionType sampleDirection = Models::DirectionType::RANDOM;
+
+    std::vector<std::unique_ptr<SampleInfo>> sampleList;
+
+    std::unordered_map<Models::RateOption, std::vector<int>> validSamplesForRate;
+
     int currentSelectedSample = -1;
     int currentPlayIndex = -1; // Tracks the index for sequential/bidirectional playback
     bool isAscending = true;   // For bidirectional mode
 
-    // Loaded samples
-    std::vector<std::unique_ptr<SampleInfo>> sampleList;
-
-    // Replace six separate vectors with a single unordered_map
-    std::unordered_map<Models::RateOption, std::vector<int>> validSamplesForRate;
-
-    // Helper methods for managing valid sample lists
     void updateValidSamplesForRate(Models::RateOption rate);
 
     const std::vector<int> &getValidSamplesForRate(Models::RateOption rate) const;
 
-    // Random sample selection helper methods
     int selectRandomSampleWithProbability(const std::vector<int> &validSamples);
 
     void organizeValidSamplesByGroup(const std::vector<int> &validSamples,
@@ -148,21 +149,5 @@ private:
 
     int selectSampleFromGroup(const std::vector<int> &samplesInGroup);
 
-    PluginProcessor &processor;
 
-    // Sample groups (max 8 groups)
-    std::vector<std::unique_ptr<Group>> groups;
-
-    // Playback engine
-    juce::Synthesiser sampler;
-
-    // Voice state for SamplerVoice instances
-    SamplerVoiceState voiceState;
-
-    // Format manager for loading audio files
-    juce::AudioFormatManager formatManager;
-
-    OnsetDetector onsetDetector;
-
-    Models::DirectionType sampleDirection = Models::DirectionType::RANDOM;
 };

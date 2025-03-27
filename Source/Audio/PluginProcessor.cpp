@@ -11,7 +11,6 @@ PluginProcessor::PluginProcessor()
                                  .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
           apvts(*this, nullptr, "PARAMETERS", AppState::createParameterLayout()) {
 
-    // Create specialized components
     timingManager = std::make_unique<TimingManager>();
     sampleManager = std::make_unique<::SampleManager>(*this);
     noteGenerator = std::make_unique<NoteGenerator>(*this);

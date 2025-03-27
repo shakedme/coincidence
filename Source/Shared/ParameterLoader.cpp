@@ -22,7 +22,6 @@ namespace AppState {
 
     std::unique_ptr<juce::RangedAudioParameter> ParameterLoader::createParameterFromJson(const juce::var &paramData) {
         if (!paramData.hasProperty("id") || !paramData.hasProperty("type")) {
-            juce::Logger::writeToLog("Parameter missing required properties");
             return nullptr;
         }
 
@@ -63,7 +62,6 @@ namespace AppState {
                     id, name, choices, defaultValue);
         }
 
-        juce::Logger::writeToLog("Unsupported parameter type: " + type);
         return nullptr;
     }
 

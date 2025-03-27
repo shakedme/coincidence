@@ -25,17 +25,11 @@ public:
     // Set transport position
     void setTransportPosition(double ppqPosition);
 
-    // Update time-based envelope
-    void updateTime(float deltaTime);
-
     // Set the rate multiplier
     void setRate(float newRate);
 
     // Get the current rate
     float getRate() const { return rate; }
-
-    // Set parameter type
-    void setParameterType(EnvelopeParams::ParameterType type);
 
     void setParameterId(juce::Identifier paramId) { paramId = paramId; }
 
@@ -77,10 +71,6 @@ private:
     // Map normalized value to parameter range
     float mapToParameterRange(float normalizedValue) const;
 
-    // Get y value from a point (normalized 0-1)
-    float getPointValue(const EnvelopePoint &point) const;
-
-    // The parameter type this mapper controls
     juce::Identifier paramId;
 
     // Parameter settings

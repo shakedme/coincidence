@@ -53,11 +53,6 @@ private:
     void setupKnobs();
     void positionKnobs();
 
-    // Gets point positions in screen coordinates
-    juce::Point<float> getPointPosition(int index) const;
-    
-    // Constraint functions for point movement
-    bool canPointMove(int index, const juce::Point<float>& newPosition) const;
     juce::Point<float> constrainPointPosition(int index, const juce::Point<float>& position) const;
 
     PluginProcessor& processor;

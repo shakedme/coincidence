@@ -4,14 +4,12 @@
 
 #include "SamplerVoiceState.h"
 
-SamplerSound *SamplerVoiceState::getCorrectSoundForIndex(int index) {
-    // Look up the sound by index in our map
-    auto it = indexToSoundMap.find(index);
+SamplerSound *SamplerVoiceState::getCurrentSound() {
+    auto it = indexToSoundMap.find(currentSampleIndex);
     if (it != indexToSoundMap.end()) {
         return it->second;
     }
 
-    // If the map is not empty, just use the first available sound as a fallback
     if (!indexToSoundMap.empty()) {
         return indexToSoundMap.begin()->second;
     }
@@ -26,8 +24,9 @@ void SamplerVoiceState::registerSoundWithIndex(SamplerSound *sound, int index) {
 }
 
 void SamplerVoiceState::setADSRParameters(float attackMs, float decayMs, float sustain, float releaseMs) {
-    adsrParams.attack = attackMs;
-    adsrParams.decay = decayMs;
-    adsrParams.sustain = sustain;
-    adsrParams.release = releaseMs;
+    // Convert from milliseconds to seconds for JUCE ADSR
+    adsrParams.attack = attackMs / 1000.0f;  // milliseconds to seconds
+    adsrParams.decay = decayMs / 1000.0f;    // milliseconds to seconds
+    adsrParams.sustain = sustain;            // already correct (0-1)
+    adsrParams.release = releaseMs / 1000.0f; // milliseconds to seconds
 }
