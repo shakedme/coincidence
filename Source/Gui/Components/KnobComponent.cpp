@@ -9,14 +9,16 @@
 #include "../Util.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
-KnobComponent::KnobComponent(const juce::String &tooltip)
-        : juce::Slider(juce::Slider::RotaryVerticalDrag, juce::Slider::TextBoxBelow) {
+KnobComponent::KnobComponent(ModulationMatrix &modMatrix, const juce::String &tooltip)
+        : modMatrix(modMatrix),
+          juce::Slider(juce::Slider::RotaryVerticalDrag, juce::Slider::TextBoxBelow) {
     setTooltip(tooltip);
     setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 12);
     setColour(juce::Slider::textBoxTextColourId, juce::Colours::white);
     setColour(juce::Slider::textBoxBackgroundColourId, juce::Colours::transparentBlack);
     setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
     setNumDecimalPlacesToDisplay(0);
+    startTimerHz(30);
 }
 
 void KnobComponent::paint(juce::Graphics &g) {
@@ -53,6 +55,31 @@ void KnobComponent::paint(juce::Graphics &g) {
                           1.0f);
         }
     }
+
+    if (isModulated) {
+        auto bounds = getLocalBounds().toFloat();
+        auto radius = juce::jmin(bounds.getWidth(), bounds.getHeight()) / 2.0f - 5.0f;
+        auto centreX = bounds.getCentreX();
+        auto centreY = bounds.getCentreY();
+
+        // Draw modulation arc
+        juce::Path arcPath;
+        float startAngle = juce::MathConstants<float>::pi * 1.2f;
+        float endAngle = juce::MathConstants<float>::pi * 2.8f;
+        float modAngle = startAngle + (endAngle - startAngle) * (getValue() + modulationValue);
+
+        arcPath.addArc(centreX - radius, centreY - radius, radius * 2.0f, radius * 2.0f,
+                       startAngle, endAngle, true);
+
+        g.setColour(juce::Colours::white.withAlpha(0.3f));
+        g.strokePath(arcPath, juce::PathStrokeType(2.0f));
+
+        // Draw modulation indicator dot
+        float dotX = centreX + std::cos(modAngle) * radius;
+        float dotY = centreY + std::sin(modAngle) * radius;
+        g.setColour(juce::Colours::white);
+        g.fillEllipse(dotX - 3.0f, dotY - 3.0f, 6.0f, 6.0f);
+    }
 }
 
 bool KnobComponent::isInterestedInDragSource(const juce::DragAndDropTarget::SourceDetails &dragSourceDetails) {
@@ -81,14 +108,23 @@ void KnobComponent::itemDropped(const juce::DragAndDropTarget::SourceDetails &dr
         auto *dragSource = dynamic_cast<juce::Component *>(dragSourceDetails.sourceComponent.get());
         if (dragSource != nullptr) {
             auto *editor = findParentComponentOfClass<PluginEditor>();
-            auto *processor = editor->getAudioProcessor();
-            if (auto *myProcessor = dynamic_cast<PluginProcessor *>(processor)) {
-                auto *envelopeSection = Util::getChildComponentOfClass<EnvelopeSection>(editor);
-                auto lfoComponent = envelopeSection->getLFOComponent(lfoIndex);
-                myProcessor->getModulationMatrix().addConnection(lfoComponent, getName());
-            }
+            auto *envelopeSection = Util::getChildComponentOfClass<EnvelopeSection>(editor);
+            auto lfoComponent = envelopeSection->getLFOComponent(lfoIndex);
+            modMatrix.addConnection(lfoComponent, getName());
+            isModulated = true;
         }
     }
 
     repaint();
+}
+
+void KnobComponent::timerCallback() {
+    if (isModulated) {
+        auto [baseValue, modValue] = modMatrix.getParamAndModulationValue(getName());
+        if (modValue != modulationValue) {
+            modulationValue = modValue;
+            isModulated = modValue != 0.0f;
+        }
+        repaint();
+    }
 }

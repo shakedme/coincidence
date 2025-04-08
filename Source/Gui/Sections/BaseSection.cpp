@@ -81,7 +81,7 @@ void BaseSectionComponent::initKnob(std::unique_ptr<juce::Slider> &knob,
                                     int max,
                                     double interval,
                                     const juce::String &suffix) {
-    knob = std::unique_ptr<juce::Slider>(new KnobComponent(tooltip));
+    knob = std::unique_ptr<juce::Slider>(new KnobComponent(processor.getModulationMatrix(), tooltip));
     knob->setName(name);
     knob->setRange(min, max, interval);
     knob->setTextValueSuffix("%");

@@ -33,7 +33,7 @@ public:
         envTabButton->onClick = [this] { setActiveTab(Tab::Env); };
         addAndMakeVisible(envTabButton.get());
 
-        gainSlider = std::unique_ptr<juce::Slider>(new KnobComponent("Set gain"));
+        gainSlider = std::unique_ptr<juce::Slider>(new KnobComponent(processor.getModulationMatrix(), "Set gain"));
         gainSlider->setName("gain");
         gainSlider->setRange(0, 200, 1.0f);
         gainSlider->setValue(100, juce::sendNotification);

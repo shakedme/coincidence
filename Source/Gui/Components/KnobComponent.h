@@ -8,9 +8,10 @@
 
 
 class KnobComponent : public juce::Slider,
+                      public juce::Timer,
                       public juce::DragAndDropTarget {
 public:
-    KnobComponent(const juce::String &tooltip);
+    KnobComponent(ModulationMatrix &modMatrix, const juce::String &tooltip);
 
     ~KnobComponent() override = default;
 
@@ -28,6 +29,11 @@ public:
 
     void itemDropped(const juce::DragAndDropTarget::SourceDetails &dragSourceDetails) override;
 
+    void timerCallback() override;
+
 private:
+    ModulationMatrix &modMatrix;
     bool dragHighlight = false;
+    bool isModulated = false;
+    float modulationValue = 0.0f;
 }; 
