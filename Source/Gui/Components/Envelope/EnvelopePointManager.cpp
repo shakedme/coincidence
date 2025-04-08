@@ -4,19 +4,16 @@
 
 EnvelopePointManager::EnvelopePointManager(int hDivisions, int vDivisons)
         : horizontalDivisions(hDivisions), verticalDivisions(vDivisons) {
-    // Initialize with default points
-    addPoint(0.0f, 0.5f, false); // Starting point (not editable)
-    addPoint(1.0f, 0.5f, false); // Ending point (not editable)
+    addPoint(0.0f, 0.5f, false);
+    addPoint(1.0f, 0.5f, false);
 }
 
 void EnvelopePointManager::addPoint(float x, float y, bool editable) {
     auto newPoint = std::make_unique<EnvelopePoint>(x, y, editable);
 
-    // If snap to grid is enabled, snap the point
     juce::Point<float> snapped = snapToGrid({x, y});
     newPoint->position.setXY(snapped.x, snapped.y);
 
-    // Insert at the correct position based on x-coordinate
     auto it = std::upper_bound(points.begin(), points.end(), newPoint,
                                [](const auto &a, const auto &b) {
                                    return a->position.x < b->position.x;
@@ -28,7 +25,6 @@ void EnvelopePointManager::addPoint(float x, float y, bool editable) {
 
 bool EnvelopePointManager::removePoint(int index) {
     if (index <= 0 || index >= static_cast<int>(points.size()) - 1) {
-        // Don't allow removing first or last point
         return false;
     }
 

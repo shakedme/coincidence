@@ -8,7 +8,8 @@
 #include "BaseEffect.h"
 #include <vector>
 #include "../PluginProcessor.h"
-#include "../../Shared/ParameterBinding.h"
+#include "../../Shared/Parameters/StructParameter.h"
+#include "../../Shared/Parameters/Params.h"
 
 /**
  * Delay effect processor which applies delay based on envelope value
@@ -30,8 +31,7 @@ public:
     void reset() override;
 
 private:
-    Models::DelaySettings settings;
-    std::unique_ptr<AppState::ParameterBinding<Models::DelaySettings>> paramBinding;
+    std::unique_ptr<StructParameter<Models::DelaySettings>> settings;
 
     juce::dsp::DelayLine<float> delayLineLeft{44100};
     juce::dsp::DelayLine<float> delayLineRight{44100};

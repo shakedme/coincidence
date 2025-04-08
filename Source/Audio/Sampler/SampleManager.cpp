@@ -4,12 +4,8 @@
 #include <utility>
 
 SampleManager::SampleManager(PluginProcessor &p) : processor(p) {
-    processor.getAPVTS().addParameterListener(AppState::ID_SAMPLE_DIRECTION, this);
-    processor.getAPVTS().addParameterListener(AppState::ID_SAMPLE_PITCH_FOLLOW, this);
-    processor.getAPVTS().addParameterListener(AppState::ID_ADSR_ATTACK, this);
-    processor.getAPVTS().addParameterListener(AppState::ID_ADSR_DECAY, this);
-    processor.getAPVTS().addParameterListener(AppState::ID_ADSR_SUSTAIN, this);
-    processor.getAPVTS().addParameterListener(AppState::ID_ADSR_RELEASE, this);
+    processor.getAPVTS().addParameterListener(Params::ID_SAMPLE_DIRECTION, this);
+    processor.getAPVTS().addParameterListener(Params::ID_SAMPLE_PITCH_FOLLOW, this);
 
     formatManager.registerBasicFormats();
     sampler.addVoice(new SamplerVoice(voiceState));
@@ -21,26 +17,10 @@ SampleManager::~SampleManager() {
 }
 
 void SampleManager::parameterChanged(const juce::String &parameterID, float newValue) {
-    if (parameterID == AppState::ID_SAMPLE_DIRECTION) {
+    if (parameterID == Params::ID_SAMPLE_DIRECTION) {
         sampleDirection = static_cast<Models::DirectionType>(static_cast<int>(newValue));
-    } else if (parameterID == AppState::ID_SAMPLE_PITCH_FOLLOW) {
+    } else if (parameterID == Params::ID_SAMPLE_PITCH_FOLLOW) {
         voiceState.setPitchFollowEnabled(newValue > 0.5f);
-    } else if (parameterID == AppState::ID_ADSR_ATTACK) {
-        float attackMs = newValue * 5000.0f;
-        auto params = voiceState.getADSRParameters();
-        voiceState.setADSRParameters(attackMs, params.decay, params.sustain, params.release);
-    } else if (parameterID == AppState::ID_ADSR_DECAY) {
-        float decayMs = newValue * 5000.0f;
-        auto params = voiceState.getADSRParameters();
-        voiceState.setADSRParameters(params.attack, decayMs, params.sustain, params.release);
-    } else if (parameterID == AppState::ID_ADSR_SUSTAIN) {
-        float sustain = newValue;
-        auto params = voiceState.getADSRParameters();
-        voiceState.setADSRParameters(params.attack, params.decay, sustain, params.release);
-    } else if (parameterID == AppState::ID_ADSR_RELEASE) {
-        float releaseMs = newValue * 5000.0f;
-        auto params = voiceState.getADSRParameters();
-        voiceState.setADSRParameters(params.attack, params.decay, params.sustain, releaseMs);
     }
 }
 
@@ -696,7 +676,7 @@ void SampleManager::normalizeSamples() {
     const float globalGain = targetLevel / globalPeak;
 
     // Second pass - apply normalization
-    for (auto & sample : sampleList) {
+    for (auto &sample: sampleList) {
         if (!sample->sound) continue;
 
         juce::AudioBuffer<float> *audioData = sample->sound->getAudioData();

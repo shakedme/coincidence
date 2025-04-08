@@ -7,9 +7,14 @@ Delay::Delay()
 void Delay::initialize(PluginProcessor &p) {
     BaseEffect::initialize(p);
 
-    // Create parameter binding
-    paramBinding = AppState::createParameterBinding<Models::DelaySettings>(settings, p.getAPVTS());
-    paramBinding->registerParameters(AppState::createDelayParameters());
+    std::vector<StructParameter<Models::DelaySettings>::FieldDescriptor> descriptors = {
+            makeFieldDescriptor(Params::ID_DELAY_MIX, &Models::DelaySettings::delayMix),
+            makeFieldDescriptor(Params::ID_DELAY_FEEDBACK, &Models::DelaySettings::delayFeedback),
+            makeFieldDescriptor(Params::ID_DELAY_RATE, &Models::DelaySettings::delayRate)
+    };
+
+    settings = std::make_unique<StructParameter<Models::DelaySettings>>(
+            processor->getModulationMatrix(), descriptors);
 }
 
 Delay::~Delay() {
@@ -29,6 +34,7 @@ void Delay::prepare(const juce::dsp::ProcessSpec &spec) {
 }
 
 void Delay::process(const juce::dsp::ProcessContextReplacing<float> &context) {
+    auto settings = this->settings->getValue();
     // Check if effect should be applied
     if (settings.delayMix > 0.01f) {
         auto &inputBlock = context.getInputBlock();

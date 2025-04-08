@@ -6,31 +6,15 @@
 //==============================================================================
 EnvelopeComponent::EnvelopeComponent(PluginProcessor &p)
         : processor(p),
-          parameterMapper(),
           pointManager(),
           renderer(pointManager) {
 
-    // Configure the pointManager
     pointManager.onPointsChanged = [this]() { handlePointsChanged(); };
 
     setupRateUI();
     setupPresetsUI();
 
-    // Add the waveform component as a child component
-    addAndMakeVisible(waveformComponent);
-
-    // Configure the waveform component to be transparent so we can draw over it
-    waveformComponent.setBackgroundColour(juce::Colours::transparentBlack);
-    waveformComponent.setWaveformAlpha(0.3f);
-    waveformComponent.setWaveformColour(juce::Colour(0xff52bfd9));
-    waveformComponent.setWaveformScaleFactor(1.0f);
-
-    // Start the timer for envelope updates
-    startTimerHz(30); // 30 FPS for smoother visualization
-
-    juce::Timer::callAfterDelay(200, [this]() {
-        updateTimeRangeFromRate();
-    });
+    startTimerHz(30);
 
     setWantsKeyboardFocus(true);
 }
@@ -40,12 +24,12 @@ EnvelopeComponent::~EnvelopeComponent() {
 }
 
 void EnvelopeComponent::paint(juce::Graphics &g) {
-    g.fillAll(juce::Colour(0xff222222));
+    g.fillAll(juce::Colours::transparentBlack);
 
     renderer.drawGrid(g);
 
     double ppqPosition = processor.getTimingManager().getPpqPosition();
-    float cycle = std::fmod(static_cast<float>(ppqPosition * parameterMapper.getRate()), 1.0f);
+    float cycle = std::fmod(static_cast<float>(ppqPosition * currentRate), 1.0f);
 
     renderer.drawEnvelope(g, cycle);
 
@@ -56,26 +40,11 @@ void EnvelopeComponent::paint(juce::Graphics &g) {
 
 void EnvelopeComponent::resized() {
     resizeControls(getWidth());
-
     pointManager.setBounds(getWidth(), getHeight() - removeFromTop);
     renderer.setBounds(getWidth(), getHeight() - removeFromTop);
-
-    const int controlHeight = 25;
-    const int padding = 5;
-    const int topControlArea = controlHeight + (2 * padding);
-
-    auto waveformBounds = getLocalBounds();
-    waveformBounds.removeFromTop(topControlArea);
-    waveformComponent.setBounds(waveformBounds);
 }
 
 void EnvelopeComponent::timerCallback() {
-    parameterMapper.setTransportPosition(processor.getTimingManager().getPpqPosition());
-    if (!parameterMapper.getParameterId().isNull()) {
-        processor.getAPVTS()
-        .state
-        .setProperty(parameterMapper.getParameterId(), parameterMapper.getCurrentValue(), nullptr);
-    }
     repaint();
 }
 
@@ -251,57 +220,22 @@ bool EnvelopeComponent::keyPressed(const juce::KeyPress &key) {
     return false;
 }
 
-void EnvelopeComponent::setSampleRate(float newSampleRate) {
-    // Pass the sample rate to the waveform component
-    waveformComponent.setSampleRate(newSampleRate);
-}
-
-void EnvelopeComponent::setTimeRange(float seconds) {
-    // Pass the time range to the waveform component
-    waveformComponent.setTimeRange(seconds);
-}
-
-void EnvelopeComponent::setParameterRange(float min, float max, bool exponential) {
-    parameterMapper.setParameterRange(min, max, exponential);
-}
-
-void EnvelopeComponent::setParameterId(juce::Identifier paramId) {
-    parameterMapper.setParameterId(paramId);
-}
-
-void EnvelopeComponent::setRate(float newRate) {
-    parameterMapper.setRate(newRate);
-    updateTimeRangeFromRate();
-}
-
-void EnvelopeComponent::pushAudioBuffer(const float *audioData, int numSamples) {
-    // This method is called from the audio thread
-    // Forward the audio data to the waveform component
-    waveformComponent.pushAudioBuffer(audioData, numSamples);
-}
-
-void EnvelopeComponent::updateTimeRangeFromRate() {
-    float timeRangeInSeconds = calculateTimeRangeInSeconds(processor.getTimingManager().getBpm());
-    setTimeRange(timeRangeInSeconds);
-}
-
 void EnvelopeComponent::handlePointsChanged() {
-    parameterMapper.setPoints(pointManager.getPoints());
     repaint();
 }
 
 void EnvelopeComponent::setupRateUI() {
-    // Create rate combo box
     rateComboBox = std::make_unique<juce::ComboBox>("rateComboBox");
-    rateComboBox->addItem("2/1", static_cast<int>(Rate::TwoWhole) + 1);
-    rateComboBox->addItem("1/1", static_cast<int>(Rate::Whole) + 1);
-    rateComboBox->addItem("1/2", static_cast<int>(Rate::Half) + 1);
-    rateComboBox->addItem("1/4", static_cast<int>(Rate::Quarter) + 1);
-    rateComboBox->addItem("1/8", static_cast<int>(Rate::Eighth) + 1);
-    rateComboBox->addItem("1/16", static_cast<int>(Rate::Sixteenth) + 1);
-    rateComboBox->addItem("1/32", static_cast<int>(Rate::ThirtySecond) + 1);
-    rateComboBox->setSelectedId(static_cast<int>(Rate::Quarter) + 1);
+    rateComboBox->addItem("2/1", static_cast<int>(Models::LFORate::TwoWhole) + 1);
+    rateComboBox->addItem("1/1", static_cast<int>(Models::LFORate::Whole) + 1);
+    rateComboBox->addItem("1/2", static_cast<int>(Models::LFORate::Half) + 1);
+    rateComboBox->addItem("1/4", static_cast<int>(Models::LFORate::Quarter) + 1);
+    rateComboBox->addItem("1/8", static_cast<int>(Models::LFORate::Eighth) + 1);
+    rateComboBox->addItem("1/16", static_cast<int>(Models::LFORate::Sixteenth) + 1);
+    rateComboBox->addItem("1/32", static_cast<int>(Models::LFORate::ThirtySecond) + 1);
+    rateComboBox->setSelectedId(static_cast<int>(Models::LFORate::Quarter) + 1);
     rateComboBox->onChange = [this] {
+        onRateChanged(static_cast<Models::LFORate>(rateComboBox->getSelectedId() - 1));
         updateRateFromComboBox();
     };
     addAndMakeVisible(rateComboBox.get());
@@ -336,23 +270,18 @@ void EnvelopeComponent::setupPresetsUI() {
 }
 
 void EnvelopeComponent::resizeControls(int width, int topPadding) {
-    // Calculate space for the rate controls
     const int controlHeight = 25;
     const int comboWidth = 100;
     const int bottomPadding = 10;
     int bottomEdge = getHeight() - bottomPadding;
 
-    // Position rate controls at the top left
     rateComboBox->setBounds(10, bottomEdge - 20, comboWidth, controlHeight);
 
-    // Position preset shape buttons in the bottom right corner
     const int buttonSize = 40;
     const int buttonPadding = 5;
 
-    // Calculate the bottom right position
     int rightEdge = width - buttonPadding;
 
-    // Position buttons horizontally
     for (int i = presetButtons.size() - 1; i >= 0; --i) {
         presetButtons[i]->setBounds(rightEdge - buttonSize, bottomEdge - buttonSize, buttonSize, buttonSize);
         rightEdge -= (buttonSize + buttonPadding);
@@ -360,93 +289,50 @@ void EnvelopeComponent::resizeControls(int width, int topPadding) {
 }
 
 void EnvelopeComponent::updateRateFromComboBox() {
-    // Update the current rate enum
-    currentRateEnum = static_cast<Rate>(rateComboBox->getSelectedId() - 1);
+    currentRateEnum = static_cast<Models::LFORate>(rateComboBox->getSelectedId() - 1);
 
-    // Calculate and set the appropriate rate based on selection
     float newRate = 1.0f;
     switch (currentRateEnum) {
-        case Rate::TwoWhole:
+        case Models::LFORate::TwoWhole:
             newRate = 0.125f;
             break;
-        case Rate::Whole:
+        case Models::LFORate::Whole:
             newRate = 0.25f;
             break;
-        case Rate::Half:
+        case Models::LFORate::Half:
             newRate = 0.5f;
             break;
-        case Rate::Quarter:
+        case Models::LFORate::Quarter:
             newRate = 1.0f;
             break;
-        case Rate::Eighth:
+        case Models::LFORate::Eighth:
             newRate = 2.0f;
             break;
-        case Rate::Sixteenth:
+        case Models::LFORate::Sixteenth:
             newRate = 4.0f;
             break;
-        case Rate::ThirtySecond:
+        case Models::LFORate::ThirtySecond:
             newRate = 8.0f;
             break;
     }
 
-    // Set the rate
-    setRate(newRate);
+    currentRate = newRate;
 }
 
 void EnvelopeComponent::setCurrentPresetShape(EnvelopePresetGenerator::PresetShape shape) {
-    currentPresetShape = shape;
-
-    // Update button states - highlight the selected shape
     for (size_t i = 0; i < presetButtons.size(); ++i) {
         auto buttonShape = static_cast<EnvelopePresetGenerator::PresetShape>(i);
         presetButtons[i]->setToggleState(buttonShape == shape, juce::dontSendNotification);
     }
-
     repaint();
-}
-
-float EnvelopeComponent::calculateTimeRangeInSeconds(double bpm) const {
-    const double beatsPerSecond = bpm / 60.0;
-
-    // Calculate time range based on selected rate - this should match exactly one envelope cycle
-    float timeRangeInSeconds = 1.0f;
-
-    switch (currentRateEnum) {
-        case Rate::TwoWhole:
-            timeRangeInSeconds = static_cast<float>(8.0 / beatsPerSecond);
-            break;
-        case Rate::Whole:
-            // One whole note = 4 quarter notes
-            timeRangeInSeconds = static_cast<float>(4.0 / beatsPerSecond);
-            break;
-        case Rate::Half:
-            // One half note = 2 quarter notes
-            timeRangeInSeconds = static_cast<float>(2.0 / beatsPerSecond);
-            break;
-        case Rate::Quarter:
-            // One quarter note
-            timeRangeInSeconds = static_cast<float>(1.0 / beatsPerSecond);
-            break;
-        case Rate::Eighth:
-            // One eighth note = 0.5 quarter notes
-            timeRangeInSeconds = static_cast<float>(0.5 / beatsPerSecond);
-            break;
-        case Rate::Sixteenth:
-            // One sixteenth note = 0.25 quarter notes
-            timeRangeInSeconds = static_cast<float>(0.25 / beatsPerSecond);
-            break;
-        case Rate::ThirtySecond:
-            // One thirty-second note = 0.125 quarter notes
-            timeRangeInSeconds = static_cast<float>(0.125 / beatsPerSecond);
-            break;
-    }
-
-    return timeRangeInSeconds;
 }
 
 void EnvelopeComponent::handlePresetButtonClick(EnvelopePresetGenerator::PresetShape shape) {
-    currentPresetShape = shape;
     auto newPoints = EnvelopePresetGenerator::createShape(shape);
     pointManager.setPoints(std::move(newPoints));
     repaint();
+}
+
+const std::vector<std::unique_ptr<EnvelopePoint>> &EnvelopeComponent::getPoints() {
+    return pointManager.getPoints();
 }

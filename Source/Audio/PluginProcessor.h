@@ -6,6 +6,7 @@
 #include "Midi/ScaleManager.h"
 #include "Midi/NoteGenerator.h"
 #include "Sampler/SampleManager.h"
+#include "../Shared/ModulationMatrix.h"
 
 // Forward declarations
 class PluginEditor;
@@ -14,7 +15,7 @@ class FxEngine;
 
 class EnvelopeComponent;
 
-class EnvelopeSectionComponent;
+class EnvelopeSection;
 
 /**
  * Main processor class for the MIDI generator plugin.
@@ -80,6 +81,8 @@ public:
 
     juce::AudioProcessorValueTreeState &getAPVTS() { return apvts; }
 
+    ModulationMatrix &getModulationMatrix() const { return *modMatrix; }
+
     // Current state values for UI visualization
     float getCurrentRandomizedGate() const { return noteGenerator->getCurrentRandomizedGate(); }
 
@@ -93,6 +96,7 @@ private:
     juce::AudioProcessorValueTreeState apvts;
 
     // Specialized components for handling different aspects of the plugin
+    std::unique_ptr<ModulationMatrix> modMatrix;
     std::unique_ptr<NoteGenerator> noteGenerator;
     std::unique_ptr<SampleManager> sampleManager;
     std::unique_ptr<FxEngine> fxEngine;

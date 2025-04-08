@@ -2,7 +2,8 @@
 
 #include <juce_audio_utils/juce_audio_utils.h>
 #include "../../Shared/Models.h"
-#include "../../Shared/ParameterBinding.h"
+#include "../../Shared/Parameters/Params.h"
+#include "../../Shared/Parameters/StructParameter.h"
 
 class PluginProcessor;
 
@@ -33,7 +34,7 @@ public:
 private:
     PluginProcessor &processor;
 
-    std::unique_ptr<AppState::ParameterBinding<Models::MelodySettings>> paramBinding;
+    std::unique_ptr<StructParameter<Models::MelodySettings>> settingsBinding;
     Models::MelodySettings settings;
 
     // Arpeggiator state

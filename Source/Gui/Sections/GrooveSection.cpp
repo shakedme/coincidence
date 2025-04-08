@@ -124,7 +124,7 @@ void GrooveSectionComponent::setupRhythmModeControls() {
     // Create parameter attachment
 //    comboBoxAttachments.push_back(
 //            std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
-//                    processor.getAPVTS(), AppState::ID_RHYTHM_MODE, *rhythmModeComboBox));
+//                    processor.getAPVTS(), Params::ID_RHYTHM_MODE, *rhythmModeComboBox));
 }
 
 void GrooveSectionComponent::setupDensityControls() {
@@ -139,7 +139,7 @@ void GrooveSectionComponent::setupDensityControls() {
     // Create parameter attachment
     sliderAttachments.push_back(
             std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-                    processor.getAPVTS(), AppState::ID_PROBABILITY, *probabilityKnob));
+                    processor.getAPVTS(), Params::ID_PROBABILITY, *probabilityKnob));
 }
 
 void GrooveSectionComponent::setupGateControls() {
@@ -161,10 +161,10 @@ void GrooveSectionComponent::setupGateControls() {
     // Create parameter attachments
     sliderAttachments.push_back(
             std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-                    processor.getAPVTS(), AppState::ID_GATE, *gateKnob));
+                    processor.getAPVTS(), Params::ID_GATE, *gateKnob));
     sliderAttachments.push_back(
             std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-                    processor.getAPVTS(), AppState::ID_GATE_RANDOMIZE, *gateRandomKnob));
+                    processor.getAPVTS(), Params::ID_GATE_RANDOMIZE, *gateRandomKnob));
 }
 
 void GrooveSectionComponent::setupVelocityControls() {
@@ -187,10 +187,10 @@ void GrooveSectionComponent::setupVelocityControls() {
     // Create parameter attachments
     sliderAttachments.push_back(
             std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-                    processor.getAPVTS(), AppState::ID_VELOCITY, *velocityKnob));
+                    processor.getAPVTS(), Params::ID_VELOCITY, *velocityKnob));
     sliderAttachments.push_back(
             std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-                    processor.getAPVTS(), AppState::ID_VELOCITY_RANDOMIZE, *velocityRandomKnob));
+                    processor.getAPVTS(), Params::ID_VELOCITY_RANDOMIZE, *velocityRandomKnob));
 }
 
 void GrooveSectionComponent::updateRateLabelsForRhythmMode() {
@@ -246,13 +246,13 @@ void GrooveSectionComponent::setupDirectionControls() {
 
     // Set initial value from parameter
     auto *gateDirectionParam = dynamic_cast<juce::AudioParameterChoice *>(
-            processor.getAPVTS().getParameter(AppState::ID_GATE_DIRECTION));
+            processor.getAPVTS().getParameter(Params::ID_GATE_DIRECTION));
 
     if (gateDirectionParam)
         gateDirectionSelector->setDirection(static_cast<Models::DirectionType>(gateDirectionParam->getIndex()));
 
     gateDirectionSelector->onDirectionChanged = [this](Models::DirectionType direction) {
-        auto *param = processor.getAPVTS().getParameter(AppState::ID_GATE_DIRECTION);
+        auto *param = processor.getAPVTS().getParameter(Params::ID_GATE_DIRECTION);
         if (param)
             param->beginChangeGesture();
         param->setValueNotifyingHost(param->convertTo0to1(static_cast<int>(direction)));
@@ -266,13 +266,13 @@ void GrooveSectionComponent::setupDirectionControls() {
             std::make_unique<DirectionSelector>(juce::Colour(0xff52bfd9));
 
     auto *velocityDirectionParam = dynamic_cast<juce::AudioParameterChoice *>(
-            processor.getAPVTS().getParameter(AppState::ID_VELOCITY_DIRECTION));
+            processor.getAPVTS().getParameter(Params::ID_VELOCITY_DIRECTION));
 
     if (velocityDirectionParam)
         velocityDirectionSelector->setDirection(static_cast<Models::DirectionType>(velocityDirectionParam->getIndex()));
 
     velocityDirectionSelector->onDirectionChanged = [this](Models::DirectionType direction) {
-        auto *param = processor.getAPVTS().getParameter(AppState::ID_VELOCITY_DIRECTION);
+        auto *param = processor.getAPVTS().getParameter(Params::ID_VELOCITY_DIRECTION);
         if (param)
             param->beginChangeGesture();
         param->setValueNotifyingHost(param->convertTo0to1(static_cast<int>(direction)));

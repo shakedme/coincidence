@@ -7,7 +7,7 @@ BaseEffect::BaseEffect() {
 }
 
 void BaseEffect::initialize(PluginProcessor &processorToUse) {
-    processorPtr = &processorToUse;
+    processor = &processorToUse;
     timingManagerPtr = &processorToUse.getTimingManager();
 }
 
@@ -36,7 +36,7 @@ bool BaseEffect::shouldApplyEffect(float probability) {
 
 bool BaseEffect::hasMinTimePassed() {
     // Check if minimum time between triggers has passed
-    if (!processorPtr || !timingManagerPtr) return false;
+    if (!processor || !timingManagerPtr) return false;
 
     juce::int64 currentSample = timingManagerPtr->getSamplePosition();
     juce::int64 minSamplesBetweenTriggers = static_cast<juce::int64>(MIN_TIME_BETWEEN_TRIGGERS_SECONDS * sampleRate);

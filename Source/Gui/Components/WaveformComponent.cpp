@@ -2,11 +2,8 @@
 
 WaveformComponent::WaveformComponent() {
     setInterceptsMouseClicks(false, true);
-    // Set up waveform rendering
     setupWaveformRendering();
-
-    // Start the timer for waveform updates - use higher refresh rate for smoother animation
-    startTimerHz(30); // 30 FPS for smoother visualization
+    startTimerHz(30);
 }
 
 WaveformComponent::~WaveformComponent() {
@@ -14,17 +11,13 @@ WaveformComponent::~WaveformComponent() {
 }
 
 void WaveformComponent::paint(juce::Graphics &g) {
-    // Draw background
     g.fillAll(backgroundColour);
-
-    // Draw waveform
     if (waveformCache.isValid()) {
         g.drawImageAt(waveformCache, 0, 0);
     }
 }
 
 void WaveformComponent::resized() {
-    // Update waveform data buffer when component is resized
     if (waveformData.size() != static_cast<size_t>(getWidth()) && getWidth() > 0) {
         waveformData.resize(getWidth(), 0.0f);
         waveformPeaks.resize(getWidth());
@@ -63,8 +56,6 @@ void WaveformComponent::setWaveformAlpha(float alpha) {
 }
 
 void WaveformComponent::pushAudioBuffer(const float *audioData, int numSamples) {
-    // This method is called from the audio thread
-    // Add data to the ring buffer in a lock-free manner
     if (auto localQueue = audioBufferQueueWeak.lock()) {
         localQueue->push(audioData, numSamples);
         waveformNeedsRedraw.store(true);
@@ -72,15 +63,12 @@ void WaveformComponent::pushAudioBuffer(const float *audioData, int numSamples) 
 }
 
 void WaveformComponent::setupWaveformRendering() {
-    // Create the buffer queue
     audioBufferQueue = std::make_shared<AudioBufferQueue>();
     audioBufferQueueWeak = audioBufferQueue;
 
-    // Initialize waveform data buffer based on component width
     waveformData.resize(getWidth() > 0 ? getWidth() : 300, 0.0f);
     waveformPeaks.resize(waveformData.size());
 
-    // Create the initial cache image
     waveformCache = juce::Image(juce::Image::ARGB,
                                 getWidth() > 0 ? getWidth() : 300,
                                 getHeight() > 0 ? getHeight() : 150,

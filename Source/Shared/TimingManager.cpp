@@ -1,6 +1,7 @@
 #include "TimingManager.h"
+#include "Parameters/Params.h"
 
-using namespace AppState;
+using namespace Params;
 using namespace Models;
 
 TimingManager::TimingManager() {

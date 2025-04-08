@@ -189,35 +189,11 @@
   },
   {
     "type": "float",
-    "id": "adsr_attack",
-    "name": "ADSR Attack",
+    "id": "gain",
+    "name": "Gain",
     "min": 0.0,
-    "max": 1.0,
-    "default": 0.0
-  },
-  {
-    "type": "float",
-    "id": "adsr_decay",
-    "name": "ADSR Decay",
-    "min": 0.0,
-    "max": 1.0,
-    "default": 0.0
-  },
-  {
-    "type": "float",
-    "id": "adsr_sustain",
-    "name": "ADSR Sustain",
-    "min": 0.0,
-    "max": 1.0,
-    "default": 1.0
-  },
-  {
-    "type": "float",
-    "id": "adsr_release",
-    "name": "ADSR Release",
-    "min": 0.0,
-    "max": 1.0,
-    "default": 0.0
+    "max": 200.0,
+    "default": 100.0
   },
   {
     "type": "dynamic",

@@ -33,7 +33,7 @@ private:
         ReverbIndex,
         DelayIndex,
         StutterIndex,
-//        GainIndex
+        GainIndex
     };
-    juce::dsp::ProcessorChain<Reverb, Delay, Stutter> fxChain;
+    juce::dsp::ProcessorChain<Reverb, Delay, Stutter, Gain> fxChain;
 };

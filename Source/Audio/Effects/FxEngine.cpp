@@ -6,7 +6,7 @@ FxEngine::FxEngine(PluginProcessor &processorRef)
     fxChain.get<ReverbIndex>().initialize(processorRef);
     fxChain.get<DelayIndex>().initialize(processorRef);
     fxChain.get<StutterIndex>().initialize(processorRef);
-//    fxChain.get<GainIndex>().initialize(processorRef);
+    fxChain.get<GainIndex>().initialize(processorRef);
 }
 
 FxEngine::~FxEngine() {

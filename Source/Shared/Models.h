@@ -2,10 +2,7 @@
 
 #include "juce_audio_utils/juce_audio_utils.h"
 
-// Forward declaration
 class PluginProcessor;
-
-// Forward declaration of EnvelopePoint for use in Models
 class EnvelopePoint;
 
 /**
@@ -13,7 +10,6 @@ class EnvelopePoint;
  */
 namespace Models {
 
-// Rate options
     enum RateOption {
         RATE_1_1 = 0,
         RATE_1_2,
@@ -27,7 +23,16 @@ namespace Models {
     static inline const char *rateBaseNames[Models::NUM_RATE_OPTIONS] = {
             "1/1", "1/2", "1/4", "1/8", "1/16", "1/32"};
 
-// Scale types
+    enum class LFORate {
+        TwoWhole = 0,
+        Whole,
+        Half,
+        Quarter,
+        Eighth,
+        Sixteenth,
+        ThirtySecond
+    };
+
     enum ScaleType {
         SCALE_MAJOR = 0,
         SCALE_MINOR,
@@ -35,15 +40,6 @@ namespace Models {
         NUM_SCALE_TYPES
     };
 
-    // Create ADSR parameters
-    struct ADSRSettings {
-        float attack = 100.0f;   // milliseconds
-        float decay = 200.0f;    // milliseconds
-        float sustain = 0.5f;    // 0.0 to 1.0
-        float release = 200.0f;  // milliseconds
-    };
-
-// Rhythm modes
     enum RhythmMode {
         RHYTHM_NORMAL = 0,
         RHYTHM_DOTTED,

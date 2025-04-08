@@ -1,17 +1,13 @@
 #include "PluginEditor.h"
 
-//==============================================================================
 PluginEditor::PluginEditor(PluginProcessor &p)
         : AudioProcessorEditor(&p), audioProcessor(p) {
-    // Set custom look and feel
     setLookAndFeel(&customLookAndFeel);
 
-    // Create header with tabs
-    header = std::make_unique<HeaderComponent>();
+    header = std::make_unique<HeaderComponent>(audioProcessor);
     header->onTabChanged = [this](HeaderComponent::Tab tab) { switchTab(tab); };
     addAndMakeVisible(header.get());
 
-    // Set up main sections
     grooveSection = std::make_unique<GrooveSectionComponent>(*this, audioProcessor);
     addAndMakeVisible(grooveSection.get());
 
@@ -21,22 +17,18 @@ PluginEditor::PluginEditor(PluginProcessor &p)
     sampleSection = std::make_unique<SampleSectionComponent>(*this, audioProcessor);
     addAndMakeVisible(sampleSection.get());
 
-    envelopeSection = std::make_unique<EnvelopeSectionComponent>(*this, audioProcessor);
+    envelopeSection = std::make_unique<EnvelopeSection>(*this, audioProcessor);
     addAndMakeVisible(envelopeSection.get());
 
-    // second tab
     fxSection = std::make_unique<EffectsSection>(*this, audioProcessor);
     addChildComponent(fxSection.get());
 
     tooltipWindow = std::make_unique<juce::TooltipWindow>(this, 0);
 
-    // Set up keyboard
     setupKeyboard();
 
-    // Set editor size
     setSize(800, 800);
 
-    // Start the timer for UI updates
     startTimerHz(30);
 }
 
@@ -51,14 +43,11 @@ void PluginEditor::paint(juce::Graphics &g) {
 }
 
 void PluginEditor::resized() {
-    // Set the header at the top
     const int headerHeight = 40;
     header->setBounds(0, 0, getWidth(), headerHeight);
 
-    // Calculate main area for sections
     auto area = getLocalBounds().withTrimmedTop(headerHeight);
 
-    // Position the keyboard at the bottom
     const int keyboardWidth = area.getWidth() - 20;
     const int keyboardHeight = 40;
     const int keyboardX = (getWidth() - keyboardWidth) / 2;
@@ -68,31 +57,28 @@ void PluginEditor::resized() {
 
     auto contentArea = area.withTrimmedBottom(keyboardHeight + 15);
 
-    // Set bounds for both Main and Env sections
-    if (fxSection->isVisible()) {
-        // Position envelope section in the content area
-        fxSection->setBounds(contentArea);
-    } else {
-        // Calculate dimensions for the main sections with better proportions
-        int topSectionY = contentArea.getY();
-        int sectionPadding = 5;
-        int xPadding = 10;
-        int topSectionHeight = static_cast<int>(contentArea.getHeight() * 0.38);
-        int envelopesHeight = static_cast<int>(contentArea.getHeight() * 0.37);
-        int sampleHeight = static_cast<int>(contentArea.getHeight() * 0.25);
-        int grooveWidth = static_cast<int>(getWidth() * 0.7f) - 15;
-        int pitchWidth = getWidth() - grooveWidth - 25;
-        int pitchX = xPadding + grooveWidth + sectionPadding;
+    int topSectionY = contentArea.getY();
+    int sectionPadding = 5;
+    int xPadding = 10;
+    int envelopesHeight = static_cast<int>(contentArea.getHeight() * 0.37);
+    int sampleHeight = static_cast<int>(contentArea.getHeight() * 0.25);
+    int grooveWidth = static_cast<int>(getWidth() * 0.7f) - 15;
+    int pitchWidth = getWidth() - grooveWidth - 25;
+    int pitchX = xPadding + grooveWidth + sectionPadding;
+    int topSectionHeight = static_cast<int>(contentArea.getHeight() * 0.38);
+    int sampleY = topSectionY + topSectionHeight + sectionPadding;
 
+    if (fxSection->isVisible()) {
+        fxSection->setBounds(xPadding, topSectionY,
+                             getWidth() - xPadding * 2, topSectionHeight);
+    } else {
         grooveSection->setBounds(xPadding, topSectionY, grooveWidth, topSectionHeight);
         pitchSection->setBounds(pitchX, topSectionY, pitchWidth, topSectionHeight);
-
-        int sampleY = topSectionY + topSectionHeight + sectionPadding;
         sampleSection->setBounds(xPadding, sampleY, getWidth() - xPadding * 2, sampleHeight);
-
-        int fxY = sampleY + sampleHeight + sectionPadding;
-        envelopeSection->setBounds(xPadding, fxY, getWidth() - xPadding * 2, envelopesHeight);
     }
+
+    int fxY = sampleY + sampleHeight + sectionPadding;
+    envelopeSection->setBounds(10, fxY, getWidth() - 20, envelopesHeight);
 }
 
 //==============================================================================
@@ -126,18 +112,20 @@ void PluginEditor::updateKeyboardState(bool isNoteOn, int noteNumber, int veloci
     }
 }
 
+void PluginEditor::setWaveformAudioBuffer(const float *audioData, int numSamples) {
+    if (envelopeSection != nullptr)
+        envelopeSection->pushAudioBuffer(audioData, numSamples);
+}
+
 void PluginEditor::switchTab(HeaderComponent::Tab tab) {
-    // Show/hide sections based on selected tab
     bool isMainTab = (tab == HeaderComponent::Tab::Main);
 
     grooveSection->setVisible(isMainTab);
     pitchSection->setVisible(isMainTab);
     sampleSection->setVisible(isMainTab);
-    envelopeSection->setVisible(isMainTab);
 
     fxSection->setVisible(!isMainTab);
 
-    // Update layout
     resized();
 }
 
@@ -152,7 +140,6 @@ void PluginEditor::timerCallback() {
         keyboardNeedsUpdate = false;
     }
 
-    // Handle any stray notes by making sure keyboard state is correct
     if (isShowing() && keyboardComponent != nullptr && !audioProcessor.isNoteActive()
         && keyboardState != nullptr) {
         keyboardState->allNotesOff(1);

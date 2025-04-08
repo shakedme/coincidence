@@ -15,7 +15,7 @@ juce_add_plugin("${BaseTargetName}"
         COPY_PLUGIN_AFTER_BUILD TRUE
         PLUGIN_MANUFACTURER_CODE Juce
         PLUGIN_CODE COIN
-        FORMATS AU VST3 Standalone
+        FORMATS VST3 Standalone
         PRODUCT_NAME "Coincidence")
 
 # Disable unity builds for the standalone target to prevent header inclusion issues
@@ -44,18 +44,21 @@ target_sources(${BaseTargetName} PRIVATE
         Gui/Components/Envelope/EnvelopeComponent.cpp
         Gui/Components/HeaderComponent.h
         Gui/Components/WaveformComponent.cpp
+        Gui/Components/KnobComponent.cpp
         Gui/Components/Envelope/EnvelopePresetGenerator.cpp
         Gui/Components/Envelope/EnvelopePointManager.cpp
         Gui/Components/Envelope/EnvelopeRenderer.cpp
         Gui/Components/Envelope/EnvelopeShapeButton.h
         Gui/Components/Envelope/EnvelopeParameterMapper.cpp
         Gui/Components/Envelope/EnvelopePoint.h
-        Gui/Components/Envelope/ADSREnvelopeComponent.cpp
 
         Shared/Models.h
-        Shared/ParameterBinding.cpp
-        Shared/ParameterLoader.cpp
+        Shared/Parameters/ParameterLoader.cpp
+        Shared/Parameters/Params.h
+        Shared/Parameters/Parameter.h
+        Shared/Parameters/StructParameter.h
         Shared/TimingManager.cpp
+        Shared/ModulationMatrix.cpp
 
         Audio/PluginProcessor.cpp
         Audio/Sampler/SampleManager.cpp
@@ -73,7 +76,6 @@ target_sources(${BaseTargetName} PRIVATE
         Audio/Effects/Gain.cpp
         Audio/Effects/BaseEffect.cpp
         Audio/Util/AudioBufferQueue.h
-        Audio/Util/AudioOscilloscope.cpp
         )
 
 target_compile_definitions(${BaseTargetName}

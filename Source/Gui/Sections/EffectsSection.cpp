@@ -10,7 +10,7 @@ EffectsSection::EffectsSection(PluginEditor &e, PluginProcessor &p)
     const int compactKnobSize = 36;
 
     // Stutter effect control
-    initKnob(stutterKnob, "Stutter", AppState::ID_STUTTER_PROBABILITY, 0, 100, 0.1, "");
+    initKnob(stutterKnob, "Stutter", Params::ID_STUTTER_PROBABILITY, 0, 100, 0.1, "");
     initLabel(stutterLabel, "STUTTER");
     stutterKnob->setSize(compactKnobSize, compactKnobSize);
 
@@ -24,7 +24,7 @@ EffectsSection::EffectsSection(PluginEditor &e, PluginProcessor &p)
 
     sliderAttachments.push_back(
             std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-                    processor.getAPVTS(), AppState::ID_STUTTER_PROBABILITY, *stutterKnob));
+                    processor.getAPVTS(), Params::ID_STUTTER_PROBABILITY, *stutterKnob));
 
     // Reverb section label
     reverbSectionLabel =
@@ -36,32 +36,32 @@ EffectsSection::EffectsSection(PluginEditor &e, PluginProcessor &p)
 
     // Reverb controls - compact UI without value text
     // Mix knob
-    initKnob(reverbMixKnob, "Reverb Mix", AppState::ID_REVERB_MIX, 0, 100, 0.1, "");
+    initKnob(reverbMixKnob, "Reverb Mix", Params::ID_REVERB_MIX, 0, 100, 0.1, "");
     initLabel(reverbMixLabel, "MIX");
     reverbMixKnob->setSize(compactKnobSize, compactKnobSize);
 
     // Time knob
-    initKnob(reverbTimeKnob, "Reverb Time", AppState::ID_REVERB_TIME, 0, 100, 0.1, "");
+    initKnob(reverbTimeKnob, "Reverb Time", Params::ID_REVERB_TIME, 0, 100, 0.1, "");
     initLabel(reverbTimeLabel, "TIME");
     reverbTimeKnob->setSize(compactKnobSize, compactKnobSize);
 
     // Width knob
-    initKnob(reverbWidthKnob, "Reverb Width", AppState::ID_REVERB_WIDTH, 0, 100, 0.1, "");
+    initKnob(reverbWidthKnob, "Reverb Width", Params::ID_REVERB_WIDTH, 0, 100, 0.1, "");
     initLabel(reverbWidthLabel, "WIDTH");
     reverbWidthKnob->setSize(compactKnobSize, compactKnobSize);
 
     // Parameter attachments for reverb
     sliderAttachments.push_back(
             std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-                    processor.getAPVTS(), AppState::ID_REVERB_MIX, *reverbMixKnob));
+                    processor.getAPVTS(), Params::ID_REVERB_MIX, *reverbMixKnob));
 
     sliderAttachments.push_back(
             std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-                    processor.getAPVTS(), AppState::ID_REVERB_TIME, *reverbTimeKnob));
+                    processor.getAPVTS(), Params::ID_REVERB_TIME, *reverbTimeKnob));
 
     sliderAttachments.push_back(
             std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-                    processor.getAPVTS(), AppState::ID_REVERB_WIDTH, *reverbWidthKnob));
+                    processor.getAPVTS(), Params::ID_REVERB_WIDTH, *reverbWidthKnob));
 
     // Delay section label
     delaySectionLabel =
@@ -73,17 +73,17 @@ EffectsSection::EffectsSection(PluginEditor &e, PluginProcessor &p)
 
     // Delay controls - compact UI without value text
     // Mix knob
-    initKnob(delayMixKnob, "Delay Mix", AppState::ID_DELAY_MIX, 0, 100, 0.1, "");
+    initKnob(delayMixKnob, "Delay Mix", Params::ID_DELAY_MIX, 0, 100, 0.1, "");
     initLabel(delayMixLabel, "MIX");
     delayMixKnob->setSize(compactKnobSize, compactKnobSize);
 
     // Rate knob - set initial tooltip based on BPM sync state
-    initKnob(delayRateKnob, "Delay Rate", AppState::ID_DELAY_RATE, 0, 100, 0.1, "");
+    initKnob(delayRateKnob, "Delay Rate", Params::ID_DELAY_RATE, 0, 100, 0.1, "");
     initLabel(delayRateLabel, "RATE");
     delayRateKnob->setSize(compactKnobSize, compactKnobSize);
 
     // Feedback knob
-    initKnob(delayFeedbackKnob, "Delay Feedback", AppState::ID_DELAY_FEEDBACK, 0, 100, 0.1, "");
+    initKnob(delayFeedbackKnob, "Delay Feedback", Params::ID_DELAY_FEEDBACK, 0, 100, 0.1, "");
     initLabel(delayFeedbackLabel, "FDBK");
     delayFeedbackKnob->setSize(compactKnobSize, compactKnobSize);
 
@@ -100,7 +100,7 @@ EffectsSection::EffectsSection(PluginEditor &e, PluginProcessor &p)
 
     // Get the parameter directly
     auto *pingPongParam = dynamic_cast<juce::AudioParameterBool *>(
-            processor.getAPVTS().getParameter(AppState::ID_DELAY_PING_PONG));
+            processor.getAPVTS().getParameter(Params::ID_DELAY_PING_PONG));
 
     // Set initial value from parameter
     if (pingPongParam)
@@ -108,7 +108,7 @@ EffectsSection::EffectsSection(PluginEditor &e, PluginProcessor &p)
 
     // Direct connection to parameter
     delayPingPongToggle->onValueChanged = [this](bool newValue) {
-        auto *param = processor.getAPVTS().getParameter(AppState::ID_DELAY_PING_PONG);
+        auto *param = processor.getAPVTS().getParameter(Params::ID_DELAY_PING_PONG);
         if (param) {
             param->beginChangeGesture();
             param->setValueNotifyingHost(newValue ? 1.0f : 0.0f);
@@ -126,7 +126,7 @@ EffectsSection::EffectsSection(PluginEditor &e, PluginProcessor &p)
 
     // Get the parameter directly
     auto *bpmSyncParam = dynamic_cast<juce::AudioParameterBool *>(
-            processor.getAPVTS().getParameter(AppState::ID_DELAY_BPM_SYNC));
+            processor.getAPVTS().getParameter(Params::ID_DELAY_BPM_SYNC));
 
     // Set initial value from parameter
     if (bpmSyncParam)
@@ -134,7 +134,7 @@ EffectsSection::EffectsSection(PluginEditor &e, PluginProcessor &p)
 
     // Direct connection to parameter
     delayBpmSyncToggle->onValueChanged = [this](bool newValue) {
-        auto *param = processor.getAPVTS().getParameter(AppState::ID_DELAY_BPM_SYNC);
+        auto *param = processor.getAPVTS().getParameter(Params::ID_DELAY_BPM_SYNC);
         if (param) {
             param->beginChangeGesture();
             param->setValueNotifyingHost(newValue ? 1.0f : 0.0f);
@@ -161,15 +161,15 @@ EffectsSection::EffectsSection(PluginEditor &e, PluginProcessor &p)
     // Parameter attachments for delay
     sliderAttachments.push_back(
             std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-                    processor.getAPVTS(), AppState::ID_DELAY_MIX, *delayMixKnob));
+                    processor.getAPVTS(), Params::ID_DELAY_MIX, *delayMixKnob));
 
     sliderAttachments.push_back(
             std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-                    processor.getAPVTS(), AppState::ID_DELAY_RATE, *delayRateKnob));
+                    processor.getAPVTS(), Params::ID_DELAY_RATE, *delayRateKnob));
 
     sliderAttachments.push_back(
             std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-                    processor.getAPVTS(), AppState::ID_DELAY_FEEDBACK, *delayFeedbackKnob));
+                    processor.getAPVTS(), Params::ID_DELAY_FEEDBACK, *delayFeedbackKnob));
 }
 
 void EffectsSection::updateDelayRateKnobTooltip() {
@@ -179,7 +179,7 @@ void EffectsSection::updateDelayRateKnobTooltip() {
     bool isBpmSync = false;
 
     // First try to get the value from the parameter directly, which is safer during initialization
-    auto *param = processor.getAPVTS().getParameter(AppState::ID_DELAY_BPM_SYNC);
+    auto *param = processor.getAPVTS().getParameter(Params::ID_DELAY_BPM_SYNC);
     if (param)
         isBpmSync = param->getValue() > 0.5f;
     else if (delayBpmSyncToggle) // Fallback to button state if available

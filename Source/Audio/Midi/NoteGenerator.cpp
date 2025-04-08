@@ -4,13 +4,28 @@
 NoteGenerator::NoteGenerator(PluginProcessor &processorRef)
         : processor(processorRef),
           timingManager(processorRef.getTimingManager()) {
-    // Initialize state
     releaseResources();
 
     scaleManager = std::make_unique<ScaleManager>(processor);
 
-    paramBinding = AppState::createParameterBinding<Models::MidiSettings>(settings, processor.getAPVTS());
-    paramBinding->registerParameters(AppState::createMidiParameters());
+    std::vector<StructParameter<Models::MidiSettings>::FieldDescriptor> descriptors = {
+            makeFieldDescriptor(Params::ID_RHYTHM_1_1, &Models::MidiSettings::barProbability),
+            makeFieldDescriptor(Params::ID_RHYTHM_1_2, &Models::MidiSettings::halfBarProbability),
+            makeFieldDescriptor(Params::ID_RHYTHM_1_4, &Models::MidiSettings::quarterBarProbability),
+            makeFieldDescriptor(Params::ID_RHYTHM_1_8, &Models::MidiSettings::eighthBarProbability),
+            makeFieldDescriptor(Params::ID_RHYTHM_1_16, &Models::MidiSettings::sixteenthBarProbability),
+            makeFieldDescriptor(Params::ID_RHYTHM_1_32, &Models::MidiSettings::thirtySecondBarProbability),
+            makeFieldDescriptor(Params::ID_PROBABILITY, &Models::MidiSettings::probability),
+            makeFieldDescriptor(Params::ID_GATE, &Models::MidiSettings::gateValue),
+            makeFieldDescriptor(Params::ID_GATE_RANDOMIZE, &Models::MidiSettings::gateRandomize),
+            makeFieldDescriptor(Params::ID_GATE_DIRECTION, &Models::MidiSettings::gateDirection),
+            makeFieldDescriptor(Params::ID_VELOCITY, &Models::MidiSettings::velocityValue),
+            makeFieldDescriptor(Params::ID_VELOCITY_RANDOMIZE, &Models::MidiSettings::velocityRandomize),
+            makeFieldDescriptor(Params::ID_VELOCITY_DIRECTION, &Models::MidiSettings::velocityDirection)
+    };
+
+    settingsBinding = std::make_unique<StructParameter<Models::MidiSettings>>(
+            processor.getModulationMatrix(), descriptors);
 }
 
 void NoteGenerator::prepareToPlay(double sampleRate, int) {
@@ -33,6 +48,8 @@ void NoteGenerator::processIncomingMidi(const juce::MidiBuffer &midiMessages,
                                         juce::MidiBuffer &processedMidi,
                                         int numSamples
 ) {
+    settings = settingsBinding->getValue();
+
     for (const auto metadata: midiMessages) {
         auto message = metadata.getMessage();
         const int time = metadata.samplePosition;
@@ -45,8 +62,7 @@ void NoteGenerator::processIncomingMidi(const juce::MidiBuffer &midiMessages,
             if (noteIsActive && currentActiveNote >= 0) {
                 stopActiveNote(processedMidi, time);
             }
-        }
-        else if (!message.isNoteOnOrOff()) {
+        } else if (!message.isNoteOnOrOff()) {
             processedMidi.addEvent(message, time);
         }
     }
@@ -321,10 +337,8 @@ int NoteGenerator::calculateNoteLength(Models::RateOption rate) {
 }
 
 int NoteGenerator::calculateVelocity() {
-    // Start with base velocity value (0-127)
     double velocityValue = settings.velocityValue * 127.0;
 
-    // Add randomization if needed
     if (settings.velocityRandomize > 0.0f) {
         velocityValue = applyRandomization(settings.velocityValue,
                                            settings.velocityRandomize,

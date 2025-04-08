@@ -9,15 +9,20 @@ PluginProcessor::PluginProcessor()
         : AudioProcessor(BusesProperties()
                                  .withInput("Input", juce::AudioChannelSet::stereo(), true)
                                  .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
-          apvts(*this, nullptr, "PARAMETERS", AppState::createParameterLayout()) {
+          apvts(*this,
+                nullptr,
+                "PARAMETERS",
+                ParameterLoader::createParameterLayout()) {
 
+    // init order matters! be aware
+    modMatrix = std::make_unique<ModulationMatrix>(*this);
     timingManager = std::make_unique<TimingManager>();
     sampleManager = std::make_unique<::SampleManager>(*this);
     noteGenerator = std::make_unique<NoteGenerator>(*this);
     fxEngine = std::make_unique<FxEngine>(*this);
 
-    auto *fileLogger = new FileLogger();
-    juce::Logger::setCurrentLogger(fileLogger);
+//    auto *fileLogger = new FileLogger();
+//    juce::Logger::setCurrentLogger(fileLogger);
 
     forceParameterUpdates();
 }
@@ -80,14 +85,12 @@ void PluginProcessor::changeProgramName(int index, const juce::String &newName) 
 
 //==============================================================================
 void PluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
-    // Initialize components
     sampleManager->prepareToPlay(sampleRate);
     noteGenerator->prepareToPlay(sampleRate, samplesPerBlock);
     fxEngine->prepareToPlay(sampleRate, samplesPerBlock);
 }
 
 void PluginProcessor::releaseResources() {
-    // Release components
     noteGenerator->releaseResources();
     fxEngine->releaseResources();
 }
@@ -95,29 +98,25 @@ void PluginProcessor::releaseResources() {
 void PluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                                    juce::MidiBuffer &midiMessages) {
 
-    // Clear audio
+    modMatrix->calculateModulationValues();
+
     buffer.clear();
 
-    // Create processed MIDI buffer
     juce::MidiBuffer processedMidi;
 
     timingManager->updateTimingInfo(getPlayHead());
 
-    // Process incoming MIDI messages
     noteGenerator->processIncomingMidi(
             midiMessages, processedMidi, buffer.getNumSamples());
 
-    // If samples are loaded, uses generated midi to trigger samples
     if (sampleManager->isSampleLoaded()) {
         sampleManager->processAudio(buffer, processedMidi);
         fxEngine->processAudio(buffer, processedMidi);
-
-//        // After processing is done, send the processed audio data to envelope components for visualization
-//        if (buffer.getNumChannels() > 0 && buffer.getNumSamples() > 0) {
-//            envelopeManager->pushAudioBuffer(buffer.getReadPointer(0), buffer.getNumSamples());
-//        }
+        if (buffer.getNumChannels() > 0 && buffer.getNumSamples() > 0) {
+            auto *editor = dynamic_cast<PluginEditor *>(getActiveEditor());
+            editor->setWaveformAudioBuffer(buffer.getReadPointer(0), buffer.getNumSamples());
+        }
     } else {
-        // Pass on generated midi to the next plugin in the signal chain
         midiMessages.swapWith(processedMidi);
     }
 
@@ -135,7 +134,6 @@ juce::AudioProcessorEditor *PluginProcessor::createEditor() {
 
 //==============================================================================
 void PluginProcessor::getStateInformation(juce::MemoryBlock &destData) {
-    // Create a fresh XmlElement for our state (not using parameters.copyState() directly)
     auto mainXml = std::make_unique<juce::XmlElement>("COINCIDENCE_STATE");
 
     // Add parameter state as a child
@@ -396,7 +394,6 @@ void PluginProcessor::setStateInformation(const void *data, int sizeInBytes) {
         }
     }
 
-    // Force an update of all parameters
     forceParameterUpdates();
 }
 
@@ -407,8 +404,8 @@ juce::AudioProcessor *JUCE_CALLTYPE createPluginFilter() {
 Models::DirectionType PluginProcessor::getSampleDirectionType() const {
     auto *param = apvts.getParameter("sample_direction");
     if (param) {
-        auto index = static_cast<juce::AudioParameterChoice *>(param)->getIndex();
+        auto index = dynamic_cast<juce::AudioParameterChoice *>(param)->getIndex();
         return static_cast<Models::DirectionType>(index);
     }
-    return Models::RIGHT; // Default to random
+    return Models::RIGHT;
 }

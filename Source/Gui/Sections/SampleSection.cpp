@@ -148,7 +148,7 @@ void SampleSectionComponent::initComponents(PluginProcessor &processorRef) {
 
     // Set initial value from parameter
     auto *sampleDirectionParam = dynamic_cast<juce::AudioParameterChoice *>(
-            processorRef.getAPVTS().getParameter(AppState::ID_SAMPLE_DIRECTION));
+            processorRef.getAPVTS().getParameter(Params::ID_SAMPLE_DIRECTION));
 
     if (sampleDirectionParam)
         sampleDirectionSelector->setDirection(
@@ -156,7 +156,7 @@ void SampleSectionComponent::initComponents(PluginProcessor &processorRef) {
 
     sampleDirectionSelector->onDirectionChanged =
             [&processorRef](Models::DirectionType direction) {
-                auto *param = processorRef.getAPVTS().getParameter(AppState::ID_SAMPLE_DIRECTION);
+                auto *param = processorRef.getAPVTS().getParameter(Params::ID_SAMPLE_DIRECTION);
                 if (param) {
                     param->beginChangeGesture();
                     param->setValueNotifyingHost(param->convertTo0to1(static_cast<int>(direction)));
@@ -169,13 +169,13 @@ void SampleSectionComponent::initComponents(PluginProcessor &processorRef) {
     pitchFollowToggle->setTooltip("Enable pitch following for sample playback");
 
     auto *pitchFollowParam = dynamic_cast<juce::AudioParameterBool *>(
-            processorRef.getAPVTS().getParameter(AppState::ID_SAMPLE_PITCH_FOLLOW));
+            processorRef.getAPVTS().getParameter(Params::ID_SAMPLE_PITCH_FOLLOW));
 
     if (pitchFollowParam)
         pitchFollowToggle->setValue(pitchFollowParam->get());
 
     pitchFollowToggle->onValueChanged = [&processorRef](bool followPitch) {
-        auto *param = processorRef.getAPVTS().getParameter(AppState::ID_SAMPLE_PITCH_FOLLOW);
+        auto *param = processorRef.getAPVTS().getParameter(Params::ID_SAMPLE_PITCH_FOLLOW);
         if (param) {
             param->beginChangeGesture();
             param->setValueNotifyingHost(param->convertTo0to1(followPitch));

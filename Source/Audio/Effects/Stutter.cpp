@@ -16,9 +16,8 @@ Stutter::Stutter()
 
 void Stutter::initialize(PluginProcessor &p) {
     BaseEffect::initialize(p);
-
-    paramBinding = AppState::createParameterBinding<Models::StutterSettings>(settings, p.getAPVTS());
-    paramBinding->registerParameters(AppState::createStutterParameters());
+    stutterProbability = std::make_unique<Parameter<float>>(
+            Params::ID_STUTTER_PROBABILITY, processor->getModulationMatrix());
 }
 
 void Stutter::prepare(const juce::dsp::ProcessSpec &spec) {
@@ -206,7 +205,7 @@ void Stutter::startStutterAtPositionBlock(juce::dsp::AudioBlock<float> &outBlock
 }
 
 bool Stutter::shouldStutter() {
-    return BaseEffect::shouldApplyEffect(settings.stutterProbability);
+    return BaseEffect::shouldApplyEffect(stutterProbability->getValue());
 }
 
 void Stutter::updateStutterPosition(int numSamples) {

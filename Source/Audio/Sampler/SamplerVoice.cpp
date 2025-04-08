@@ -17,7 +17,6 @@ void SamplerVoice::reset() {
     pitchRatio = 1.0;
     lgain = 0.0f;
     rgain = 0.0f;
-    adsr.reset();
 }
 
 bool SamplerVoice::canPlaySound(juce::SynthesiserSound *sound) {
@@ -72,15 +71,8 @@ void SamplerVoice::renderNextBlock(juce::AudioBuffer<float> &outputBuffer,
         sourceSamplePosition += pitchRatio;
     }
 
-    adsr.applyEnvelopeToBuffer(tempBuffer, 0, numSamples);
-
     for (int channel = 0; channel < outputBuffer.getNumChannels(); ++channel) {
         outputBuffer.addFrom(channel, startSample, tempBuffer, channel, 0, numSamples);
-    }
-
-    if (!adsr.isActive()) {
-        clearCurrentNote();
-        playing = false;
     }
 }
 
@@ -113,20 +105,13 @@ void SamplerVoice::startNote(int midiNoteNumber,
         lgain = velocity;
         rgain = velocity;
         playing = true;
-
-        updateADSRParameters(voiceState.getADSRParameters());
-        adsr.noteOn();
     }
 }
 
 void SamplerVoice::stopNote(float /*velocity*/, bool allowTailOff) {
-    if (allowTailOff) {
-        adsr.noteOff();
-    } else {
-        clearCurrentNote();
-        playing = false;
-        reset();
-    }
+    clearCurrentNote();
+    playing = false;
+    reset();
 }
 
 void SamplerVoice::pitchWheelMoved(int newPitchWheelValue) {}

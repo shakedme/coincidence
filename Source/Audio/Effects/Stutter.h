@@ -10,7 +10,8 @@
 #include "../../Shared/TimingManager.h"
 #include "../Sampler/SampleManager.h"
 #include "BaseEffect.h"
-#include "../../Shared/ParameterBinding.h"
+#include "../../Shared/Parameters/Params.h"
+#include "../../Shared/Parameters/StructParameter.h"
 
 
 class Stutter : public BaseEffect {
@@ -28,9 +29,9 @@ public:
     void reset() override;
 
     void setMidiMessages(const juce::MidiBuffer &messages) { midiMessages = messages; }
+
 private:
-    Models::StutterSettings settings;
-    std::unique_ptr<AppState::ParameterBinding<Models::StutterSettings>> paramBinding;
+    std::unique_ptr<Parameter<float>> stutterProbability;
 
     juce::MidiBuffer midiMessages;
 
@@ -57,8 +58,11 @@ private:
 
     // Block-based processing methods (more efficient)
     void addToHistoryFromBlock(const juce::dsp::AudioBlock<const float> &block);
+
     void processActiveStutterBlock(juce::dsp::AudioBlock<float> &outBlock, int numSamples, int numChannels);
-    void startStutterAtPositionBlock(juce::dsp::AudioBlock<float> &outBlock, juce::int64 samplePosition, int numSamples, int numChannels);
+
+    void startStutterAtPositionBlock(juce::dsp::AudioBlock<float> &outBlock, juce::int64 samplePosition, int numSamples,
+                                     int numChannels);
 
     // Buffer-based methods (legacy)
     void copyStutterDataToBuffer(juce::AudioBuffer<float> &tempBuffer,

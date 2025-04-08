@@ -22,7 +22,7 @@ public:
     virtual void reset() override;
 
 protected:
-    PluginProcessor *processorPtr = nullptr;
+    PluginProcessor *processor = nullptr;
     TimingManager *timingManagerPtr = nullptr;
 
     // Common utility methods

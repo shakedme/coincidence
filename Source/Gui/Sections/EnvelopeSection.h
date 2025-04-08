@@ -1,10 +1,10 @@
 #pragma once
 
 #include "../Components/Envelope/EnvelopeTabs.h"
-#include "../Components/Envelope/ADSREnvelopeComponent.h"
 #include "BaseSection.h"
 #include <map>
-#include "../Components/Envelope/EnvelopeParameterTypes.h"
+#include "../Components/WaveformComponent.h"
+#include "../../Shared/Models.h"
 
 // Forward declarations
 class PluginEditor;
@@ -13,26 +13,41 @@ class PluginProcessor;
 
 class EnvelopeComponent;
 
-class EnvelopeSectionComponent : public BaseSectionComponent {
+class EnvelopeSection : public BaseSectionComponent {
 public:
-    EnvelopeSectionComponent(PluginEditor &editor, PluginProcessor &processor);
+    EnvelopeSection(PluginEditor &editor, PluginProcessor &processor);
 
-    ~EnvelopeSectionComponent() override = default;
+    ~EnvelopeSection() override = default;
 
     void paint(juce::Graphics &g) override;
 
     void resized() override;
 
-    void createEnvelopeComponents();
+    void setSampleRate(float newSampleRate);
+
+    void setTimeRange(float seconds);
+
+    void pushAudioBuffer(const float *audioData, int numSamples);
+
+    std::shared_ptr<EnvelopeComponent> getLFOComponent(int index) {
+        return lfoComponents[index];
+    }
 
 private:
-    // ADSR component for amplitude envelope
-    std::unique_ptr<ADSREnvelopeComponent> adsrComponent;
-    
-    // Tabbed interface for LFO envelopes
+    juce::TextButton addLFOButton;
     std::unique_ptr<EnvelopeTabs> lfoTabs;
-    std::unordered_map<int, std::unique_ptr<EnvelopeComponent>> lfoComponents;
-    
-    // Creates the LFO envelope components
+    WaveformComponent waveformComponent;
+    std::unordered_map<int, std::shared_ptr<EnvelopeComponent>> lfoComponents;
+
     void createLFOComponents();
+
+    void addLFOComponent(int index);
+
+    void onAddLFOClicked();
+
+    [[nodiscard]] float calculateTimeRangeInSeconds(Models::LFORate newRate) const;
+
+    void updateTimeRangeFromRate(Models::LFORate newRate);
+
+
 }; 

@@ -52,8 +52,6 @@ protected:
     createLabel(const juce::String &text,
                 juce::Justification justification = juce::Justification::centred);
 
-    juce::Slider *createRotarySlider(const juce::String &tooltip);
-
     void drawMetallicPanel(juce::Graphics &g);
 
     void clearAttachments();

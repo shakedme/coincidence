@@ -26,21 +26,10 @@ public:
 
     void setPitchFollowEnabled(bool enabled) { pitchFollowEnabled = enabled; }
 
-    void setADSRParameters(float attackMs, float decayMs, float sustain, float releaseMs);
-
-    [[nodiscard]] const juce::ADSR::Parameters &getADSRParameters() const { return adsrParams; }
-
 private:
     int currentSampleIndex;
     std::map<int, SamplerSound *> indexToSoundMap;
     bool pitchFollowEnabled;
-
-    juce::ADSR::Parameters adsrParams{
-            0.1f,   // attack (seconds)
-            0.1f,   // decay (seconds)
-            1.0f,   // sustain level (0-1)
-            0.1f    // release (seconds)
-    };
 };
 
 

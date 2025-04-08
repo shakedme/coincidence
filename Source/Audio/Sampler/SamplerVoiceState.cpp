@@ -22,11 +22,3 @@ void SamplerVoiceState::registerSoundWithIndex(SamplerSound *sound, int index) {
         indexToSoundMap[index] = sound;
     }
 }
-
-void SamplerVoiceState::setADSRParameters(float attackMs, float decayMs, float sustain, float releaseMs) {
-    // Convert from milliseconds to seconds for JUCE ADSR
-    adsrParams.attack = attackMs / 1000.0f;  // milliseconds to seconds
-    adsrParams.decay = decayMs / 1000.0f;    // milliseconds to seconds
-    adsrParams.sustain = sustain;            // already correct (0-1)
-    adsrParams.release = releaseMs / 1000.0f; // milliseconds to seconds
-}

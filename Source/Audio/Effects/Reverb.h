@@ -7,19 +7,17 @@
 #include "../Sampler/SampleManager.h"
 #include "BaseEffect.h"
 #include <vector>
-#include "../../Shared/ParameterBinding.h"
-#include "../../Gui/Components/Envelope/EnvelopeParameterMapper.h"
+#include "../../Shared/Parameters/Params.h"
+#include "../../Shared/Parameters/StructParameter.h"
 
 class PluginProcessor;
 
 class Reverb : public BaseEffect {
 public:
-    // Default constructor for ProcessorChain
     Reverb();
 
     ~Reverb() override = default;
 
-    // Initialize after default construction
     void initialize(PluginProcessor &p);
 
     // Override ProcessorBase methods
@@ -29,15 +27,8 @@ public:
 
     void reset() override;
 
-    // ValueTree::Listener
-//    void valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property) override;
-
 private:
-    Models::ReverbSettings settings;
-    std::unique_ptr<AppState::ParameterBinding<Models::ReverbSettings>> audioParamBinding;
-
-    float envelopeValue = 1.0f;
-    std::unique_ptr<AppState::SingleParameterBinding<float>> envelopeBinding;
+    std::unique_ptr<StructParameter<Models::ReverbSettings>> settings;
 
     juce::dsp::Reverb reverbProcessor;
     juce::AudioBuffer<float> wetBuffer;

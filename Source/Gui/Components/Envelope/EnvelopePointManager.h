@@ -61,7 +61,6 @@ public:
     distanceToCurve(const juce::Point<float> &point, const juce::Point<float> &start, const juce::Point<float> &end,
                     float curvature) const;
 
-    // Access points
     [[nodiscard]] const std::vector<std::unique_ptr<EnvelopePoint>> &getPoints() const;
 
     void setPoints(std::vector<std::unique_ptr<EnvelopePoint>> newPoints);

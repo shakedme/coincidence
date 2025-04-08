@@ -83,45 +83,34 @@ void PitchSectionComponent::setupScaleTypeControls() {
     // Create parameter attachment
     comboBoxAttachments.push_back(
             std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
-                    processor.getAPVTS(), AppState::ID_SCALE_TYPE, *scaleTypeComboBox));
+                    processor.getAPVTS(), Params::ID_SCALE_TYPE, *scaleTypeComboBox));
 }
 
 void PitchSectionComponent::setupSemitoneControls() {
-    // Create semitones knob
-    semitonesKnob = std::unique_ptr<juce::Slider>(createRotarySlider("Semitone range"));
-    semitonesKnob->setName("semitones");
-    semitonesKnob->setRange(0, 12, 1);
+    initKnob(semitonesKnob, "Semitone range", "semitones", 0, 12, 1);
     addAndMakeVisible(semitonesKnob.get());
 
-    // Create semitones label
-    semitonesLabel = std::unique_ptr<juce::Label>(createLabel("STEPS", juce::Justification::centred));
-    semitonesLabel->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
+    initLabel(semitonesLabel, "STEPS", juce::Justification::centred);
     addAndMakeVisible(semitonesLabel.get());
 
-    // Create semitones probability knob
-    semitonesProbabilityKnob = std::unique_ptr<juce::Slider>(createRotarySlider("Semitone variation probability"));
-    semitonesProbabilityKnob->setName("semitones_prob");
-    semitonesProbabilityKnob->setRange(0.0, 100.0, 0.1);
-    semitonesProbabilityKnob->setTextValueSuffix("%");
+    initKnob(semitonesProbabilityKnob, "Semitone variation probability", "semitones_prob", 0, 100, 0.1, "%");
     addAndMakeVisible(semitonesProbabilityKnob.get());
 
-    // Create semitones probability label
-    semitonesProbabilityLabel = std::unique_ptr<juce::Label>(createLabel("CHANCE", juce::Justification::centred));
-    semitonesProbabilityLabel->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
+    initLabel(semitonesProbabilityLabel, "CHANCE", juce::Justification::centred);
     addAndMakeVisible(semitonesProbabilityLabel.get());
 
     semitonesDirectionSelector = std::make_unique<DirectionSelector>(juce::Colour(0xff52d97d));
 
     // Set initial value from parameter
     auto *semitonesDirectionParam = dynamic_cast<juce::AudioParameterChoice *>(
-            processor.getAPVTS().getParameter(AppState::ID_SEMITONES_DIRECTION));
+            processor.getAPVTS().getParameter(Params::ID_SEMITONES_DIRECTION));
 
     if (semitonesDirectionParam)
         semitonesDirectionSelector->setDirection(
                 static_cast<Models::DirectionType>(semitonesDirectionParam->getIndex()));
 
     semitonesDirectionSelector->onDirectionChanged = [this](Models::DirectionType direction) {
-        auto *param = processor.getAPVTS().getParameter(AppState::ID_SEMITONES_DIRECTION);
+        auto *param = processor.getAPVTS().getParameter(Params::ID_SEMITONES_DIRECTION);
         if (param) {
             param->beginChangeGesture();
             param->setValueNotifyingHost(param->convertTo0to1(static_cast<int>(direction)));
@@ -132,41 +121,30 @@ void PitchSectionComponent::setupSemitoneControls() {
 
     sliderAttachments.push_back(
             std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-                    processor.getAPVTS(), AppState::ID_SEMITONES, *semitonesKnob));
+                    processor.getAPVTS(), Params::ID_SEMITONES, *semitonesKnob));
     sliderAttachments.push_back(
             std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-                    processor.getAPVTS(), AppState::ID_SEMITONES_PROB, *semitonesProbabilityKnob));
+                    processor.getAPVTS(), Params::ID_SEMITONES_PROB, *semitonesProbabilityKnob));
 }
 
 void PitchSectionComponent::setupOctaveControls() {
-    // Create octaves knob
-    octavesKnob = std::unique_ptr<juce::Slider>(createRotarySlider("Octave range"));
-    octavesKnob->setName("octaves");
-    octavesKnob->setRange(0, 3, 1);
+    initKnob(octavesKnob, "Octave range", "octaves", 0, 3, 1);
     addAndMakeVisible(octavesKnob.get());
 
-    // Create octaves label
-    octavesLabel = std::unique_ptr<juce::Label>(createLabel("OCTAVE", juce::Justification::centred));
-    octavesLabel->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
+    initLabel(octavesLabel, "OCTAVE", juce::Justification::centred);
     addAndMakeVisible(octavesLabel.get());
 
-    // Create octaves probability knob
-    octavesProbabilityKnob = std::unique_ptr<juce::Slider>(createRotarySlider("Octave variation probability"));
-    octavesProbabilityKnob->setName("octaves_prob");
-    octavesProbabilityKnob->setRange(0.0, 100.0, 0.1);
-    octavesProbabilityKnob->setTextValueSuffix("%");
+    initKnob(octavesProbabilityKnob, "Octave variation probability", "octaves_prob", 0, 100, 0.1, "%");
     addAndMakeVisible(octavesProbabilityKnob.get());
 
-    // Create octaves probability label
-    octavesProbabilityLabel = std::unique_ptr<juce::Label>(createLabel("CHANCE", juce::Justification::centred));
-    octavesProbabilityLabel->setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
+    initLabel(octavesProbabilityLabel, "CHANCE", juce::Justification::centred);
     addAndMakeVisible(octavesProbabilityLabel.get());
 
     // Create parameter attachments
     sliderAttachments.push_back(
             std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-                    processor.getAPVTS(), AppState::ID_OCTAVES, *octavesKnob));
+                    processor.getAPVTS(), Params::ID_OCTAVES, *octavesKnob));
     sliderAttachments.push_back(
             std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-                    processor.getAPVTS(), AppState::ID_OCTAVES_PROB, *octavesProbabilityKnob));
+                    processor.getAPVTS(), Params::ID_OCTAVES_PROB, *octavesProbabilityKnob));
 }

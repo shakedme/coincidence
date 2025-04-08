@@ -6,10 +6,14 @@ Reverb::Reverb()
 
 void Reverb::initialize(PluginProcessor &p) {
     BaseEffect::initialize(p);
-    audioParamBinding = AppState::createParameterBinding<Models::ReverbSettings>(settings, p.getAPVTS());
-    audioParamBinding->registerParameters(AppState::createReverbParameters());
-    envelopeBinding = std::make_unique<AppState::SingleParameterBinding<float>>(envelopeValue, p.getAPVTS().state,
-                                                                                AppState::ID_REVERB_ENV);
+    std::vector<StructParameter<Models::ReverbSettings>::FieldDescriptor> descriptors = {
+            makeFieldDescriptor(Params::ID_REVERB_MIX, &Models::ReverbSettings::reverbMix),
+            makeFieldDescriptor(Params::ID_REVERB_TIME, &Models::ReverbSettings::reverbTime),
+            makeFieldDescriptor(Params::ID_REVERB_WIDTH, &Models::ReverbSettings::reverbWidth)
+    };
+
+    settings = std::make_unique<StructParameter<Models::ReverbSettings>>(
+            processor->getModulationMatrix(), descriptors);
 }
 
 void Reverb::prepare(const juce::dsp::ProcessSpec &spec) {
@@ -34,29 +38,22 @@ void Reverb::process(const juce::dsp::ProcessContextReplacing<float> &context) {
         wetBuffer.copyFrom(channel, 0, inputData, numSamples);
     }
 
-    // Configure reverb parameters (100% wet for the reverb processor)
+    auto settings = this->settings->getValue();
     juce::Reverb::Parameters params;
     params.roomSize = settings.reverbTime;
     params.width = settings.reverbWidth;
-    params.wetLevel = 1.0f;  // Always 100% wet for the reverb signal
-    params.dryLevel = 0.0f;  // No dry in the wet buffer
+    params.wetLevel = 1.0f;
+    params.dryLevel = 0.0f;
     reverbProcessor.setParameters(params);
 
-    // Process the wet buffer through reverb
     juce::dsp::AudioBlock<float> wetBlock(wetBuffer);
     juce::dsp::ProcessContextReplacing<float> wetContext(wetBlock);
     reverbProcessor.process(wetContext);
 
-    // Calculate the mix value with envelope modulation
-    float mixValue = settings.reverbMix * envelopeValue;
-
-    // Mix wet and dry signals using the BaseEffect helper method
     for (int channel = 0; channel < numChannels; ++channel) {
         float *dryData = outputBlock.getChannelPointer(channel);
         const float *wetData = wetBuffer.getReadPointer(channel);
-
-        // Use the mix helper with fadeOut = 1.0f (no fade out)
-        mixWetDrySignals(dryData, wetData, mixValue, numSamples, 1.0f);
+        mixWetDrySignals(dryData, wetData, settings.reverbMix, numSamples, 1.0f);
     }
 }
 

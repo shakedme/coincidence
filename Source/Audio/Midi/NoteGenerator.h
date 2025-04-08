@@ -3,6 +3,8 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 #include "../../Shared/Models.h"
 #include "../../Shared/TimingManager.h"
+#include "../../Shared/Parameters/StructParameter.h"
+#include "../../Shared/Parameters/Params.h"
 #include "ScaleManager.h"
 
 class PluginProcessor;
@@ -57,11 +59,12 @@ public:
     const std::vector<PendingNote> &getPendingNotes() const { return pendingNotes; }
 
 private:
+    std::unique_ptr<StructParameter<Models::MidiSettings>> settingsBinding;
+    Models::MidiSettings settings;
+
     // Reference to the main processor
     PluginProcessor &processor;
 
-    std::unique_ptr<AppState::ParameterBinding<Models::MidiSettings>> paramBinding;
-    Models::MidiSettings settings;
 
     // Managers for specific functionality
     std::unique_ptr<ScaleManager> scaleManager;

@@ -33,10 +33,6 @@ public:
 
     [[nodiscard]] bool isVoiceActive() const override;
 
-    void updateADSRParameters(const juce::ADSR::Parameters &newParams) {
-        adsr.setParameters(newParams);
-    }
-
 private:
     double pitchRatio = 1.0;
     double sourceSamplePosition = 0.0;
@@ -44,8 +40,6 @@ private:
     float lgain = 0.0f, rgain = 0.0f;
     bool playing = false;
     int currentSampleIndex = -1;
-
-    juce::ADSR adsr;
 
     SamplerVoiceState &voiceState;
 

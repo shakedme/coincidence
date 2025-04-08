@@ -5,10 +5,8 @@
 #include <atomic>
 #include <mutex>
 #include "EnvelopeParameterMapper.h"
-#include "EnvelopeParameterTypes.h"
 #include "EnvelopePoint.h"
 #include "../../../Shared/TimingManager.h"
-#include "../WaveformComponent.h"
 #include "EnvelopePresetGenerator.h"
 #include "EnvelopePointManager.h"
 #include "EnvelopeRenderer.h"
@@ -25,7 +23,6 @@ public:
 
     void resized() override;
 
-    // Mouse interaction
     void mouseDown(const juce::MouseEvent &e) override;
 
     void mouseDrag(const juce::MouseEvent &e) override;
@@ -36,44 +33,18 @@ public:
 
     bool keyPressed(const juce::KeyPress &key) override;
 
-    // Set the sample rate for audio visualization
-    void setSampleRate(float newSampleRate);
+    float getRate() { return currentRate; }
 
-    // Set time range in seconds (for scaling the waveform)
-    void setTimeRange(float seconds);
+    Models::LFORate getRateEnum() { return currentRateEnum; }
 
-    // Add audio samples for visualization
-    void pushAudioBuffer(const float *audioData, int numSamples);
+    [[nodiscard]] const std::vector<std::unique_ptr<EnvelopePoint>> &getPoints();
 
-    // Parameter mapping
-    void setParameterRange(float min, float max, bool exponential = false);
-
-    void setParameterId(juce::Identifier paramId);
-
-    // Set envelope rate
-    void setRate(float newRate);
-
-    void setSettings(EnvelopeParams::ParameterSettings settings) {
-        parameterMapper.setSettings(settings);
-    }
-
-    enum class Rate {
-        TwoWhole = 0,
-        Whole,
-        Half,
-        Quarter,
-        Eighth,
-        Sixteenth,
-        ThirtySecond
-    };
+    std::function<void(Models::LFORate rate)> onRateChanged;
 
 private:
-    // Handler methods for utility class callbacks
     void handlePointsChanged();
 
     void timerCallback() override;
-
-    void updateTimeRangeFromRate();
 
     void resizeControls(int width, int topPadding = 5);
 
@@ -87,42 +58,27 @@ private:
 
     void handlePresetButtonClick(EnvelopePresetGenerator::PresetShape shape);
 
-    [[nodiscard]] float calculateTimeRangeInSeconds(double bpm) const;
-
     int removeFromTop = 65;
 
     std::unique_ptr<juce::ComboBox> rateComboBox;
-    Rate currentRateEnum = Rate::Quarter;
+    Models::LFORate currentRateEnum = Models::LFORate::Quarter;
     float currentRate = 1.0f;
 
-    // Selection area
     bool isCreatingSelectionArea = false;
     juce::Point<float> selectionStart;
     juce::Rectangle<float> selectionArea;
 
-    // Point dragging tracking
     int draggedPointIndex = -1;
-
-    // Curve editing
     int curveEditingSegment = -1;
     float initialCurvature = 0.0f;
     juce::Point<float> curveEditStartPos;
 
-    // Waveform component for visualization
-    WaveformComponent waveformComponent;
-
-    // Parameter mapper
-    EnvelopeParameterMapper parameterMapper;
-
     PluginProcessor &processor;
 
-    // Utility classes
     EnvelopePointManager pointManager;
     EnvelopeRenderer renderer;
 
-    // Preset shape buttons
     std::vector<std::unique_ptr<EnvelopeShapeButton>> presetButtons;
-    EnvelopePresetGenerator::PresetShape currentPresetShape = EnvelopePresetGenerator::PresetShape::Sine;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(EnvelopeComponent)
 }; 
