@@ -10,7 +10,10 @@ class EnvelopePoint;
 
 struct ParameterSettings {
     bool bipolar = false;
+    bool exponential = false;
     float amount = 1.0f;
+    float minValue = 0.0f;
+    float maxValue = 1.0f;
 };
 
 class EnvelopeParameterMapper {

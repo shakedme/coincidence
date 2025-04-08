@@ -192,8 +192,8 @@
     "id": "gain",
     "name": "Gain",
     "min": 0.0,
-    "max": 200.0,
-    "default": 100.0
+    "max": 100.0,
+    "default": 75.0
   },
   {
     "type": "dynamic",

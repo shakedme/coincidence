@@ -21,17 +21,21 @@ public:
             modulationMatrix(matrix), paramId(std::move(paramId)) {}
 
     T getValue() const {
-        auto value = modulationMatrix.getParamModulationValue(paramId);
+        auto [baseValue, modValue] = modulationMatrix.getParamAndModulationValue(paramId);
+        float result = baseValue + modValue;
+        result = std::clamp(result, 0.0f, 1.0f);
+
         if constexpr (std::is_same_v<T, float>) {
-            return percentToFloat(value);
+            return result;
         } else if constexpr (std::is_same_v<T, bool>) {
-            return toBool(value);
+            return result > 0.5f;
         } else if constexpr (std::is_integral_v<T>) {
-            return toInt(value);
+            return static_cast<T>(std::round(result));
         } else if constexpr (std::is_enum_v<T>) {
-            return toEnum<T>(value);
+            return static_cast<T>(static_cast<int>(result));
         } else {
             jassert(false && "Unsupported parameter type!");
+            return T();
         }
     }
 

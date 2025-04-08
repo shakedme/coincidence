@@ -43,25 +43,23 @@ void EnvelopeParameterMapper::addDefaultPointsToBuffer(PointBuffer *buffer) cons
 
 float EnvelopeParameterMapper::getCurrentValue() const {
     double ppqPosition = timingManager.getPpqPosition();
+    float normalizedPosition;
+
     if (useTransportSync && ppqPosition >= 0.0) {
-        float normalizedPosition = std::fmod(static_cast<float>(ppqPosition * rate), 1.0f);
-        float normalizedValue = interpolateValue(normalizedPosition);
-
-        if (settings.bipolar) {
-            normalizedValue = normalizedValue * 2.0f - 1.0f;
-        }
-
-        return normalizedValue;
+        normalizedPosition = std::fmod(static_cast<float>(ppqPosition * rate), 1.0f);
     } else {
-        float normalizedTime = std::fmod(currentTime * rate, 1.0f);
-        float normalizedValue = interpolateValue(normalizedTime);
-
-        if (settings.bipolar) {
-            normalizedValue = normalizedValue * 2.0f - 1.0f;
-        }
-
-        return normalizedValue;
+        normalizedPosition = std::fmod(currentTime * rate, 1.0f);
     }
+
+    float normalizedValue = interpolateValue(normalizedPosition);
+
+    if (settings.bipolar) {
+        normalizedValue = normalizedValue * 2.0f - 1.0f;
+    }
+
+    float scaledModulation = normalizedValue * settings.amount;
+
+    return scaledModulation;
 }
 
 void EnvelopeParameterMapper::setRate(float newRate) {

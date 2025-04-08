@@ -15,7 +15,9 @@ void Gain::prepare(const juce::dsp::ProcessSpec &spec) {
 }
 
 void Gain::process(const juce::dsp::ProcessContextReplacing<float> &context) {
-    gain.setGainLinear(gainParam->getValue());
+    float value = gainParam->getValue();
+    float gainDB = juce::jmap(value, -30.0f, 12.0f);
+    gain.setGainDecibels(gainDB);
     gain.process(context);
 }
 

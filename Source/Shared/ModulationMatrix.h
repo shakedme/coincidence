@@ -29,7 +29,7 @@ public:
 
     void calculateModulationValues();
 
-    float getParamModulationValue(const juce::Identifier &paramId);
+    std::pair<float,float> getParamAndModulationValue(const juce::Identifier& paramId);
 
 private:
     PluginProcessor &processor;

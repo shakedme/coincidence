@@ -26,7 +26,7 @@ public:
                 : paramId(std::move(id)) {
             setter = [field](StructType &target, float value) {
                 if constexpr (std::is_same_v<FieldType, float>) {
-                    target.*field = Params::percentToFloat(value);
+                    target.*field = value;
                 } else if constexpr (std::is_same_v<FieldType, bool>) {
                     target.*field = Params::toBool(value);
                 } else if constexpr (std::is_integral_v<FieldType>) {
@@ -47,8 +47,9 @@ public:
         StructType result = defaultStruct;
 
         for (const auto &descriptor: fieldDescriptors) {
-            float modulationValue = modulationMatrix.getParamModulationValue(descriptor.paramId);
-            descriptor.setter(result, modulationValue);
+            auto [baseValue, modValue] = modulationMatrix.getParamAndModulationValue(descriptor.paramId);
+            float finalValue = std::clamp(baseValue + modValue, 0.0f, 1.0f);
+            descriptor.setter(result, finalValue);
         }
 
         return result;
