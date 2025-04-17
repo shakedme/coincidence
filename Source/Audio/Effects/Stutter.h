@@ -20,7 +20,7 @@ public:
 
     ~Stutter() override = default;
 
-    void initialize(PluginProcessor &p);
+    void initialize(PluginProcessor &p) override;
 
     void prepare(const juce::dsp::ProcessSpec &spec) override;
 

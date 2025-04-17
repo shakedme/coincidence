@@ -35,7 +35,6 @@ bool BaseEffect::shouldApplyEffect(float probability) {
 }
 
 bool BaseEffect::hasMinTimePassed() {
-    // Check if minimum time between triggers has passed
     if (!processor || !timingManagerPtr) return false;
 
     juce::int64 currentSample = timingManagerPtr->getSamplePosition();
@@ -49,11 +48,8 @@ bool BaseEffect::hasMinTimePassed() {
 
 void BaseEffect::mixWetDrySignals(float *dry, const float *wet, float wetMix, int numSamples, float fadeOut) {
     for (int sample = 0; sample < numSamples; ++sample) {
-        // Use equal-power crossfade to preserve perceived loudness
         float dryGain = std::cos(wetMix * juce::MathConstants<float>::halfPi);
         float wetGain = std::sin(wetMix * juce::MathConstants<float>::halfPi) * fadeOut;
-
-        // Mix signals while maintaining overall volume
         dry[sample] = (dry[sample] * dryGain) + (wet[sample] * wetGain);
     }
 }

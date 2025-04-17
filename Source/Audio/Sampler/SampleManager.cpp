@@ -238,13 +238,47 @@ int SampleManager::getNextSampleIndex(Models::RateOption currentRate) {
 
         case Models::RANDOM: // Random selection with probability
         {
-            int result = selectRandomSampleWithProbability(validSamples);
+            // Use more reliable random selection logic
+            std::random_device rd;
+            std::mt19937 gen(rd() + juce::Random::getSystemRandom().nextInt64());
+            
+            // First check if there are any samples with non-zero probability
+            bool hasNonZeroProbability = false;
+            for (int idx : validSamples) {
+                if (getSampleProbability(idx) > 0.0f) {
+                    hasNonZeroProbability = true;
+                    break;
+                }
+            }
+            
+            if (!hasNonZeroProbability) {
+                return -1; // No samples with non-zero probability
+            }
+            
+            // Try to avoid consecutive repeats in random mode
+            int previousIndex = currentPlayIndex;
+            int result;
+            
+            // If we have more than one valid sample, try to avoid playing the same sample twice
+            if (validSamples.size() > 1) {
+                int attempts = 0;
+                do {
+                    result = selectRandomSampleWithProbability(validSamples);
+                    attempts++;
+                    // Only try a limited number of times to avoid infinite loops
+                    // if there's only one sample with non-zero probability
+                } while (result == previousIndex && attempts < 3 && result >= 0);
+            } else {
+                result = selectRandomSampleWithProbability(validSamples);
+            }
+            
             // If no valid samples with non-zero probability, return -1 to indicate don't play anything
             if (result == -1) {
                 return -1; // Signal not to play anything
             }
-            nextValidIndex = result;
-            break;
+            
+            // Update index and return
+            return result;
         }
     }
 
@@ -337,8 +371,11 @@ int SampleManager::selectGroup(const std::map<int, std::vector<int>> &groupedVal
         return -1;
     }
 
+    // Use a proper generator with proper distribution instead of biased approaches
+    std::random_device rd;
+    std::mt19937 gen(rd() + juce::Random::getSystemRandom().nextInt64());
+
     // Check for equal probabilities case - if all groups have the same probability
-    // we can just select one at random without roulette wheel selection
     bool allEqual = true;
     float firstProb = groupProbabilities[0].second;
     for (size_t i = 1; i < groupProbabilities.size(); ++i) {
@@ -348,88 +385,70 @@ int SampleManager::selectGroup(const std::map<int, std::vector<int>> &groupedVal
         }
     }
 
-    // If all probabilities are equal, just pick randomly
+    // If all probabilities are equal, just use uniform distribution
     if (allEqual) {
-        // Shuffle first for true randomness
-        std::shuffle(groupProbabilities.begin(), groupProbabilities.end(),
-                     std::default_random_engine(juce::Random::getSystemRandom().nextInt64()));
-
-        return groupProbabilities[0].first;
+        std::uniform_int_distribution<> distrib(0, groupProbabilities.size() - 1);
+        int randomIndex = distrib(gen);
+        return groupProbabilities[randomIndex].first;
     }
 
-    // True roulette wheel selection (doesn't depend on iteration order at all)
-    float randomValue = juce::Random::getSystemRandom().nextFloat() * totalGroupProbability;
-    float cumulativeProbability = 0.0f;
-
-    // Sort the vector randomly to avoid any potential bias
-    std::shuffle(groupProbabilities.begin(), groupProbabilities.end(),
-                 std::default_random_engine(juce::Random::getSystemRandom().nextInt64()));
-
-    // Implementation of roulette wheel selection
-    for (const auto &[groupIdx, probability]: groupProbabilities) {
-        cumulativeProbability += probability;
-        if (randomValue <= cumulativeProbability) {
-            return groupIdx;
-        }
+    std::vector<float> weights;
+    weights.reserve(groupProbabilities.size());
+    for (const auto& pair : groupProbabilities) {
+        weights.push_back(pair.second);
     }
-
-    // Fallback if no group selected (could happen due to floating-point precision issues)
-    if (!groupProbabilities.empty()) {
-        return groupProbabilities.back().first;
-    }
-
-    return -1;
+    
+    std::discrete_distribution<> distribution(weights.begin(), weights.end());
+    int selectedIndex = distribution(gen);
+    return groupProbabilities[selectedIndex].first;
 }
 
 int SampleManager::selectSampleFromGroup(const std::vector<int> &samplesInGroup) {
     // Calculate total probability for samples in this group
-    float totalSampleProbability = 0.0f;
     std::vector<std::pair<int, float>> sampleProbabilities;
 
     for (int idx: samplesInGroup) {
         float prob = getSampleProbability(idx);
-        totalSampleProbability += prob;
         sampleProbabilities.emplace_back(idx, prob);
     }
 
+    // If there are no samples with probability, return -1
+    if (sampleProbabilities.empty()) {
+        return -1;
+    }
+
+    // Use a proper generator with proper distribution
+    std::random_device rd;
+    std::mt19937 gen(rd() + juce::Random::getSystemRandom().nextInt64());
+
     // Check for equal probabilities case
     bool allEqual = true;
-    if (!sampleProbabilities.empty()) {
-        float firstProb = sampleProbabilities[0].second;
-        for (size_t i = 1; i < sampleProbabilities.size(); ++i) {
-            if (std::abs(sampleProbabilities[i].second - firstProb) > 0.0001f) {
-                allEqual = false;
-                break;
-            }
+    float firstProb = sampleProbabilities[0].second;
+    for (size_t i = 1; i < sampleProbabilities.size(); ++i) {
+        if (std::abs(sampleProbabilities[i].second - firstProb) > 0.0001f) {
+            allEqual = false;
+            break;
         }
     }
 
-    // If all probabilities are equal, just pick randomly
-    if (allEqual && !sampleProbabilities.empty()) {
-        // Shuffle first for true randomness
-        std::shuffle(sampleProbabilities.begin(), sampleProbabilities.end(),
-                     std::default_random_engine(juce::Random::getSystemRandom().nextInt64()));
-
-        return sampleProbabilities[0].first;
+    // If all probabilities are equal, just use uniform distribution
+    if (allEqual) {
+        std::uniform_int_distribution<> distrib(0, sampleProbabilities.size() - 1);
+        int randomIndex = distrib(gen);
+        return sampleProbabilities[randomIndex].first;
     }
 
-    // Shuffle the probabilities vector to remove bias when probabilities are equal
-    std::shuffle(sampleProbabilities.begin(), sampleProbabilities.end(),
-                 std::default_random_engine(juce::Random::getSystemRandom().nextInt64()));
-
-    // Select based on sample probability
-    float randomSampleValue = juce::Random::getSystemRandom().nextFloat() * totalSampleProbability;
-    float runningSampleTotal = 0.0f;
-
-    for (const auto &[idx, probability]: sampleProbabilities) {
-        runningSampleTotal += probability;
-        if (randomSampleValue <= runningSampleTotal) {
-            return idx;
-        }
+    // Use discrete distribution for weighted random selection
+    // Extract just the probability values for the distribution
+    std::vector<float> weights;
+    weights.reserve(sampleProbabilities.size());
+    for (const auto& pair : sampleProbabilities) {
+        weights.push_back(pair.second);
     }
-
-    // Fallback in case of rounding errors
-    return samplesInGroup.back();
+    
+    std::discrete_distribution<> distribution(weights.begin(), weights.end());
+    int selectedIndex = distribution(gen);
+    return sampleProbabilities[selectedIndex].first;
 }
 
 juce::String SampleManager::getSampleName(int index) const {

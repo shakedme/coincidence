@@ -55,7 +55,13 @@ void ModulationMatrix::calculateModulationValues() {
 }
 
 std::pair<float, float> ModulationMatrix::getParamAndModulationValue(const juce::Identifier &paramId) {
-    float baseValue = processor.getAPVTS().getRawParameterValue(paramId)->load() / 100.0f;
+    auto* parameter = processor.getAPVTS().getParameter(paramId);
+    if (!parameter) {
+        jassertfalse;
+        return {0.0f, 0.0f};
+    }
+
+    float baseValue = parameter->getValue();
     float modValue = 0.0f;
 
     if (modulationValues.contains(paramId)) {

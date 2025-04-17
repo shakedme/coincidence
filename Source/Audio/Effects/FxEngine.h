@@ -10,6 +10,10 @@
 #include "Stutter.h"
 #include "Gain.h"
 #include "BaseEffect.h"
+#include "Compression.h"
+#include "Pan.h"
+#include "Flanger.h"
+#include "Phaser.h"
 
 class PluginProcessor;
 
@@ -33,7 +37,12 @@ private:
         ReverbIndex,
         DelayIndex,
         StutterIndex,
-        GainIndex
+        FlangerIndex,
+        PhaserIndex,
+        CompressorIndex,
+        GainIndex,
+        PanIndex,
+
     };
-    juce::dsp::ProcessorChain<Reverb, Delay, Stutter, Gain> fxChain;
+    juce::dsp::ProcessorChain<Reverb, Delay, Stutter, Flanger, Phaser, Compression, Gain, Pan> fxChain;
 };

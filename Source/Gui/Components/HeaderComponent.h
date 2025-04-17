@@ -4,6 +4,7 @@
 
 #include <memory>
 #include "KnobComponent.h"
+#include "../../Audio/PluginProcessor.h"
 
 //==============================================================================
 class HeaderComponent : public juce::Component {

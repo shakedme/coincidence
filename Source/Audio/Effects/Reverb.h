@@ -18,9 +18,8 @@ public:
 
     ~Reverb() override = default;
 
-    void initialize(PluginProcessor &p);
+    void initialize(PluginProcessor &p) override;
 
-    // Override ProcessorBase methods
     void prepare(const juce::dsp::ProcessSpec &spec) override;
 
     void process(const juce::dsp::ProcessContextReplacing<float> &context) override;

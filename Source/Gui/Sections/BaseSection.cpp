@@ -19,15 +19,11 @@ BaseSectionComponent::BaseSectionComponent(PluginEditor &e,
     addAndMakeVisible(sectionLabel.get());
 }
 
-// Update the paint method to call drawMetallicPanel
 void BaseSectionComponent::paint(juce::Graphics &g) {
-    // Draw the metallic panel first
     drawMetallicPanel(g);
 
-    // Set the bounds for the section label consistently
     sectionLabel->setBounds(0, 5, getWidth(), HEADER_HEIGHT);
 
-    // Draw the accent line under the section header
     g.setColour(sectionColour.withAlpha(0.5f));
     g.drawLine(10, HEADER_HEIGHT + 5, getWidth() - 10, HEADER_HEIGHT + 5, 1.0f);
 }

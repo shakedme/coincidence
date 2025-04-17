@@ -5,6 +5,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "../../Shared/ModulationMatrix.h"
 
 
 class KnobComponent : public juce::Slider,

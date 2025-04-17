@@ -10,8 +10,7 @@ class BaseEffect : public juce::dsp::ProcessorBase {
 public:
     BaseEffect();
 
-    // Initialize method to be called after default construction
-    void initialize(PluginProcessor &processor);
+    virtual void initialize(PluginProcessor &processor);
 
     virtual ~BaseEffect() = default;
 

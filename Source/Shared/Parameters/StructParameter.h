@@ -47,9 +47,10 @@ public:
         StructType result = defaultStruct;
 
         for (const auto &descriptor: fieldDescriptors) {
-            auto [baseValue, modValue] = modulationMatrix.getParamAndModulationValue(descriptor.paramId);
-            float finalValue = std::clamp(baseValue + modValue, 0.0f, 1.0f);
-            descriptor.setter(result, finalValue);
+            auto [baseValueNormalized, modValueNormalized] = modulationMatrix.getParamAndModulationValue(descriptor.paramId);
+            float finalNormalizedValue = baseValueNormalized + modValueNormalized;
+            finalNormalizedValue = std::clamp(finalNormalizedValue, 0.0f, 1.0f);
+            descriptor.setter(result, finalNormalizedValue);
         }
 
         return result;

@@ -304,26 +304,16 @@ void Stutter::captureFromHistory(juce::int64 triggerSamplePosition, int lengthTo
                                    secondPartSize);
 
         }
-
-        // Verify the data is not silent (for debugging)
-        float sum = 0.0f;
-        for (int i = 0; i < lengthToCapture; ++i) {
-            sum += std::abs(stutterBuffer.getSample(channel, i));
-        }
     }
 }
 
 void Stutter::handleTransportLoopDetection() {
-    // Check if we've detected a loop in the transport (from TimingManager)
     if (timingManagerPtr->wasLoopDetected()) {
-        // Reset stuttering state when transport loops
         isStuttering = false;
         stutterPosition = 0;
         stutterLength = 0;
         stutterRepeatCount = 0;
         stutterRepeatsTotal = 0;
-
-        // Clear the loop detection flag
         timingManagerPtr->clearLoopDetection();
     }
 }
@@ -347,12 +337,10 @@ Models::RateOption Stutter::selectRandomRate() {
 std::vector<juce::int64> Stutter::checkForMidiTriggers(const juce::MidiBuffer &midiMessages) {
     std::vector<juce::int64> triggerPositions;
 
-    // Look for MIDI note-on events to use as reference points
     if (!midiMessages.isEmpty()) {
         for (const auto metadata: midiMessages) {
             auto message = metadata.getMessage();
             if (message.isNoteOn()) {
-                // Found a note-on - this is a good point to start effects
                 triggerPositions.push_back(metadata.samplePosition);
             }
         }

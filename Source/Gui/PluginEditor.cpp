@@ -37,7 +37,7 @@ PluginEditor::~PluginEditor() {
     setLookAndFeel(nullptr);
 }
 
-//==============================================================================
+
 void PluginEditor::paint(juce::Graphics &g) {
     g.fillAll(juce::Colour(0xff222222));
 }
@@ -70,7 +70,7 @@ void PluginEditor::resized() {
 
     if (fxSection->isVisible()) {
         fxSection->setBounds(xPadding, topSectionY,
-                             getWidth() - xPadding * 2, topSectionHeight);
+                             getWidth() - xPadding * 2, getHeight() - envelopesHeight - keyboardHeight - headerHeight);
     } else {
         grooveSection->setBounds(xPadding, topSectionY, grooveWidth, topSectionHeight);
         pitchSection->setBounds(pitchX, topSectionY, pitchWidth, topSectionHeight);

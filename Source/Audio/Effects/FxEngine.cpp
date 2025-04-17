@@ -6,7 +6,11 @@ FxEngine::FxEngine(PluginProcessor &processorRef)
     fxChain.get<ReverbIndex>().initialize(processorRef);
     fxChain.get<DelayIndex>().initialize(processorRef);
     fxChain.get<StutterIndex>().initialize(processorRef);
+    fxChain.get<FlangerIndex>().initialize(processorRef);
+    fxChain.get<PhaserIndex>().initialize(processorRef);
+    fxChain.get<CompressorIndex>().initialize(processorRef);
     fxChain.get<GainIndex>().initialize(processorRef);
+    fxChain.get<PanIndex>().initialize(processorRef);
 }
 
 FxEngine::~FxEngine() {

@@ -79,6 +79,33 @@ namespace Models {
         bool delayBpmSync = true;             // BPM sync mode (true) or milliseconds (false)
     };
 
+    struct CompressionSettings {
+        float mix = 0.0f;               // 0-100% (dry/wet mix)
+        float threshold = 0.0f;           // -60dB to 0dB
+        float ratio = 1.0f;               // 1:1 to 20:1
+        float attack = 10.0f;             // 0.1ms to 100ms
+        float release = 100.0f;           // 10ms to 1000ms
+    };
+
+    struct PanSettings {
+        float panPosition = 0.0f; // Normalized 0-1, where 0=Left, 0.5=Center, 1=Right
+    };
+
+    struct FlangerSettings {
+        float mix = 0.0f;              // Normalized 0-1, dry/wet mix
+        float rate = 0.0f;             // Normalized 0-1, maps to 0.01-20 Hz
+        float depth = 0.0f;            // Normalized 0-1, modulation depth
+        float feedback = 0.0f;         // Normalized 0-1, feedback amount
+    };
+
+    struct PhaserSettings {
+        float mix = 0.0f;              // Normalized 0-1, dry/wet mix
+        float rate = 0.0f;             // Normalized 0-1, maps to 0.01-20 Hz
+        float depth = 0.0f;            // Normalized 0-1, modulation depth
+        float feedback = 0.0f;         // Normalized 0-1, feedback amount
+        int stages = 4;                // Number of filter stages (typically 4, 8, or 12)
+    };
+
     // Generator settings
     struct MidiSettings {
         float probability = 100.0f; // 0-100% chance of triggering a note

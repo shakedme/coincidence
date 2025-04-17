@@ -4,7 +4,6 @@
 
 using namespace Models;
 
-//==============================================================================
 PluginProcessor::PluginProcessor()
         : AudioProcessor(BusesProperties()
                                  .withInput("Input", juce::AudioChannelSet::stereo(), true)
@@ -112,10 +111,13 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     if (sampleManager->isSampleLoaded()) {
         sampleManager->processAudio(buffer, processedMidi);
         fxEngine->processAudio(buffer, processedMidi);
-        if (buffer.getNumChannels() > 0 && buffer.getNumSamples() > 0) {
-            auto *editor = dynamic_cast<PluginEditor *>(getActiveEditor());
-            editor->setWaveformAudioBuffer(buffer.getReadPointer(0), buffer.getNumSamples());
+
+        if (auto *editor = activeEditorPtr.getComponent()) {
+            if (buffer.getNumChannels() > 0 && buffer.getNumSamples() > 0) {
+                editor->setWaveformAudioBuffer(buffer.getReadPointer(0), buffer.getNumSamples());
+            }
         }
+
     } else {
         midiMessages.swapWith(processedMidi);
     }
@@ -129,7 +131,9 @@ bool PluginProcessor::hasEditor() const {
 }
 
 juce::AudioProcessorEditor *PluginProcessor::createEditor() {
-    return new PluginEditor(*this);
+    auto *editor = new PluginEditor(*this);
+    activeEditorPtr = editor;
+    return editor;
 }
 
 //==============================================================================

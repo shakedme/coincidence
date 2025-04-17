@@ -7,6 +7,7 @@
 #include "Midi/NoteGenerator.h"
 #include "Sampler/SampleManager.h"
 #include "../Shared/ModulationMatrix.h"
+#include <juce_gui_basics/juce_gui_basics.h>
 
 // Forward declarations
 class PluginEditor;
@@ -101,6 +102,9 @@ private:
     std::unique_ptr<SampleManager> sampleManager;
     std::unique_ptr<FxEngine> fxEngine;
     std::unique_ptr<TimingManager> timingManager;
+
+    // Safe pointer to the editor for thread-safe access from audio thread
+    juce::Component::SafePointer<PluginEditor> activeEditorPtr;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginProcessor)
 };

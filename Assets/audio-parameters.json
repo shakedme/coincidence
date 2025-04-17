@@ -196,6 +196,54 @@
     "default": 75.0
   },
   {
+    "type": "float",
+    "id": "compression_mix",
+    "name": "Compression Mix",
+    "min": 0.0,
+    "max": 100.0,
+    "default": 0.0
+  },
+  {
+    "type": "float",
+    "id": "compression_threshold",
+    "name": "Compression Threshold",
+    "min": -60.0,
+    "max": 0.0,
+    "default": 0.0
+  },
+  {
+    "type": "float",
+    "id": "compression_ratio",
+    "name": "Compression Ratio",
+    "min": 1.0,
+    "max": 20.0,
+    "default": 1.0
+  },
+  {
+    "type": "float",
+    "id": "compression_attack",
+    "name": "Compression Attack",
+    "min": 0.1,
+    "max": 100.0,
+    "default": 10.0
+  },
+  {
+    "type": "float",
+    "id": "compression_release",
+    "name": "Compression Release",
+    "min": 10.0,
+    "max": 1000.0,
+    "default": 100.0
+  },
+  {
+    "type": "float",
+    "id": "pan",
+    "name": "Pan",
+    "min": -100.0,
+    "max": 100.0,
+    "default": 0.0
+  },
+  {
     "type": "dynamic",
     "id": "rates",
     "names": "Rate $NAME Value",
@@ -204,5 +252,77 @@
     "min": 0.0,
     "max": 100.0,
     "default": 0.0
+  },
+  {
+    "type": "float",
+    "id": "flanger_mix",
+    "name": "Flanger Mix",
+    "min": 0.0,
+    "max": 100.0,
+    "default": 0.0
+  },
+  {
+    "type": "float",
+    "id": "flanger_rate",
+    "name": "Flanger Rate",
+    "min": 0.01,
+    "max": 20.0,
+    "default": 1.0
+  },
+  {
+    "type": "float",
+    "id": "flanger_depth",
+    "name": "Flanger Depth",
+    "min": 0.0,
+    "max": 100.0,
+    "default": 50.0
+  },
+  {
+    "type": "float",
+    "id": "flanger_feedback",
+    "name": "Flanger Feedback",
+    "min": 0.0,
+    "max": 100.0,
+    "default": 50.0
+  },
+  {
+    "type": "float",
+    "id": "phaser_mix",
+    "name": "Phaser Mix",
+    "min": 0.0,
+    "max": 100.0,
+    "default": 0.0
+  },
+  {
+    "type": "float",
+    "id": "phaser_rate",
+    "name": "Phaser Rate",
+    "min": 0.01,
+    "max": 20.0,
+    "default": 1.0
+  },
+  {
+    "type": "float",
+    "id": "phaser_depth",
+    "name": "Phaser Depth",
+    "min": 0.0,
+    "max": 100.0,
+    "default": 50.0
+  },
+  {
+    "type": "float",
+    "id": "phaser_feedback",
+    "name": "Phaser Feedback",
+    "min": 0.0,
+    "max": 100.0,
+    "default": 50.0
+  },
+  {
+    "type": "int",
+    "id": "phaser_stages",
+    "name": "Phaser Stages",
+    "min": 2,
+    "max": 12,
+    "default": 4
   }
 ] 

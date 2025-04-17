@@ -57,6 +57,29 @@ namespace Params {
     static const juce::String ID_DELAY_PING_PONG = "delay_ping_pong";
     static const juce::String ID_DELAY_BPM_SYNC = "delay_bpm_sync";
 
+    // Compression parameters
+    static const juce::String ID_COMPRESSION_MIX = "compression_mix";
+    static const juce::String ID_COMPRESSION_THRESHOLD = "compression_threshold";
+    static const juce::String ID_COMPRESSION_RATIO = "compression_ratio";
+    static const juce::String ID_COMPRESSION_ATTACK = "compression_attack";
+    static const juce::String ID_COMPRESSION_RELEASE = "compression_release";
+
+    // Pan parameters
+    static const juce::String ID_PAN = "pan";
+
+    // Flanger parameters
+    static const juce::String ID_FLANGER_MIX = "flanger_mix";
+    static const juce::String ID_FLANGER_RATE = "flanger_rate";
+    static const juce::String ID_FLANGER_DEPTH = "flanger_depth";
+    static const juce::String ID_FLANGER_FEEDBACK = "flanger_feedback";
+
+    // Phaser parameters
+    static const juce::String ID_PHASER_MIX = "phaser_mix";
+    static const juce::String ID_PHASER_RATE = "phaser_rate";
+    static const juce::String ID_PHASER_DEPTH = "phaser_depth";
+    static const juce::String ID_PHASER_FEEDBACK = "phaser_feedback";
+    static const juce::String ID_PHASER_STAGES = "phaser_stages";
+
     static const juce::Identifier ID_GAIN = "gain";
     static const juce::Identifier ID_REVERB_ENV = "reverb_envelope";
 

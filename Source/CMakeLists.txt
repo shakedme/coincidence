@@ -28,11 +28,11 @@ target_sources(${BaseTargetName} PRIVATE
         Gui/PluginEditor.cpp
 
         Gui/Sections/BaseSection.cpp
-        Gui/Sections/EffectsSection.cpp
         Gui/Sections/GrooveSection.cpp
         Gui/Sections/EnvelopeSection.cpp
         Gui/Sections/PitchSection.cpp
         Gui/Sections/SampleSection.cpp
+        Gui/Sections/EffectsSection.cpp
 
         Gui/Components/DirectionButton.h
         Gui/Components/DirectionSelector.h
@@ -75,8 +75,11 @@ target_sources(${BaseTargetName} PRIVATE
         Audio/Effects/Delay.cpp
         Audio/Effects/Gain.cpp
         Audio/Effects/BaseEffect.cpp
-        Audio/Util/AudioBufferQueue.h
-        )
+        Audio/Effects/Compression.cpp
+        Audio/Effects/Pan.cpp
+        Audio/Effects/Flanger.cpp
+        Audio/Effects/Phaser.cpp
+        Audio/Util/AudioBufferQueue.h)
 
 target_compile_definitions(${BaseTargetName}
         PUBLIC
